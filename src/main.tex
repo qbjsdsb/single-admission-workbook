@@ -1,0 +1,50 @@
+\documentclass[UTF8,zihao=-4]{ctexart}
+
+\usepackage[b5paper,margin=17mm,top=18mm,bottom=18mm]{geometry}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{ulem}
+\usepackage{setspace}
+
+\definecolor{workbookgray}{gray}{0.35}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setstretch{1.35}
+\pagestyle{empty}
+
+\newcommand{\question}[2]{%
+  \par\noindent\textbf{#1}\quad #2\par
+}
+
+\newcommand{\marked}[1]{%
+  \ensuremath{\overset{\scriptstyle\cdot}{\text{#1}}}%
+}
+
+\begin{document}
+
+\begin{center}
+  {\zihao{3}\bfseries 语文、政治习题册模板样章}
+  \\
+  {\small\color{workbookgray}公开模板示例，不含真实题库}
+\end{center}
+
+\section*{第一章\hspace{1em}题目组件示例}
+
+\noindent\textbf{使用说明：}本页只展示题目、括号答题位置和基本层级。正式项目中，内容必须经过来源登记与教师审核。
+
+\question{1．}{请在括号内填写答案（\hspace{3em}）。}
+
+\question{2．}{下列句子中，\marked{加}\marked{点}词语的意义与现代汉语不同的一项是（\hspace{3em}）。}
+
+\question{3．}{请结合上下文，判断\uline{划线句子}的表达作用（\hspace{7em}）。}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+
+\begin{center}
+  {\small\color{workbookgray}后续版本将在此基础上加入章节、题型、教师版和答案组件。}
+\end{center}
+
+\end{document}
+
