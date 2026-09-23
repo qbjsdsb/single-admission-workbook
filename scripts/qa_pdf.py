@@ -215,14 +215,19 @@ def check_render_outputs(pdf_reports: list[dict[str, object]], build_dir: Path) 
 def check_dot_mark(path: Path, build_dir: Path) -> dict[str, object]:
     report = check_pdf(path, build_dir)
     errors = list(report.get("errors", []))
-    text_path = build_dir / "dot-mark-regression.txt"
-    if not text_path.exists():
-        errors.append("missing extracted dot-mark regression text")
+    pdftotext = shutil.which("pdftotext")
+    raw_text_path = build_dir / "dot-mark-regression.raw.txt"
+    if not pdftotext:
+        errors.append("pdftotext not found")
     else:
-        extracted = normalize_dot_mark_text(text_path.read_text(encoding="utf-8", errors="replace"))
-        for expected in DOT_MARK_EXPECTATIONS:
-            if normalize_dot_mark_text(expected) not in extracted:
-                errors.append(f"dot-mark PDF text extraction missing: {expected}")
+        code, _ = command_output([pdftotext, "-raw", str(path), str(raw_text_path)])
+        if code != 0 or not raw_text_path.exists():
+            errors.append("raw dot-mark PDF text extraction failed")
+        else:
+            extracted = normalize_dot_mark_text(raw_text_path.read_text(encoding="utf-8", errors="replace"))
+            for expected in DOT_MARK_EXPECTATIONS:
+                if normalize_dot_mark_text(expected) not in extracted:
+                    errors.append(f"dot-mark PDF text extraction missing: {expected}")
     report["errors"] = errors
     report["ok"] = not errors
     return report
