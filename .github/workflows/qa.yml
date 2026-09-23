@@ -41,6 +41,7 @@ jobs:
           path: |
             build/*.pdf
             build/*.log
+            build/*.txt
             build/qa-report.json
             build/render/**
           if-no-files-found: warn
