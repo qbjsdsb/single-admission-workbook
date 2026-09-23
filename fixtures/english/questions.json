@@ -1,0 +1,84 @@
+[
+  {
+    "question_id": "EN-GRAM-001",
+    "occurrence_id": "EN-FIXTURE-001",
+    "revision_id": "r1",
+    "subject": "english",
+    "source": {
+      "source_id": "fixture-english-structure",
+      "title": "自拟英语结构压力样本",
+      "year": "fixture",
+      "provider": "single-admission-workbook",
+      "format": "self_authored"
+    },
+    "source_type": "self_authored",
+    "verification_status": "reviewed",
+    "allowed_usage": "student_release",
+    "topic": ["grammar", "sentence_completion"],
+    "difficulty": "introductory",
+    "stem": {
+      "text": "She ______ to the library every Saturday.",
+      "segments": [
+        {"kind": "text", "text": "She "},
+        {"kind": "blank", "text": "2.5em"},
+        {"kind": "text", "text": " to the library every Saturday."}
+      ]
+    },
+    "choices": [
+      {"label": "A", "text": "go"},
+      {"label": "B", "text": "goes"},
+      {"label": "C", "text": "going"},
+      {"label": "D", "text": "gone"}
+    ],
+    "score": {"points": 5, "kind": "objective"},
+    "answer": {
+      "value": "B",
+      "basis": "第三人称单数主语在一般现在时中使用 goes。",
+      "scoring_points": ["识别主语人称和数", "选择一般现在时第三人称单数形式"]
+    },
+    "explanation": "用于检查英文段落、填空线、选项和中英混排。",
+    "notes": "自拟结构样本，不是历年真题。"
+  },
+  {
+    "question_id": "EN-READ-001",
+    "occurrence_id": "EN-FIXTURE-002",
+    "revision_id": "r1",
+    "subject": "english",
+    "source": {
+      "source_id": "fixture-english-structure",
+      "title": "自拟英语结构压力样本",
+      "year": "fixture",
+      "provider": "single-admission-workbook",
+      "format": "self_authored"
+    },
+    "source_type": "self_authored",
+    "verification_status": "reviewed",
+    "allowed_usage": "student_release",
+    "topic": ["reading", "main_idea"],
+    "difficulty": "standard",
+    "stem": {
+      "text": "What is the main idea of the short passage?",
+      "segments": [
+        {"kind": "text", "text": "What is the main idea of the short passage?"}
+      ]
+    },
+    "material": {
+      "id": "EN-MAT-001",
+      "text": "Small, regular reviews help learners notice progress and find the next useful step."
+    },
+    "choices": [
+      {"label": "A", "text": "Regular review can make learning more useful."},
+      {"label": "B", "text": "Long breaks are always better than practice."},
+      {"label": "C", "text": "Learners should avoid checking their work."},
+      {"label": "D", "text": "Progress cannot be observed."}
+    ],
+    "score": {"points": 5, "kind": "objective"},
+    "answer": {
+      "value": "A",
+      "basis": "The passage connects regular review with noticing progress and choosing the next step.",
+      "scoring_points": ["Identify the main idea"]
+    },
+    "explanation": "阅读题保留原文、设问和选项的层级，避免旧文档转换时段落串接。",
+    "notes": "自拟结构样本，不是历年真题。"
+  }
+]

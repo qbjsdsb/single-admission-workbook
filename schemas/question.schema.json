@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/qbjsdsb/single-admission-workbook/schemas/question.schema.json",
+  "title": "Single Admission Workbook Question",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "question_id",
+    "subject",
+    "source",
+    "source_type",
+    "verification_status",
+    "allowed_usage",
+    "stem",
+    "score"
+  ],
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9-]+$",
+      "description": "Stable identity independent of year, chapter, page, and layout."
+    },
+    "occurrence_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9._-]+$"
+    },
+    "revision_id": {
+      "type": "string",
+      "pattern": "^r[0-9]+$"
+    },
+    "subject": {
+      "enum": ["chinese", "math", "politics", "english"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "title"],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$"},
+        "title": {"type": "string", "minLength": 1},
+        "year": {"type": ["integer", "string"]},
+        "provider": {"type": "string"},
+        "url": {"type": "string", "format": "uri"},
+        "format": {"enum": ["pdf", "doc", "docx", "zip", "html", "text", "self_authored"]},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+        "location": {"type": "string"}
+      }
+    },
+    "source_type": {
+      "enum": [
+        "official_exam",
+        "official_syllabus",
+        "teacher_reviewed_transcription",
+        "secondary_transcription",
+        "recall",
+        "mock",
+        "lecture_note",
+        "textbook_note",
+        "knowledge_summary",
+        "derived_exercise",
+        "self_authored"
+      ]
+    },
+    "verification_status": {
+      "enum": ["unknown", "inventoried", "reviewed", "teacher_reviewed", "cross_checked", "verified", "disputed", "rejected"]
+    },
+    "allowed_usage": {
+      "enum": ["research_only", "structure_reference", "knowledge_reference", "transformation_source", "exercise_candidate", "student_release", "teacher_release"]
+    },
+    "topic": {"type": "array", "items": {"type": "string"}},
+    "difficulty": {"enum": ["unknown", "introductory", "standard", "challenging"]},
+    "stem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {
+              "kind": {"enum": ["text", "marked", "math", "blank", "emphasis", "line_break"]},
+              "text": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "text": {"type": "string"},
+        "segments": {"type": "array"}
+      }
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "text"],
+        "properties": {
+          "label": {"type": "string", "pattern": "^[A-H]$"},
+          "text": {"type": "string"}
+        }
+      }
+    },
+    "blanks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": {"type": "string"},
+          "expected_type": {"enum": ["text", "number", "formula", "word", "sentence", "unknown"]},
+          "answer": {"type": "string"}
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["points"],
+      "properties": {
+        "points": {"type": "number", "exclusiveMinimum": 0},
+        "kind": {"enum": ["objective", "fill_in", "solution", "writing", "unknown"]},
+        "observed_text": {"type": "string"}
+      }
+    },
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {"type": "string"},
+        "basis": {"type": "string"},
+        "scoring_points": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "explanation": {"type": "string"},
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["original_value", "observed_issue", "proposed_correction", "verification_status"],
+        "properties": {
+          "original_value": {"type": "string"},
+          "observed_issue": {"type": "string"},
+          "proposed_correction": {"type": "string"},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "verification_status": {"enum": ["unknown", "inventoried", "reviewed", "teacher_reviewed", "cross_checked", "verified", "disputed", "rejected"]}
+        }
+      }
+    },
+    "temporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "valid_from": {"type": "string"},
+        "valid_to": {"type": "string"},
+        "current_affairs_window": {"type": "string"}
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}

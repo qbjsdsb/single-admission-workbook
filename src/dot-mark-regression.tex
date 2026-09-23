@@ -1,0 +1,25 @@
+\documentclass[student]{../src/workbook}
+\usepackage{../src/common/workbook-common}
+
+\begin{document}
+\workbooktitle{语文着重号回归样张}
+\workbookmeta{检查单字、多字、粗体、楷体、行末和窄栏换行中的字下点}
+
+\subjectchapter{场景一}{单字与多字}
+单字：\marked{馁}。多字词：\marked{循序渐进}。普通字与加点字混排：先理解再\marked{复核}。
+
+\subjectchapter{场景二}{字形与字号}
+普通体：\marked{亡}、\marked{莫}。\textbf{粗体：\marked{贼}、\marked{造}。}
+
+{\kaishu 楷体：\marked{馁}、\marked{食}，并检查点与楷体笔画的间距。}\par
+
+\subjectchapter{场景三}{行末和自动换行}
+\noindent\parbox[t]{0.72\linewidth}{行末位置测试：本行末尾的着重点贴近版心右端。\hfill\marked{末}}\par
+
+\medskip
+\noindent\parbox[t]{0.47\linewidth}{窄栏换行测试：标记词组\marked{循序渐进}处于自动换行位置附近，观察词组、下点与前后文字是否保持完整。}
+
+\subjectchapter{场景四}{加点文本提取}
+\noindent 本段包含可提取的正文：\marked{关键字}、\marked{目标字}。字下点属于视觉标记，不应替换正文字符。
+
+\end{document}

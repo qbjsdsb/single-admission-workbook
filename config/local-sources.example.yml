@@ -1,0 +1,22 @@
+# Copy this file to config/local-sources.yml on a private machine.
+# The copied file is gitignored. Keep original materials read-only.
+version: 1
+read_only: true
+source_root: D:/your-private-source-root
+
+roots:
+  raw: ${source_root}/raw
+  normalized: ${source_root}/normalized
+  outputs: ${source_root}/outputs
+
+aliases:
+  chinese_review_2024: ${source_root}/raw/replace-with-private-relative-path
+  politics_review_2022: ${source_root}/raw/replace-with-private-relative-path
+  math_formula_sample: ${source_root}/raw/replace-with-private-relative-path
+  english_doc_conversion_sample: ${source_root}/raw/replace-with-private-relative-path
+
+allowed_extensions: [pdf, doc, docx, zip]
+private_manifest:
+  path: ${source_root}/normalized/source-manifest.yml
+  include_sha256: true
+  include_absolute_paths: true

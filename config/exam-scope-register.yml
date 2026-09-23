@@ -1,0 +1,88 @@
+registry: exam-scope-register
+version: 1.0.0
+as_of: '2026-09-22'
+owner: single-admission-workbook
+update_rule: 每个招生周期重新核验官方管理文件，并检查国家体育总局考试大纲索引是否发布替代版。
+
+governing_documents:
+  - id: exam-syllabus-2023
+    title: 运动训练、武术与民族传统体育专业单独招生文化考试大纲（2023版）
+    authority: 国家体育总局科教司
+    document_no: 体科字〔2023〕177号
+    issued_at: '2023-11-14'
+    published_at: '2023-11-15'
+    effective_at: '2023-11-14'
+    status: current_basis
+    supersedes: exam-syllabus-2021
+    subjects: [chinese, math, politics, english]
+    source_url: https://www.sport.gov.cn/kjs/n23837299/c26969449/content.html
+    notes: 截至登记日期在官方索引和管理文件核验范围内未找到新的文化科目替代大纲；后续周期仍需复核。
+
+  - id: admission-management-2026
+    title: 2026年普通高等学校运动训练、武术与民族传统体育专业招生管理办法
+    authority: 国家体育总局、教育部
+    issued_at: '2025-11-18'
+    published_at: '2025-11-20'
+    effective_at: 2026招生周期
+    status: current_for_cycle_2026
+    source_url: https://www.sport.gov.cn/kjs/n23837299/c29231171/content.html
+    notes: 管理文件用于登记考试科目、分值、时长和当年日程，不替代学科考试大纲。
+
+common_exam:
+  subjects: [chinese, math, politics, english]
+  score_per_subject: 150
+  total_score: 600
+  duration_minutes_per_subject: 90
+  cycle_2026:
+    - date: '2026-03-28'
+      session: morning
+      subject: chinese
+      time: '09:00-10:30'
+    - date: '2026-03-28'
+      session: afternoon
+      subject: math
+      time: '14:00-15:30'
+    - date: '2026-03-29'
+      session: morning
+      subject: politics
+      time: '09:00-10:30'
+    - date: '2026-03-29'
+      session: afternoon
+      subject: english
+      time: '14:00-15:30'
+
+subjects:
+  chinese:
+    syllabus_source: https://www.sport.gov.cn/kjs/n23837299/c26969449/part/26971307.pdf
+    scope: [language_knowledge_and_expression, literature, modern_reading, classical_poetry_and_prose, writing]
+    structure:
+      objective_score: 90
+      writing_score: 60
+      proportions: {language_knowledge_and_expression: 0.27, reading: 0.33, writing: 0.40}
+  math:
+    syllabus_source: https://www.sport.gov.cn/kjs/n23837299/c26969449/part/27385214.pdf
+    scope: [sets_and_logic, functions, inequalities, trigonometry, sequences, vectors, analytic_geometry, solid_geometry, counting_and_probability]
+    structure:
+      multiple_choice_score: 64
+      fill_in_score: 32
+      solution_score: 54
+      proportions: {algebra: 0.50, solid_geometry: 0.20, analytic_geometry: 0.20, probability: 0.10}
+  politics:
+    syllabus_source: https://www.sport.gov.cn/kjs/n23837299/c26969449/part/26971309.pdf
+    scope: [socialism_with_chinese_characteristics, economy_and_society, politics_and_rule_of_law, philosophy_and_culture, current_affairs]
+    current_affairs_window: exam_year_previous_april_through_exam_year_march
+    structure:
+      multiple_choice_count: 25
+      multiple_choice_score: 75
+      fill_in_count: 5
+      fill_in_score: 15
+      question_count: 3
+      question_score: 60
+      proportions: {socialism_with_chinese_characteristics: 0.15, economy_and_society: 0.15, politics_and_rule_of_law: 0.30, philosophy_and_culture: 0.30, current_affairs: 0.10}
+  english:
+    syllabus_source: https://www.sport.gov.cn/kjs/n23837299/c26969449/part/26971310.pdf
+    scope: [phonetics, basic_words_and_phrases, grammar, reading, writing]
+    structure:
+      objective_score: 120
+      subjective_score: 30
+      proportions: {phonetics: 0.27, words_and_phrases: 0.13, reading: 0.40, spelling: 0.13, writing: 0.07}
