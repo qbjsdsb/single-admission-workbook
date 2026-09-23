@@ -1,0 +1,90 @@
+[
+  {
+    "question_id": "CN-LANG-001",
+    "occurrence_id": "CN-FIXTURE-001",
+    "revision_id": "r1",
+    "subject": "chinese",
+    "source": {
+      "source_id": "fixture-chinese-structure",
+      "title": "自拟语文结构压力样本",
+      "year": "fixture",
+      "provider": "single-admission-workbook",
+      "format": "self_authored"
+    },
+    "source_type": "self_authored",
+    "verification_status": "reviewed",
+    "allowed_usage": "student_release",
+    "topic": ["language_knowledge_and_expression", "classical_reading"],
+    "difficulty": "standard",
+    "stem": {
+      "text": "下列加点词语的解释，正确的一项是（　　）。",
+      "segments": [
+        {"kind": "text", "text": "下列"},
+        {"kind": "marked", "text": "加点"},
+        {"kind": "text", "text": "词语的解释，正确的一项是（　　）。"}
+      ]
+    },
+    "material": {
+      "id": "CN-MAT-001",
+      "text": "材料：学习贵在循序渐进，先求理解，再求熟练；每次练习都应留下可以复核的依据。"
+    },
+    "choices": [
+      {"label": "A", "text": "循序：按照一定的次序"},
+      {"label": "B", "text": "复核：完全重复"},
+      {"label": "C", "text": "依据：临时猜测"},
+      {"label": "D", "text": "熟练：从未练习"}
+    ],
+    "score": {"points": 5, "kind": "objective"},
+    "answer": {
+      "value": "A",
+      "basis": "“循序”指按照一定的次序或步骤。",
+      "scoring_points": ["能根据语境解释关键词。"]
+    },
+    "explanation": "其余三项与材料中的语境不合。此题只用于验证中文下点、材料框和选项结构。",
+    "notes": "自拟结构样本，不是历年真题。"
+  },
+  {
+    "question_id": "CN-READ-001",
+    "occurrence_id": "CN-FIXTURE-002",
+    "revision_id": "r1",
+    "subject": "chinese",
+    "source": {
+      "source_id": "fixture-chinese-structure",
+      "title": "自拟语文结构压力样本",
+      "year": "fixture",
+      "provider": "single-admission-workbook",
+      "format": "self_authored"
+    },
+    "source_type": "self_authored",
+    "verification_status": "reviewed",
+    "allowed_usage": "student_release",
+    "topic": ["modern_reading", "evidence_and_explanation"],
+    "difficulty": "standard",
+    "stem": {
+      "text": "材料中画线句子的作用，概括最恰当的一项是（　　）。",
+      "segments": [
+        {"kind": "text", "text": "材料中"},
+        {"kind": "emphasis", "text": "画线句子"},
+        {"kind": "text", "text": "的作用，概括最恰当的一项是（　　）。"}
+      ]
+    },
+    "material": {
+      "id": "CN-MAT-002",
+      "text": "先求理解，再求熟练。只有留下可复核的依据，练习才会转化为稳定能力。"
+    },
+    "choices": [
+      {"label": "A", "text": "点明中心，并承接下文的复核要求"},
+      {"label": "B", "text": "交代人物身份，推动故事发展"},
+      {"label": "C", "text": "描写自然风景，营造热烈气氛"},
+      {"label": "D", "text": "列举数字，说明实验步骤"}
+    ],
+    "score": {"points": 5, "kind": "objective"},
+    "answer": {
+      "value": "A",
+      "basis": "句子直接提出理解、熟练和复核之间的关系。",
+      "scoring_points": ["指出内容作用", "说明结构联系"]
+    },
+    "explanation": "答案需要同时覆盖内容作用和结构作用，不能只复述句意。",
+    "notes": "自拟结构样本，不是历年真题。"
+  }
+]

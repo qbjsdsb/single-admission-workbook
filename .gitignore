@@ -1,4 +1,9 @@
 build/
+config/local-sources.yml
+local-sources.yml
+.codex/
+.pytest_cache/
+__pycache__/
 *.aux
 *.log
 *.out

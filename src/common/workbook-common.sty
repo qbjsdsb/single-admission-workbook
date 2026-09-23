@@ -1,0 +1,83 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{workbook-common}[2026/09/22 Shared workbook components]
+
+% xeCJKfntef already marks each decorative under-dot as empty ActualText.
+% Keep the original text in the normal content stream; nesting another
+% ActualText span here causes some Poppler builds to reorder or drop marked text.
+\newcommand{\marked}[1]{%
+  \CJKunderdot[depth=0.15em,sep=0.01em]{#1}%
+}
+
+\newcommand{\answerblank}[1]{\rule[-0.25ex]{#1}{0.35pt}}
+
+\newcommand{\workbooktitle}[1]{%
+  \begin{center}
+    {\zihao{3}\bfseries #1}\par
+  \end{center}
+}
+
+\newcommand{\workbookmeta}[1]{%
+  \begin{center}
+    {\small\color{workbookmuted}#1}\par
+  \end{center}
+  \vspace{0.4em}
+  \hrule height 0.45pt
+  \vspace{0.65em}
+}
+
+\newcommand{\subjectchapter}[2]{%
+  \needspace{11\baselineskip}
+  \par\vspace{0.7em}
+  {\zihao{4}\bfseries #1\quad #2}\par
+  \vspace{0.25em}\hrule height 0.35pt\vspace{0.45em}
+}
+
+\newcommand{\question}[2]{%
+  \needspace{4\baselineskip}
+  \par\noindent\textbf{#1\quad}#2\par
+}
+
+\newcommand{\materialbox}[1]{%
+  \par\smallskip\noindent
+  \fcolorbox{workbookrule}{workbookpale}{%
+    \begin{minipage}{0.91\linewidth}
+      {\small #1}
+    \end{minipage}%
+  }\par\smallskip
+}
+
+\newcommand{\choices}[1]{%
+  \begin{enumerate}[label=\Alph*.,leftmargin=1.7em,itemsep=0.15em,topsep=0.2em]
+    #1
+  \end{enumerate}
+}
+
+\newcommand{\choice}[1]{\item #1}
+
+\newcommand{\scoreline}[1]{%
+  {\small\color{workbookmuted}本题分值：#1 分}\par
+}
+
+\newcommand{\teacheranswer}[1]{%
+  \ifworkbookteacher
+    \par\smallskip\noindent\color{workbookteacher}\textbf{参考答案：}#1\par
+  \fi
+}
+
+\newcommand{\teacherbasis}[1]{%
+  \ifworkbookteacher
+    \noindent\color{workbookteacher}\textbf{依据/得分点：}#1\par
+  \fi
+}
+
+\newcommand{\teacherexplanation}[1]{%
+  \ifworkbookteacher
+    \noindent\color{workbookteacher}\textbf{解析：}#1\par
+  \fi
+}
+
+\newcommand{\sourcenote}[1]{%
+  \ifworkbookteacher
+    \par\smallskip\noindent{\scriptsize\color{workbookmuted}来源与审核备注：#1}\par
+  \fi
+}

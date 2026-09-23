@@ -1,0 +1,104 @@
+registry: standards-register
+version: 1.0.0
+as_of: '2026-09-23'
+status_values: [current, published_not_effective, superseded, unknown]
+
+standards:
+  - id: pub-punctuation-gbt15834-2011
+    title: 标点符号用法
+    standard_no: GB/T 15834-2011
+    domain: chinese_punctuation
+    authority: 国家标准全文公开系统
+    issued_at: '2011-12-30'
+    effective_at: '2012-06-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=22EA6D162E4110E752259661E1A0D0A8
+    usage_notes: 用于中文题面、材料、答案和标点复核；不能替代学科语义审核。
+
+  - id: pub-numerals-gbt15835-2011
+    title: 出版物上数字用法
+    standard_no: GB/T 15835-2011
+    domain: publication_numerals
+    authority: 国家标准全文公开系统
+    issued_at: '2011-07-29'
+    effective_at: '2011-11-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=F5DAC3377DA99C8D78AE66735B6359C7
+    usage_notes: 用于年份、序号、分值、题号和正文数字的一致性检查。
+
+  - id: pub-pinyin-gbt16159-2012
+    title: 汉语拼音正词法基本规则
+    standard_no: GB/T 16159-2012
+    domain: pinyin
+    authority: 国家标准全文公开系统
+    issued_at: '2012-06-29'
+    effective_at: '2012-10-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=5645BD8DB9D8D73053AD3A2397E15E74
+    usage_notes: 用于语文拼音内容和版面复核；词语教学解释另行审核。
+
+  - id: pub-textbook-trim-gbt18358-2009
+    title: 中小学教科书幅面尺寸及版面通用要求
+    standard_no: GB/T 18358-2009
+    domain: textbook_layout
+    authority: 国家标准全文公开系统
+    issued_at: '2009-09-30'
+    effective_at: '2010-02-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=0B875BF08539B8BAB72CD456032A7309
+    usage_notes: 登记书册幅面和版心的参考；B5 仍作为项目打印 profile 管理。
+
+  - id: pub-textbook-print-gbt18359-2009
+    title: 中小学教科书用纸、印制质量要求和检验方法
+    standard_no: GB/T 18359-2009
+    domain: textbook_printing
+    authority: 国家标准全文公开系统
+    issued_at: '2009-07-16'
+    effective_at: '2009-12-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=7599F26EAD192DBE8FA57FF0E83A3575
+    usage_notes: 用于印前检查清单和纸张/印刷风险说明，不把屏幕截图当印刷验收。
+
+  - id: pub-print-inspection-gbt34053-4-2017
+    title: 纸质印刷产品印制质量检验规范 第4部分：中小学教科书
+    standard_no: GB/T 34053.4-2017
+    domain: textbook_printing_inspection
+    authority: 国家标准全文公开系统
+    issued_at: '2017-12-29'
+    effective_at: '2018-07-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=0ABB25D23B49141F5420C44719B85ACA
+    usage_notes: 作为印制质量检查的补充登记；具体送印还需按实际出版要求核验。
+
+  - id: pub-proofreading-gbt14706-1993
+    title: 校对符号及其用法
+    standard_no: GB/T 14706-1993
+    domain: proofreading
+    authority: 国家标准全文公开系统
+    issued_at: '1993-11-16'
+    effective_at: '1994-07-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=654F6E33383AD2645F3AB15623E43E06
+    usage_notes: 用于审核记录、校样标记和问题沟通，不代替电子内容的结构化 diff。
+
+  - id: math-symbols-gbt3102-11-1993
+    title: 物理科学和技术中使用的数学符号
+    standard_no: GB/T 3102.11-1993
+    domain: mathematical_symbols
+    authority: 国家标准全文公开系统
+    issued_at: '1993-07-01'
+    effective_at: '1994-07-01'
+    status: current
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=3DE79450D562E62D41CB6E79FF411054
+    usage_notes: 用于数学符号命名、斜体/正体和单位检查；题目答案仍需数学教师核验。
+
+  - id: paper-size-gbt148-2026
+    title: 印刷、书写和绘图用纸幅面尺寸
+    standard_no: GB/T 148-2026
+    domain: paper_size
+    authority: 国家标准全文公开系统
+    issued_at: '2026-05-25'
+    effective_at: '2026-12-01'
+    status: published_not_effective
+    source_url: https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=EB3ABA24014A3C55ED4BF88B0BB8DD22
+    usage_notes: 在生效日前不得当作当前有效依据；项目仍按实际打印 profile 和当前适用标准复核。
