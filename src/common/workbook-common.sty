@@ -1,10 +1,11 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{workbook-common}[2026/09/22 Shared workbook components]
 
+% xeCJKfntef already marks each decorative under-dot as empty ActualText.
+% Keep the original text in the normal content stream; nesting another
+% ActualText span here causes some Poppler builds to reorder or drop marked text.
 \newcommand{\marked}[1]{%
-  \BeginAccSupp{method=pdfstringdef,unicode,ActualText={#1}}%
   \CJKunderdot[depth=0.15em,sep=0.01em]{#1}%
-  \EndAccSupp{}%
 }
 
 \newcommand{\answerblank}[1]{\rule[-0.25ex]{#1}{0.35pt}}
