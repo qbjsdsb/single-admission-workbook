@@ -23,6 +23,7 @@
 \RequirePackage{needspace}
 \RequirePackage{setspace}
 \RequirePackage{xeCJKfntef}
+\RequirePackage{accsupp}
 \RequirePackage{ulem}
 \normalem
 
