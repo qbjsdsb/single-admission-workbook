@@ -15,6 +15,22 @@ from pathlib import Path
 EXPECTED_B5 = (176 / 25.4 * 72, 250 / 25.4 * 72)
 SUBJECT_LABELS = {"chinese": "语文", "math": "数学", "politics": "政治", "english": "英语"}
 TEACHER_ONLY_LABELS = ("参考答案：", "依据/得分点：", "解析：", "来源与审核备注：")
+DOT_MARK_EXPECTATIONS = (
+    "语文着重号回归样张",
+    "单字：馁",
+    "多字词：循序渐进",
+    "粗体：贼、造",
+    "楷体：馁、食",
+    "行末位置测试",
+    "窄栏换行测试",
+    "关键字、目标字",
+)
+
+
+def normalize_dot_mark_text(text: str) -> str:
+    # Poppler may expose CJK underdot glyphs as ASCII periods between text runs.
+    # Ignore those visual-marker periods while preserving the marked characters' order.
+    return re.sub(r"[\s.]+", "", text)
 
 
 def command_output(command: list[str]) -> tuple[int, str]:
@@ -203,9 +219,9 @@ def check_dot_mark(path: Path, build_dir: Path) -> dict[str, object]:
     if not text_path.exists():
         errors.append("missing extracted dot-mark regression text")
     else:
-        extracted = re.sub(r"\s+", "", text_path.read_text(encoding="utf-8", errors="replace"))
-        for expected in ("语文着重号回归样张", "单字：馁", "多字词：循序渐进", "粗体：贼、造", "楷体：馁、食", "行末位置测试", "窄栏换行测试", "关键字、目标字"):
-            if re.sub(r"\s+", "", expected) not in extracted:
+        extracted = normalize_dot_mark_text(text_path.read_text(encoding="utf-8", errors="replace"))
+        for expected in DOT_MARK_EXPECTATIONS:
+            if normalize_dot_mark_text(expected) not in extracted:
                 errors.append(f"dot-mark PDF text extraction missing: {expected}")
     report["errors"] = errors
     report["ok"] = not errors

@@ -2,7 +2,7 @@ name: workbook-qa
 
 on:
   push:
-    branches: [main, research/foundation-v1]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 

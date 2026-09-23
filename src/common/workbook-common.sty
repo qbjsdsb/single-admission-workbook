@@ -2,7 +2,9 @@
 \ProvidesPackage{workbook-common}[2026/09/22 Shared workbook components]
 
 \newcommand{\marked}[1]{%
+  \BeginAccSupp{method=pdfstringdef,unicode,ActualText={#1}}%
   \CJKunderdot[depth=0.15em,sep=0.01em]{#1}%
+  \EndAccSupp{}%
 }
 
 \newcommand{\answerblank}[1]{\rule[-0.25ex]{#1}{0.35pt}}

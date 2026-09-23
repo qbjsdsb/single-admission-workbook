@@ -39,3 +39,4 @@
 \setstretch{1.28}
 \setlength{\emergencystretch}{1.5em}
 \pagestyle{empty}
+\RequirePackage{hyperref}
