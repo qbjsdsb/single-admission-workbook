@@ -77,3 +77,14 @@ Set-Location .\single-admission-workbook-public
 
 八册构建默认生成章/节两级目录、独立页码与PDF书签；目录复用章节清单，无需另填。
 保留原校验要求，并减少重复schema检查与全库扫描。详见 [目录与轻量提速](docs/architecture/TOC_AND_SPEED.md)。
+
+### 一条命令预检原卷与解析版
+
+```bash
+python scripts/review_docx_pair.py build/private/student.docx build/private/teacher.docx \
+  --subject english --out build/private/review
+```
+
+支持已归一化的英语、政治 DOCX。复用现有提取、答案配对、分值、分类建议、
+教师解析和编辑队列，输出九份 JSON；不会自动批准答案或生成可出版状态。
+原卷、解析版及包含题文的结果必须保存在私有目录，不能提交到公开仓库。
