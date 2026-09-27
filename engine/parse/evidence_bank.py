@@ -62,7 +62,7 @@ PLAIN_ANSWER = re.compile(
     r"^\s*(?:【\s*)?答案(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
 )
 ANALYSIS = re.compile(
-    r"^\s*(?:【\s*)?解析(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
+    r"^\s*(?:【\s*)?(?:考点与)?解析(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
 )
 DETAIL = re.compile(
     r"^\s*(?:【\s*)?详解(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
@@ -76,6 +76,26 @@ CORE = re.compile(r"^\s*题干核心\s*[:：]?\s*(.+?)\s*$")
 COMPACT_ITEM = re.compile(
     r"(\d{1,3})\s*[.．、]\s*(.+?)(?=(?:\s*\d{1,3}\s*[.．、])|$)"
 )
+ANSWER_RANGE = re.compile(
+    r"(\d{1,3})\s*[-—–~～]\s*(\d{1,3})\s*([A-DＡ-Ｄ\s]+)"
+)
+
+
+def _answer_range_items(text: str) -> list[tuple[int, str]]:
+    out: list[tuple[int, str]] = []
+    for match in ANSWER_RANGE.finditer(text):
+        start = int(match.group(1))
+        end = int(match.group(2))
+        if end < start:
+            continue
+        letters = "".join(
+            ch for ch in unicodedata.normalize("NFKC", match.group(3)).upper()
+            if ch in "ABCD"
+        )
+        if len(letters) != end - start + 1:
+            continue
+        out.extend((start + offset, letter) for offset, letter in enumerate(letters))
+    return out
 
 
 def _compact_items(text: str) -> list[tuple[int, str]]:
@@ -91,7 +111,57 @@ def _compact_items(text: str) -> list[tuple[int, str]]:
     # with incidental numbered phrases and must not become answer evidence.
     if len(hits) < 2 or any(len(value) > 60 for _, value in hits):
         return []
+    numbers = [number for number, _ in hits]
+    if any(right <= left for left, right in zip(numbers, numbers[1:])):
+        return []
     return hits
+
+
+def _inferred_single_choice_start(
+    paragraphs: list[ParagraphEvidence],
+    *,
+    subject: str,
+    minimum_questions: int = 5,
+) -> int | None:
+    if subject != "english":
+        return None
+    if any(
+        (detected := detect_section(subject, paragraph.text))
+        and detected[0] == "single_choice"
+        for paragraph in paragraphs
+    ):
+        return None
+
+    first_explicit_section = next(
+        (
+            index for index, paragraph in enumerate(paragraphs)
+            if detect_section(subject, paragraph.text)
+        ),
+        len(paragraphs),
+    )
+    numbered: list[tuple[int, int]] = []
+    for index, paragraph in enumerate(paragraphs[:first_explicit_section]):
+        match = QUESTION_RE.match(paragraph.text)
+        if match:
+            numbered.append((index, int(match.group(1))))
+
+    best: list[tuple[int, int]] = []
+    current: list[tuple[int, int]] = []
+    for item in numbered:
+        if item[1] == 1:
+            if len(current) > len(best):
+                best = current
+            current = [item]
+        elif current and item[1] == current[-1][1] + 1:
+            current.append(item)
+        else:
+            if len(current) > len(best):
+                best = current
+            current = []
+    if len(current) > len(best):
+        best = current
+
+    return best[0][0] if len(best) >= minimum_questions else None
 
 
 def _question_prompt_record(
@@ -159,6 +229,9 @@ def extract_evidence_bank(
     current_question_paragraphs: list[ParagraphEvidence] = []
     seen_prompt_keys: set[tuple[str | None, int]] = set()
     pending_detail_number: int | None = None
+    inferred_single_start = _inferred_single_choice_start(
+        paragraphs, subject=subject
+    )
 
     def emit(
         *,
@@ -202,8 +275,14 @@ def extract_evidence_bank(
                     seen_prompt_keys.add(key)
         current_question_paragraphs = []
 
-    for paragraph in paragraphs:
+    for paragraph_index, paragraph in enumerate(paragraphs):
         text = paragraph.text.strip()
+        if inferred_single_start is not None and paragraph_index == inferred_single_start:
+            flush_prompt()
+            current_section = "single_choice"
+            current_number = None
+            pending_detail_number = None
+
         section = detect_section(subject, text)
         if section:
             flush_prompt()
@@ -265,6 +344,18 @@ def extract_evidence_bank(
                     value=_answer_value(answer_text),
                     locator=paragraph.locator,
                     mode="explicit_current",
+                )
+            continue
+
+        answer_range = _answer_range_items(text)
+        if answer_range:
+            for number, value in answer_range:
+                emit(
+                    number=number,
+                    field="answer",
+                    value=_answer_value(value),
+                    locator=paragraph.locator,
+                    mode="compact_summary",
                 )
             continue
 

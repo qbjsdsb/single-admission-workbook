@@ -202,6 +202,132 @@ class EvidenceBankTests(unittest.TestCase):
         }
         self.assertEqual(answers, {"A", "C"})
 
+    def test_real_english_range_summary_and_topic_analysis_format(self):
+        texts = [
+            "I. 单项选择",
+            "1. A fictional prompt.",
+            "A. one B. two C. three D. four",
+            "答案：D",
+            "考点与解析：A fictional topic-based explanation.",
+            "VII. 完形填空",
+            "21-25 DACDB        26-30 BCBDA",
+            "VIII. 阅读理解",
+            "31-34 CABD        35-38 BCBA",
+            "39-42 CBDA        43-45 ADD",
+            "IX. 单词拼写",
+            "46. village        47. sharp",
+            "48. season         49. answer",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-RANGE"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        answers = {
+            (e["source_number"], e["value"])
+            for e in bank["evidence"]
+            if e["field"] == "answer"
+        }
+        self.assertIn((1, "D"), answers)
+        self.assertIn((21, "D"), answers)
+        self.assertIn((25, "B"), answers)
+        self.assertIn((26, "B"), answers)
+        self.assertIn((30, "A"), answers)
+        self.assertIn((31, "C"), answers)
+        self.assertIn((45, "D"), answers)
+        self.assertIn((46, "village"), answers)
+        self.assertIn((49, "answer"), answers)
+
+        analysis = next(
+            e for e in bank["evidence"]
+            if e["source_number"] == 1 and e["field"] == "analysis"
+        )
+        self.assertIn("topic-based explanation", analysis["value"])
+
+    def test_missing_english_first_heading_is_inferred_for_evidence(self):
+        texts = [
+            "考试说明",
+            "1. 注意事项一。",
+            "2. 注意事项二。",
+            "1. Fictional prompt one.",
+            "A. one B. two C. three D. four",
+            "【答案】A",
+            "【解析】",
+            "【详解】Fictional explanation one.",
+            "2. Fictional prompt two.",
+            "A. one B. two C. three D. four",
+            "【答案】B",
+            "【解析】",
+            "【详解】Fictional explanation two.",
+            "3. Fictional prompt three.",
+            "A. one B. two C. three D. four",
+            "【答案】C",
+            "4. Fictional prompt four.",
+            "A. one B. two C. three D. four",
+            "【答案】D",
+            "5. Fictional prompt five.",
+            "A. one B. two C. three D. four",
+            "【答案】A",
+            "II.完形填空",
+            "21-25 ABCDA"
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-MISSING-HEAD"
+        )
+        jsonschema.validate(bank, self.schema)
+        q1 = [
+            e for e in bank["evidence"]
+            if e["source_number"] == 1 and e["field"] == "answer"
+        ]
+        self.assertEqual({e["value"] for e in q1}, {"A"})
+        self.assertTrue(all(e["section_key"] == "single_choice" for e in q1))
+        self.assertTrue(any(
+            e["source_number"] == 2
+            and e["field"] == "analysis"
+            and e["section_key"] == "single_choice"
+            for e in bank["evidence"]
+        ))
+
+    def test_decimal_in_question_text_is_not_compact_answer_summary(self):
+        texts = [
+            "I. 单项选择",
+            "3. A fictional question.",
+            "A. one B. two C. three D. four",
+            "【答案】B",
+            "4. A fictional population will reach 1.7 billion in a few years.",
+            "A. while B. since C. when D. although",
+            "【答案】A",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-DECIMAL"
+        )
+        answers = {
+            e["source_number"]: e["value"]
+            for e in bank["evidence"]
+            if e["field"] == "answer"
+        }
+        self.assertEqual(answers[3], "B")
+        self.assertEqual(answers[4], "A")
+        self.assertNotIn(1, answers)
+
     def test_rich_nodes_are_reported_as_blockers_but_text_evidence_survives(self):
         document = {
             "version": 1,
