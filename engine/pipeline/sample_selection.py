@@ -13,6 +13,23 @@ from engine.render.latex import SUBJECT_NAMES
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _has_verified_answer(question: Mapping[str, Any]) -> bool:
+    if question.get("kind") in {"cloze_group", "reading_group"}:
+        children = question.get("children") or []
+        return bool(children) and all(
+            child.get("answer") not in (None, "")
+            for child in children
+        )
+    return question.get("answer") not in (None, "")
+
+
+def _has_teacher_analysis(question: Mapping[str, Any]) -> bool:
+    if question.get("kind") in {"cloze_group", "reading_group"}:
+        children = question.get("children") or []
+        return bool(children) and all(bool(child.get("analysis")) for child in children)
+    return bool(question.get("analysis"))
+
+
 def select_sample_questions(
     canonical_draft: Mapping[str, Any],
     curriculum: Mapping[str, Any],
@@ -62,10 +79,10 @@ def select_sample_questions(
             })
             continue
 
-        if question.get("answer") in (None, ""):
+        if not _has_verified_answer(question):
             excluded.append({"question_id": qid, "reason": "missing_answer"})
             continue
-        if require_teacher_analysis and not question.get("analysis"):
+        if require_teacher_analysis and not _has_teacher_analysis(question):
             excluded.append({"question_id": qid, "reason": "missing_teacher_analysis"})
             continue
         if (question.get("chapter_key"), question.get("section_key")) not in valid_sections:
