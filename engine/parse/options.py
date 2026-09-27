@@ -4,7 +4,9 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-MARKER = re.compile(r"(?:(?<=^)|(?<=\s))([A-D])[.．、)]\s*")
+# Real Word exports frequently glue choices together: "A. oneB. twoC. threeD. four".
+# Parse label markers by A->B->C->D sequence instead of requiring whitespace.
+MARKER = re.compile(r"([A-D])[.．、)]\s*")
 
 
 @dataclass(frozen=True)
@@ -14,16 +16,26 @@ class ParsedOptions:
     status: str
 
 
-def _split_inline_options(text: str) -> list[tuple[str, str]]:
+def _split_inline_options(text: str) -> tuple[str, list[tuple[str, str]]]:
     matches = list(MARKER.finditer(text))
     if not matches:
-        return []
+        return text.strip(), []
+    prefix = text[:matches[0].start()].strip()
     out: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         content = text[match.end():end].strip()
         out.append((match.group(1), content))
-    return out
+    return prefix, out
+
+
+def _sequence_like(labels: list[str]) -> bool:
+    order = "ABCD"
+    try:
+        indices = [order.index(label) for label in labels]
+    except ValueError:
+        return False
+    return indices == sorted(indices) and len(indices) == len(set(indices))
 
 
 def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
@@ -36,9 +48,16 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
         text = raw.strip()
         if not text:
             continue
-        pieces = _split_inline_options(text)
+        prefix, pieces = _split_inline_options(text)
+        labels_here = [label for label, _ in pieces]
         starts_with_marker = bool(re.match(r"^\s*[A-D][.．、)]", text))
-        if pieces and (starts_with_marker or len(pieces) >= 2):
+        valid_marker_shape = pieces and _sequence_like(labels_here)
+
+        if valid_marker_shape and (starts_with_marker or len(pieces) >= 2):
+            if prefix:
+                if started:
+                    return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
+                stem.append(prefix)
             started = True
             found.extend(pieces)
         elif started:

@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 2
+status_version: 3
 updated: 2026-09-27
 
 product:
@@ -9,7 +9,7 @@ product:
   target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: verified_real_source_adapters
+current_phase: real_candidate_bank_fast_lane
 
 gates:
   - id: GATE-E2E-FIRST-PUBLISH
@@ -43,6 +43,19 @@ gates:
     summary: "预构建Docker出版环境可运行全部测试并在容器内编译8本验证PDF；尚未切生产"
     latest_success_run: 36320065964
 
+  - id: GATE-TOC-NAVIGATION
+    status: passed
+    pr: 15
+    merged_into: integration/production-baseline-v01
+    latest_success_run: 36322757251
+    summary: "八册章/节目录、独立页码、PDF书签与可点击目录目标均通过真实PDF自动检查"
+
+  - id: GATE-CANDIDATE-BANK-FAST-LANE
+    status: private_calibrated
+    pr: 16
+    branch: production/candidate-bank-v01
+    summary: "英语/政治Document AST到Candidate Bank已建立；真实私有学生/原卷结构校准完成，歧义保留复核"
+
   - id: GATE-DOCX-ASSETS
     status: in_progress
     pr: 13
@@ -66,6 +79,10 @@ real_corpus:
     wmf: 270
     png: 166
     jpeg: 56
+  english_fast_lane_source_docs_audited: 12
+  english_fast_lane_candidate_units: 672
+  politics_fast_lane_source_docs_audited: 17
+  politics_fast_lane_candidate_units: 558
   real_books_complete: false
 
 safety_and_quality:
@@ -80,7 +97,9 @@ next:
   - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
   - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
   - 建立真实私有Golden Benchmark（四科代表题）
-  - 将真实英语/政治fast lane批量转成Candidate Question Bank
+  - 建立教师版/解析版Evidence Bank并与Candidate Bank用Pairing v2对齐
+  - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
+  - 核对政治两份31/32题结构异常来源
   - 实现章节候选分类与人工复核队列
   - 生成首个20-50页真实私有学生版/教师版样章
   - 完成Integration Gate后将稳定基线整理进main
