@@ -9,6 +9,7 @@ from engine.parse.options import parse_options
 from engine.pipeline.books import plan_books
 from engine.quality.build_fingerprint import combined_compile_id
 from engine.quality.evidence import evaluate_answer_evidence
+from engine.quality.dedup import exact_duplicate_clusters, near_duplicate_candidates
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -126,6 +127,55 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(first["type"], "emphasis_dot")
         self.assertEqual(first["children"][0]["type"], "underline")
         self.assertEqual(first["children"][0]["children"][0]["text"], "春")
+
+
+    def test_exact_duplicate_questions_block_release(self):
+        data = json.loads((ROOT / "examples/eight-books/dataset.json").read_text())
+        duplicate = copy.deepcopy(data["questions"][0])
+        duplicate["id"] = "DEMO-1-COPY"
+        data["questions"].append(duplicate)
+        data["ledger"]["sources"].append(
+            {"id": "S-COPY", "status": "verified", "expected_questions": 1}
+        )
+        data["ledger"]["expected_source_ids"].append("S-COPY")
+        data["ledger"]["occurrences"].append(
+            {
+                "id": "O-COPY",
+                "source_id": "S-COPY",
+                "question_id": "DEMO-1-COPY",
+                "locator": "fictional duplicate fixture",
+                "status": "verified",
+            }
+        )
+        data["ledger"]["answer_evidence"].append(
+            {
+                "question_id": "DEMO-1-COPY",
+                "source_id": "S-COPY",
+                "value": "A",
+                "status": "verified",
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "unresolved exact duplicate content"):
+            plan_books(data["questions"], data["ledger"], data["curriculum"])
+
+    def test_near_duplicates_are_advisory_not_auto_merged(self):
+        left = {
+            "id": "Q-A",
+            "subject": "chinese",
+            "kind": "single_choice",
+            "stem": [{"type": "text", "text": "下面这道虚构题用于检测近似题。"}],
+            "options": [
+                {"label": "A", "content": [{"type": "text", "text": "甲"}]},
+                {"label": "B", "content": [{"type": "text", "text": "乙"}]}
+            ]
+        }
+        right = copy.deepcopy(left)
+        right["id"] = "Q-B"
+        right["stem"][0]["text"] = "下面这道虚构题用于检测近似题！"
+        self.assertEqual(exact_duplicate_clusters([left, right]), [])
+        near = near_duplicate_candidates([left, right], threshold=0.90)
+        self.assertEqual(len(near), 1)
+        self.assertEqual({near[0].left_id, near[0].right_id}, {"Q-A", "Q-B"})
 
     def test_docx_adapter_blocks_unverified_math_conversion(self):
         block = {
