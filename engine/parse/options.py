@@ -4,9 +4,10 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-# Real Word exports frequently glue choices together: "A. oneB. twoC. threeD. four".
-# Parse label markers by A->B->C->D sequence instead of requiring whitespace.
-STRICT_MARKER = re.compile(r"([A-D])[.．、)]\s*")
+# Word exports can glue labels directly to the previous option text, e.g.
+# "oneB. two". Keep that recovery path, but reject capital-letter acronym tails
+# such as "TTEC." from becoming a fake C option marker.
+STRICT_MARKER = re.compile(r"(?<![A-Z0-9])([A-D])[.．、)]\s*")
 # Page/volume separators can remain at the tail of the final question in a section.
 # They are not option text and may be ignored only after a complete A-D set exists.
 VOLUME_TAIL = re.compile(
@@ -40,18 +41,21 @@ def _split_inline_options(
     text: str,
     *,
     expected_label: str,
+    next_text: str | None,
 ) -> tuple[str, list[tuple[str, str]], bool]:
     """Split one option paragraph while recovering narrowly safe missing punctuation.
 
-    Private English calibration found lines such as "A choice    B. choice" and
-    later standalone lines such as "C choice". A bare leading label is accepted
-    only when:
-    - A is followed later on the same paragraph by a stricter B/C/D marker; or
-    - option parsing has already started and B/C/D is exactly the next expected
-      label.
+    Private English calibration found lines such as "A choice    B. choice",
+    standalone later labels such as "C choice", and a few cases where bare A is
+    on its own line followed by a strict B line.
 
-    This deliberately does not treat an ordinary stem beginning with "A ..." as
-    an option.
+    Bare-label recovery is deliberately sequence-driven:
+    - A requires either a later strict B/C/D marker in the same paragraph or a
+      strict B marker at the start of the next paragraph;
+    - B/C/D are accepted only when they are exactly the next expected label after
+      option parsing has already started.
+
+    An ordinary stem beginning with "A ..." therefore stays stem text.
     """
     prefix, strict, starts_strict = _strict_pieces(text)
 
@@ -69,13 +73,20 @@ def _split_inline_options(
     ]
     order = "ABCD"
     strict_labels = [match.group(1) for match in strict_after]
+    next_is_strict_b = bool(
+        next_text is not None
+        and re.match(r"^\s*B[.．、)]", next_text)
+    )
     allow_bare = (
         expected_label != "A"
         or (
             "A" not in strict_labels
-            and any(
-                order.index(label) > order.index(expected_label)
-                for label in strict_labels
+            and (
+                any(
+                    order.index(label) > order.index(expected_label)
+                    for label in strict_labels
+                )
+                or next_is_strict_b
             )
         )
     )
@@ -109,24 +120,23 @@ def _sequence_like(labels: list[str]) -> bool:
 
 def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
     """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
+    texts = [raw.strip() for raw in paragraphs if raw.strip()]
     stem: list[str] = []
     found: list[tuple[str, str]] = []
     started = False
 
-    for raw in paragraphs:
-        text = raw.strip()
-        if not text:
-            continue
-
+    for index, text in enumerate(texts):
         if len(found) >= 4:
             if VOLUME_TAIL.match(text):
                 continue
             return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
 
         expected_label = "ABCD"[len(found)]
+        next_text = texts[index + 1] if index + 1 < len(texts) else None
         prefix, pieces, starts_with_marker = _split_inline_options(
             text,
             expected_label=expected_label,
+            next_text=next_text,
         )
         labels_here = [label for label, _ in pieces]
         valid_marker_shape = (
@@ -134,8 +144,18 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
             and _sequence_like(labels_here)
             and labels_here[0] == expected_label
         )
+        bare_a_confirmed_by_next_b = (
+            expected_label == "A"
+            and len(pieces) == 1
+            and next_text is not None
+            and bool(re.match(r"^\s*B[.．、)]", next_text))
+        )
 
-        if valid_marker_shape and (starts_with_marker or len(pieces) >= 2):
+        if valid_marker_shape and (
+            starts_with_marker
+            or len(pieces) >= 2
+            or bare_a_confirmed_by_next_b
+        ):
             if prefix:
                 if started:
                     return ParsedOptions(
