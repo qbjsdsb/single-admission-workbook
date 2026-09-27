@@ -1,8 +1,30 @@
-# Mathematics asset audit v0.1
+# Mathematics and DOCX asset audit v0.1
 
-Private calibration against the supplied mathematics prep DOCX revealed that legacy embedded equation objects are more important than OMML for this corpus.
+Private calibration against the supplied source archive shows that legacy embedded equation objects and media assets are more important than OMML for this corpus.
 
-Observed aggregate facts from the private source file:
+## Whole DOCX corpus
+
+Across 110 private DOCX files:
+
+- 492 media payloads;
+- 302 embedding payloads;
+- 302 OLE objects;
+- all 302 OLE objects are Equation-family objects;
+- 378 DrawingML drawings;
+- 394 VML image references;
+- only 3 OMML math objects.
+
+Media extensions:
+
+- WMF: 270
+- PNG: 166
+- JPEG: 56
+
+The Equation OLE objects are concentrated in the mathematics prep material.
+
+## Mathematics prep DOCX
+
+Observed aggregate facts from the private mathematics prep file:
 
 - 302 embedded OLE objects;
 - all 302 use Equation-family ProgIDs:
@@ -28,9 +50,11 @@ Document AST preserves:
 - DrawingML image relationship, dimensions and name;
 - original OOXML evidence.
 
+The private asset exporter stores relationship-backed payloads by SHA-256, so repeated extraction does not create multiple copies of the same binary asset.
+
 The next conversion layer may choose a verified route:
 
-1. equation semantics converter;
+1. equation-semantics converter;
 2. preview-image fidelity route;
 3. manual-review route.
 
