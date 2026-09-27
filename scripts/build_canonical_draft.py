@@ -25,12 +25,14 @@ def main() -> int:
     parser.add_argument("scored_verified_bank", type=Path)
     parser.add_argument("classification_manifest", type=Path)
     parser.add_argument("--teacher-enrichment", type=Path)
+    parser.add_argument("--candidate-bank", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
     scored = load(args.scored_verified_bank)
     classification = load(args.classification_manifest)
     enrichment = load(args.teacher_enrichment) if args.teacher_enrichment else None
+    candidate_bank = load(args.candidate_bank) if args.candidate_bank else None
 
     manifest_schema = load(ROOT / "schema/classification-manifest.schema.json")
     jsonschema.Draft202012Validator(manifest_schema).validate(classification)
@@ -42,6 +44,7 @@ def main() -> int:
         scored,
         classification,
         teacher_enrichment=enrichment,
+        candidate_bank=candidate_bank,
     )
     batch_schema = load(ROOT / "schema/canonical-draft.schema.json")
     jsonschema.Draft202012Validator(batch_schema).validate(draft)
