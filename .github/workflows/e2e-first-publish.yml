@@ -1,5 +1,7 @@
 name: E2E first publish
 
+# End-to-end gate: fictional DOCX sources -> canonical data -> student/teacher A4 PDFs.
+
 on:
   workflow_dispatch:
   push:
