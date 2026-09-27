@@ -8,7 +8,7 @@
   "properties": {
     "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_-]*$"},
     "subject": {"enum": ["chinese", "mathematics", "english", "politics"]},
-    "kind": {"enum": ["single_choice", "multiple_choice", "fill_blank", "short_answer", "material_question", "solution", "composition", "reading_group"]},
+    "kind": {"enum": ["single_choice", "multiple_choice", "fill_blank", "short_answer", "material_question", "solution", "composition", "reading_group", "cloze_group"]},
     "chapter_key": {"type": "string"},
     "section_key": {"type": "string"},
     "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
