@@ -1,0 +1,49 @@
+version: 1
+subject: english
+status: source-derived-draft
+basis:
+  - "用户提供资料中【备考笔记】英语目录与专题文件名"
+chapters:
+  - key: vocabulary_patterns
+    title: 考点词汇与考点句型
+    sections:
+      - {key: core_1700, title: 核心1700单词}
+      - {key: irregular_verbs, title: 不规则动词}
+      - {key: word_differences, title: 常用词语辨析}
+      - {key: key_sentences, title: 高频重点句型}
+      - {key: cloze_vocabulary, title: 完形填空高频词汇}
+      - {key: common_phrases, title: 常用词组}
+      - {key: word_conversion, title: 核心单词词性转换}
+      - {key: phrase_quick_review, title: 短语速查速记}
+      - {key: verb_phrases, title: 高频动词词组}
+  - key: grammar
+    title: 语法
+    sections:
+      - {key: noun, title: 名词}
+      - {key: article, title: 冠词}
+      - {key: pronoun, title: 代词}
+      - {key: adjective, title: 形容词}
+      - {key: adverb, title: 副词}
+      - {key: numeral, title: 数词}
+      - {key: preposition, title: 介词}
+      - {key: verb, title: 动词}
+      - {key: conjunction, title: 连词}
+      - {key: word_formation, title: 构词法}
+      - {key: syntax, title: 句法}
+  - key: reading
+    title: 阅读理解
+    sections:
+      - {key: fast_reading, title: 快读文，知大意}
+      - {key: difficult_points, title: 准读文，破难处}
+      - {key: detail, title: 细节理解}
+      - {key: inference, title: 推理判断}
+      - {key: main_idea, title: 主旨大意}
+      - {key: word_guessing, title: 词义猜测}
+  - key: cloze
+    title: 完形填空
+    sections:
+      - {key: cloze_training, title: 完形填空专项训练}
+  - key: writing
+    title: 写作
+    sections:
+      - {key: writing_training, title: 写作专项训练}
