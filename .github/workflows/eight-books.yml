@@ -6,6 +6,7 @@ on:
       - 'engine/**'
       - 'schema/**'
       - 'scripts/workbook.py'
+      - 'scripts/check_pdf_navigation.py'
       - 'scripts/check_golden_benchmark.py'
       - 'tests/**'
       - 'examples/eight-books/**'
@@ -52,7 +53,7 @@ jobs:
           BASE="${{ github.event.pull_request.base.sha }}"
           git diff --name-only "$BASE"...HEAD > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
-          if grep -Eq '^(engine/render/|engine/pipeline/books.py|engine/quality/(build_fingerprint|evidence|dedup)\.py|schema/|scripts/workbook.py|templates/latex/|examples/eight-books/|requirements-pipeline\.txt|\.github/workflows/eight-books\.yml)' /tmp/changed-files.txt; then
+          if grep -Eq '^(engine/render/|engine/pipeline/books.py|engine/quality/(build_fingerprint|evidence|dedup)\.py|schema/|scripts/(workbook|check_pdf_navigation).py|templates/latex/|examples/eight-books/|requirements-pipeline\.txt|\.github/workflows/eight-books\.yml)' /tmp/changed-files.txt; then
             echo "print_needed=true" >> "$GITHUB_OUTPUT"
           else
             echo "print_needed=false" >> "$GITHUB_OUTPUT"
@@ -77,6 +78,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends texlive-xetex texlive-lang-chinese texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-croscore poppler-utils
       - name: Build eight fictional verification books
         run: python scripts/workbook.py build examples/eight-books/dataset.json --compile
+      - name: Check printed contents and PDF navigation
+        run: python scripts/check_pdf_navigation.py build/eight-books
       - name: Render every sample page in color and grayscale
         run: |
           for folder in build/eight-books/*-student build/eight-books/*-teacher; do
@@ -89,6 +92,7 @@ jobs:
           name: eight-books-fictional-verification
           path: |
             build/eight-books/*/main.pdf
+            build/eight-books/*/book.json
             build/eight-books/*/color-*.png
             build/eight-books/*/gray-*.png
             build/eight-books/coverage.json

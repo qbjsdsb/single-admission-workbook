@@ -184,6 +184,7 @@ def render_book(*, template: str, book: dict[str, Any], questions: dict[str, dic
         "%%PAGE_LABEL%%": PAGE_LABELS[book["subject"]],
         "%%QUOTE_SEED%%": str(int(book["quote_seed"]) % 997),
         "%%BODY%%": body,
+        "%%FRONT_MATTER%%": r"\workbookcontents" if book.get("table_of_contents", False) else "",
     }
     out = template
     for key, value in replacements.items():

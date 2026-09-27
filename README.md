@@ -72,3 +72,8 @@ Set-Location .\single-admission-workbook-public
 本仓库暂未附加开源许可证。许可证确定前，其他人可以查看和讨论代码，但请勿直接复制、再发布或用于商业出版。
 
 
+
+## 目录与速度优化
+
+八册构建默认生成章/节两级目录、独立页码与PDF书签；目录复用章节清单，无需另填。
+保留原校验要求，并减少重复schema检查与全库扫描。详见 [目录与轻量提速](docs/architecture/TOC_AND_SPEED.md)。

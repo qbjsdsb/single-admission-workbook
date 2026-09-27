@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 import hashlib
 import json
 from pathlib import Path
@@ -37,9 +37,10 @@ def validate_inputs(questions, ledger, curriculum):
             "unresolved exact duplicate content: " + ", ".join(cluster.question_ids)
         )
     schema = json.loads((ROOT / 'schema/question.schema.json').read_text())
+    validator = jsonschema.Draft202012Validator(schema)
     for q in questions:
         try:
-            jsonschema.validate(q, schema)
+            validator.validate(q)
         except jsonschema.ValidationError as e:
             errors.append(f"{q['id']}: schema: {e.message}")
             continue
@@ -62,23 +63,25 @@ def validate_inputs(questions, ledger, curriculum):
     expected_sources = ledger.get('expected_source_ids', [])
     if not expected_sources or set(expected_sources) != set(source_ids):
         errors.append('source ledger does not match frozen intake source IDs')
+    source_id_set = set(source_ids)
     occurrences = ledger.get('occurrences', [])
+    source_counts = Counter(o['source_id'] for o in occurrences)
     occurrence_ids = [o['id'] for o in occurrences]
     if len(occurrence_ids) != len(set(occurrence_ids)):
         errors.append('duplicate occurrence IDs')
     covered = set()
     for source in sources:
-        found = [o for o in occurrences if o['source_id'] == source['id']]
+        found_count = source_counts[source['id']]
         expected = source.get('expected_questions')
         if source.get('status') != 'verified' or type(expected) is not int or expected < 0:
             errors.append(f"{source['id']}: source segmentation not verified")
-        elif len(found) != expected:
-            errors.append(f"{source['id']}: expected {expected}, accounted {len(found)}")
+        elif found_count != expected:
+            errors.append(f"{source['id']}: expected {expected}, accounted {found_count}")
         if expected == 0 and not source.get('non_question_reason'):
             errors.append(f"{source['id']}: zero-question source needs evidence")
     for o in occurrences:
         qid = o.get('question_id')
-        if o['source_id'] not in source_ids or qid not in bank or not o.get('locator'):
+        if o['source_id'] not in source_id_set or qid not in bank or not o.get('locator'):
             errors.append(f"{o['id']}: unresolved provenance")
         else:
             covered.add(qid)
@@ -86,6 +89,9 @@ def validate_inputs(questions, ledger, curriculum):
             errors.append(f"{o['id']}: occurrence not verified")
     if covered != set(bank):
         errors.append('canonical bank and source coverage do not match')
+    by_subject = defaultdict(list)
+    for q in questions:
+        by_subject[q['subject']].append(q)
     for subject in SUBJECTS:
         chapters = curriculum.get(subject, [])
         chapter_keys = [c['key'] for c in chapters]
@@ -96,7 +102,7 @@ def validate_inputs(questions, ledger, curriculum):
             keys = [s['key'] for s in c['sections']]
             if len(keys) != len(set(keys)):
                 errors.append(f'{subject}: duplicate section keys')
-        subset = [q for q in questions if q['subject'] == subject]
+        subset = by_subject[subject]
         if not subset:
             errors.append(f'{subject}: no questions')
         for q in subset:
@@ -111,13 +117,17 @@ def plan_books(questions, ledger, curriculum):
     bank = validate_inputs(questions, ledger, curriculum)
     books = []
     difficulty = {'basic': 0, 'standard': 1, 'advanced': 2}
+    by_section = defaultdict(list)
+    for q in questions:
+        by_section[q['subject'], q['chapter_key'], q['section_key']].append(q)
+    book_schema = json.loads((ROOT / 'schema/book.schema.json').read_text())
+    book_validator = jsonschema.Draft202012Validator(book_schema)
     for subject in SUBJECTS:
         chapters = []
         for c in curriculum[subject]:
             sections = []
             for s in c['sections']:
-                selected = sorted((q for q in questions if q['subject'] == subject and
-                                   q['chapter_key'] == c['key'] and q['section_key'] == s['key']),
+                selected = sorted(by_section[subject, c['key'], s['key']],
                                   key=lambda q: (difficulty.get(q.get('difficulty'), 1), q['id']))
                 if selected:
                     sections.append({**s, 'question_ids': [q['id'] for q in selected]})
@@ -127,8 +137,8 @@ def plan_books(questions, ledger, curriculum):
             book = {'schema_version': 1, 'book_id': f'{subject}-{edition}',
                     'title': SUBJECT_NAMES[subject] + ('练习册' if edition == 'student' else '教师解析册'),
                     'subject': subject, 'edition': edition, 'paper': 'A4', 'quote_seed': 20260927,
-                    'chapters': chapters}
-            jsonschema.validate(book, json.loads((ROOT / 'schema/book.schema.json').read_text()))
+                    'chapters': chapters, 'table_of_contents': True}
+            book_validator.validate(book)
             books.append(book)
     # Exactly one placement in each edition; source duplicates retain all provenance links.
     for edition in ('student', 'teacher'):

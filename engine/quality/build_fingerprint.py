@@ -67,6 +67,7 @@ def _system_font_record(name: str) -> dict[str, str]:
 def latex_environment_payload() -> dict:
     """Describe the compile environment that can change PDF output."""
     return {
+        "compile_driver_sha256": hashlib.sha256((Path(__file__).parents[1] / "render/compile.py").read_bytes()).hexdigest(),
         "xelatex": _command_line(["xelatex", "--version"]),
         "kpsewhich": _command_line(["kpsewhich", "--version"]),
         "fonts": [
