@@ -118,6 +118,28 @@ class CandidateBankTests(unittest.TestCase):
         self.assertIn("这是虚构材料", material["stem_text"])
         self.assertEqual(material["kind"], "material_question")
 
+    def test_word_spelling_phrase_inside_question_is_not_a_new_section(self):
+        texts = [
+            "IV.单词拼写(共2小题)",
+            "46. The police called it an ______ (意外事故). (根据汉语提示单词拼写)",
+            "47. Please ______ the correct word. (根据汉语提示单词拼写)",
+            "V.书面表达(满分10分)",
+            "Write a fictional note."
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(document, subject="english", source_id="ENG-SPELL")
+        spelling = [q for q in bank["candidates"] if q["section_key"] == "word_spelling"]
+        self.assertEqual([q["source_number"] for q in spelling], [46, 47])
+        self.assertEqual(
+            [s["section_key"] for s in bank["sections"]],
+            ["word_spelling", "writing"],
+        )
+
     def test_rich_content_becomes_explicit_blocker_not_plain_text(self):
         document = {
             "version": 1,
