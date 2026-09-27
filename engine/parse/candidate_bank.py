@@ -33,7 +33,10 @@ def _paragraph_text(block: Mapping[str, Any]) -> tuple[str | None, list[str]]:
             text_parts.append(str(inline.get("text") or ""))
         else:
             blockers.append(f"unsupported_inline:{kind}")
-    return "".join(text_parts).strip(), blockers
+    # A paragraph can contain several instances of the same unsupported rich
+    # feature (for example, two images). Keep the blocker evidence unique so
+    # it satisfies the candidate-bank contract without hiding any new type.
+    return "".join(text_parts).strip(), list(dict.fromkeys(blockers))
 
 
 def safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence], list[dict[str, Any]]]:

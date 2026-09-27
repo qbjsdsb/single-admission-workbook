@@ -382,22 +382,30 @@ class EvidenceBankTests(unittest.TestCase):
         self.assertNotIn(1, answers)
 
     def test_rich_nodes_are_reported_as_blockers_but_text_evidence_survives(self):
+        rich_paragraph = paragraph(
+            1,
+            "1. A fictional prompt.",
+            {
+                "type": "image_ref",
+                "relationship_id": "rId1",
+                "locator": "word/document.xml/body/1/drawing/0",
+                "status": "captured_not_normalized",
+                "source": "drawingml",
+            },
+        )
+        rich_paragraph["inlines"].append({
+            "type": "image_ref",
+            "relationship_id": "rId2",
+            "locator": "word/document.xml/body/1/drawing/1",
+            "status": "captured_not_normalized",
+            "source": "drawingml",
+        })
         document = {
             "version": 1,
             "source_format": "docx",
             "blocks": [
                 paragraph(0, "I. 单项选择"),
-                paragraph(
-                    1,
-                    "1. A fictional prompt.",
-                    {
-                        "type": "image_ref",
-                        "relationship_id": "rId1",
-                        "locator": "word/document.xml/body/1/drawing/0",
-                        "status": "captured_not_normalized",
-                        "source": "drawingml",
-                    },
-                ),
+                rich_paragraph,
                 paragraph(2, "A. one B. two C. three D. four"),
                 paragraph(3, "答案：B"),
                 paragraph(4, "解析：虚构解析。")
@@ -409,6 +417,7 @@ class EvidenceBankTests(unittest.TestCase):
         )
         self.assertEqual(bank["summary"]["blocker_count"], 1)
         self.assertEqual(bank["summary"]["question_record_count"], 1)
+        self.assertEqual(bank["blockers"][0]["reasons"], ["unsupported_inline:image_ref"])
         self.assertTrue(any(
             "unsupported_inline:image_ref" in reason
             for reason in bank["blockers"][0]["reasons"]

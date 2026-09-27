@@ -46,7 +46,9 @@ def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidenc
             if inline.get("type") == "text":
                 text_parts.append(str(inline.get("text") or ""))
             else:
-                unsupported.append(f"unsupported_inline:{inline.get('type')}")
+                reason = f"unsupported_inline:{inline.get('type')}"
+                if reason not in unsupported:
+                    unsupported.append(reason)
         text = "".join(text_parts).strip()
         if unsupported:
             blockers.append({"locator": locator, "reasons": unsupported})
