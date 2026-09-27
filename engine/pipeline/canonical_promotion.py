@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import re
 from typing import Any, Mapping
 
 
@@ -11,6 +9,12 @@ SUBJECT_PREFIX = {
     "mathematics": "MAT",
     "english": "ENG",
     "politics": "POL",
+}
+
+DIFFICULTY_ORDER = {
+    "basic": 0,
+    "standard": 1,
+    "advanced": 2,
 }
 
 
@@ -56,16 +60,91 @@ def _teacher_index(
     return out
 
 
+def _build_leaf_question(
+    *,
+    subject: str,
+    item: Mapping[str, Any],
+    classification: Mapping[str, Any],
+    enrichment: Mapping[str, Any] | None,
+    include_placement: bool,
+) -> dict[str, Any]:
+    candidate_id = str(item.get("candidate_id") or "")
+    score = item.get("score")
+    if not isinstance(score, (int, float)) or score <= 0:
+        raise ValueError("missing_or_invalid_score")
+
+    kind = str(item.get("kind") or "")
+    if kind not in {
+        "single_choice",
+        "fill_blank",
+        "material_question",
+        "composition",
+    }:
+        raise ValueError(f"unsupported_canonical_kind:{kind}")
+
+    question: dict[str, Any] = {
+        "id": _canonical_id(subject, candidate_id),
+        "kind": kind,
+        "score": float(score),
+        "stem": _text_rich(item.get("stem_text")),
+        "answer": item.get("verified_answer"),
+    }
+
+    if include_placement:
+        question.update({
+            "subject": subject,
+            "chapter_key": str(classification["chapter_key"]),
+            "section_key": str(classification["section_key"]),
+            "tags": sorted(set(str(x) for x in classification.get("tags") or [])),
+            "difficulty": str(classification.get("difficulty") or "standard"),
+        })
+
+    if kind == "single_choice":
+        options = item.get("options") or []
+        if len(options) < 2:
+            raise ValueError("single_choice_missing_options")
+        question["options"] = [
+            {
+                "label": str(option.get("label") or ""),
+                "content": _text_rich(option.get("text")),
+            }
+            for option in options
+        ]
+        question["layout"] = {
+            "choice_mode": "auto",
+            "keep_together": True,
+        }
+
+    if enrichment:
+        if enrichment.get("analysis"):
+            question["analysis"] = _text_rich(enrichment["analysis"])
+        if enrichment.get("teacher_notes"):
+            question["teacher_notes"] = _text_rich(enrichment["teacher_notes"])
+
+    return question
+
+
+def _max_difficulty(classifications: list[Mapping[str, Any]]) -> str:
+    return max(
+        (
+            str(item.get("difficulty") or "standard")
+            for item in classifications
+        ),
+        key=lambda value: DIFFICULTY_ORDER.get(value, 1),
+    )
+
+
 def promote_to_canonical_draft(
     scored_verified_bank: Mapping[str, Any],
     classification_manifest: Mapping[str, Any],
     *,
     teacher_enrichment: Mapping[str, Any] | None = None,
+    candidate_bank: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build schema-valid canonical drafts only from fully gated inputs.
 
-    This function does not classify or invent metadata. Missing classification,
-    missing score, or unsupported candidate kinds remain unresolved.
+    Candidate groups are promoted atomically when Candidate Bank group evidence is
+    supplied. A cloze/reading passage is never published as detached child items.
     """
     subject = str(scored_verified_bank.get("subject") or "")
     candidate_source_id = str(scored_verified_bank.get("candidate_source_id") or "")
@@ -74,6 +153,12 @@ def promote_to_canonical_draft(
     if classification_manifest.get("subject") != subject:
         raise ValueError("classification manifest subject mismatch")
 
+    if candidate_bank is not None:
+        if candidate_bank.get("source_id") != candidate_source_id:
+            raise ValueError("candidate bank source mismatch")
+        if candidate_bank.get("subject") != subject:
+            raise ValueError("candidate bank subject mismatch")
+
     classifications = _classification_index(classification_manifest)
     if teacher_enrichment is not None:
         enrichment_source = teacher_enrichment.get("candidate_source_id")
@@ -81,13 +166,136 @@ def promote_to_canonical_draft(
             raise ValueError("teacher enrichment source mismatch")
     teacher = _teacher_index(teacher_enrichment)
 
+    assigned = {
+        str(item.get("candidate_id") or ""): item
+        for item in scored_verified_bank.get("assigned") or []
+        if str(item.get("candidate_id") or "")
+    }
+
     questions: list[dict[str, Any]] = []
     unresolved: list[dict[str, str]] = []
+    grouped_candidate_ids: set[str] = set()
+
+    for group in ([] if candidate_bank is None else candidate_bank.get("groups") or []):
+        group_id = str(group.get("group_id") or "")
+        child_ids = [str(x) for x in group.get("child_candidate_ids") or []]
+        grouped_candidate_ids.update(child_ids)
+
+        if not group_id or not child_ids:
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": "invalid_group_structure",
+            })
+            continue
+
+        shared_material = str(group.get("shared_material_text") or "").strip()
+        if not shared_material:
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": "group_missing_shared_material",
+            })
+            continue
+
+        missing = [candidate_id for candidate_id in child_ids if candidate_id not in assigned]
+        if missing:
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": "group_incomplete_verified_or_score",
+            })
+            continue
+
+        child_classifications: list[Mapping[str, Any]] = []
+        classification_failed = False
+        for candidate_id in child_ids:
+            classification = classifications.get(candidate_id)
+            if classification is None:
+                unresolved.append({
+                    "candidate_id": group_id,
+                    "reason": "group_missing_classification",
+                })
+                classification_failed = True
+                break
+            if classification.get("decision") != "assign":
+                unresolved.append({
+                    "candidate_id": group_id,
+                    "reason": "group_classification_deferred",
+                })
+                classification_failed = True
+                break
+            child_classifications.append(classification)
+        if classification_failed:
+            continue
+
+        placements = {
+            (
+                str(classification["chapter_key"]),
+                str(classification["section_key"]),
+            )
+            for classification in child_classifications
+        }
+        if len(placements) != 1:
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": "group_classification_mismatch",
+            })
+            continue
+
+        children: list[dict[str, Any]] = []
+        child_failed = False
+        for candidate_id, classification in zip(child_ids, child_classifications):
+            try:
+                child = _build_leaf_question(
+                    subject=subject,
+                    item=assigned[candidate_id],
+                    classification=classification,
+                    enrichment=teacher.get(candidate_id),
+                    include_placement=False,
+                )
+            except ValueError as exc:
+                unresolved.append({
+                    "candidate_id": group_id,
+                    "reason": f"group_child_invalid:{exc}",
+                })
+                child_failed = True
+                break
+            children.append(child)
+        if child_failed:
+            continue
+
+        chapter_key, section_key = next(iter(placements))
+        tags = sorted({
+            str(tag)
+            for classification in child_classifications
+            for tag in classification.get("tags") or []
+        })
+        group_kind = str(group.get("kind") or "")
+        if group_kind not in {"cloze_group", "reading_group"}:
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": f"unsupported_group_kind:{group_kind}",
+            })
+            continue
+
+        questions.append({
+            "id": _canonical_id(subject, group_id),
+            "subject": subject,
+            "kind": group_kind,
+            "chapter_key": chapter_key,
+            "section_key": section_key,
+            "tags": tags,
+            "difficulty": _max_difficulty(child_classifications),
+            "score": float(sum(float(child["score"]) for child in children)),
+            "stem": _text_rich(shared_material),
+            "answer": [child.get("answer") for child in children],
+            "children": children,
+        })
 
     for item in scored_verified_bank.get("assigned") or []:
         candidate_id = str(item.get("candidate_id") or "")
         if not candidate_id:
             unresolved.append({"candidate_id": "", "reason": "missing_candidate_id"})
+            continue
+        if candidate_id in grouped_candidate_ids:
             continue
 
         classification = classifications.get(candidate_id)
@@ -104,66 +312,20 @@ def promote_to_canonical_draft(
             })
             continue
 
-        score = item.get("score")
-        if not isinstance(score, (int, float)) or score <= 0:
+        try:
+            question = _build_leaf_question(
+                subject=subject,
+                item=item,
+                classification=classification,
+                enrichment=teacher.get(candidate_id),
+                include_placement=True,
+            )
+        except ValueError as exc:
             unresolved.append({
                 "candidate_id": candidate_id,
-                "reason": "missing_or_invalid_score",
+                "reason": str(exc),
             })
             continue
-
-        kind = str(item.get("kind") or "")
-        if kind not in {
-            "single_choice",
-            "fill_blank",
-            "material_question",
-            "composition",
-        }:
-            unresolved.append({
-                "candidate_id": candidate_id,
-                "reason": f"unsupported_canonical_kind:{kind}",
-            })
-            continue
-
-        question: dict[str, Any] = {
-            "id": _canonical_id(subject, candidate_id),
-            "subject": subject,
-            "kind": kind,
-            "chapter_key": str(classification["chapter_key"]),
-            "section_key": str(classification["section_key"]),
-            "tags": sorted(set(str(x) for x in classification.get("tags") or [])),
-            "difficulty": str(classification.get("difficulty") or "standard"),
-            "score": float(score),
-            "stem": _text_rich(item.get("stem_text")),
-            "answer": item.get("verified_answer"),
-        }
-
-        if kind == "single_choice":
-            options = item.get("options") or []
-            if len(options) < 2:
-                unresolved.append({
-                    "candidate_id": candidate_id,
-                    "reason": "single_choice_missing_options",
-                })
-                continue
-            question["options"] = [
-                {
-                    "label": str(option.get("label") or ""),
-                    "content": _text_rich(option.get("text")),
-                }
-                for option in options
-            ]
-            question["layout"] = {
-                "choice_mode": "auto",
-                "keep_together": True,
-            }
-
-        enrichment = teacher.get(candidate_id)
-        if enrichment:
-            if enrichment.get("analysis"):
-                question["analysis"] = _text_rich(enrichment["analysis"])
-            if enrichment.get("teacher_notes"):
-                question["teacher_notes"] = _text_rich(enrichment["teacher_notes"])
 
         questions.append(question)
 

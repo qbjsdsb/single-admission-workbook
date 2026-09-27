@@ -2,7 +2,7 @@
 
 目标：从私有原始资料生成语文、数学、英语、政治四本练习册与四本教师解析册。
 
-**当前：全库提取/排队与八册严格编排已接通；真实全库 OCR、保真解析、逐题核验和自动分类尚未完成，不能视为八本正式成品。**
+**当前：全库提取、证据配对、逐题核验、分值/分类Gate、Canonical晋升、双版样章与八册严格编排已接通；真实全库保真解析、异常复核和四科内容生产仍未完成，不能视为八本正式成品。**
 
 ```bash
 pip install -r requirements-pipeline.txt
@@ -21,7 +21,7 @@ python scripts/workbook.py build examples/eight-books/dataset.json --compile
 
 本仓库关注的是：
 
-- B5 书芯与中文教辅版式；
+- A4 书芯与中文教辅版式；
 - LaTeX / XeLaTeX 的可重复编译；
 - 语文、政治题目组件的统一管理；
 - 学生版与教师版的分离；

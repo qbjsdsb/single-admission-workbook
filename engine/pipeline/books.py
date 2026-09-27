@@ -46,10 +46,18 @@ def validate_inputs(questions, ledger, curriculum):
             continue
         if not has_content(q['stem']):
             errors.append(f"{q['id']}: empty stem")
-        if not has_content(q.get('answer')) or not has_content(q.get('analysis')):
-            errors.append(f"{q['id']}: missing answer or analysis")
         if q['kind'] in ('reading_group', 'cloze_group'):
-            errors.append(f"{q['id']}: grouped child rendering not yet supported")
+            children = q.get('children') or []
+            if not children:
+                errors.append(f"{q['id']}: grouped question has no children")
+            for index, child in enumerate(children, start=1):
+                child_id = child.get('id') or f"child-{index}"
+                if not has_content(child.get('stem')):
+                    errors.append(f"{q['id']}/{child_id}: empty child stem")
+                if not has_content(child.get('answer')) or not has_content(child.get('analysis')):
+                    errors.append(f"{q['id']}/{child_id}: missing child answer or analysis")
+        elif not has_content(q.get('answer')) or not has_content(q.get('analysis')):
+            errors.append(f"{q['id']}: missing answer or analysis")
     if ledger.get('strict_answer_evidence'):
         errors.extend(validate_release_evidence(
             ids,

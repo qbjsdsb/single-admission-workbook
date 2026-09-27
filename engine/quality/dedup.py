@@ -34,6 +34,18 @@ def _normalize(value):
     return value
 
 
+def _group_child_content(children) -> list[dict]:
+    out = []
+    for child in children or []:
+        out.append({
+            "kind": child.get("kind"),
+            "stem": child.get("stem"),
+            "options": child.get("options"),
+            "parts": child.get("parts"),
+        })
+    return out
+
+
 def canonical_content_payload(question: Mapping[str, object]) -> dict:
     """Fields that define the actual exercise, excluding answer/explanation/source metadata."""
     return _normalize({
@@ -42,6 +54,7 @@ def canonical_content_payload(question: Mapping[str, object]) -> dict:
         "stem": question.get("stem"),
         "options": question.get("options"),
         "parts": question.get("parts"),
+        "children": _group_child_content(question.get("children")),
     })
 
 

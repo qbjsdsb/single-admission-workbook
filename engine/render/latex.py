@@ -161,6 +161,10 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
 
     return "\n".join(x for x in out if x)
 
+def render_group_material(question: dict[str, Any]) -> str:
+    return r"\groupmaterial{" + rich_text(question["stem"]) + "}"
+
+
 def render_body(book: dict[str, Any], questions: dict[str, dict[str, Any]]) -> str:
     edition = book["edition"]
     parts: list[str] = []
@@ -170,8 +174,22 @@ def render_body(book: dict[str, Any], questions: dict[str, dict[str, Any]]) -> s
         for section_index, section in enumerate(chapter["sections"], start=1):
             parts.append(rf"\sectionhead{{第{section_index}节}}{{{escape_text(section['title'])}}}")
             for qid in section["question_ids"]:
+                question = questions[qid]
+                if question.get("kind") in {"cloze_group", "reading_group"}:
+                    parts.append(render_group_material(question))
+                    for child in question.get("children") or []:
+                        display_number += 1
+                        child_question = {
+                            **child,
+                            "subject": question["subject"],
+                        }
+                        parts.append(
+                            render_question(child_question, display_number, edition)
+                        )
+                    continue
+
                 display_number += 1
-                parts.append(render_question(questions[qid], display_number, edition))
+                parts.append(render_question(question, display_number, edition))
     return "\n".join(parts)
 
 def render_book(*, template: str, book: dict[str, Any], questions: dict[str, dict[str, Any]]) -> str:
