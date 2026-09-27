@@ -58,8 +58,18 @@ def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidenc
 EXPLICIT_NUMBERED_ANSWER = re.compile(
     r"^\s*(\d{1,3})\s*[.．、]?\s*答案\s*[:：]?\s*(.+?)\s*$"
 )
-PLAIN_ANSWER = re.compile(r"^\s*答案\s*[:：]?\s*(.+?)\s*$")
-ANALYSIS = re.compile(r"^\s*解析\s*[:：]?\s*(.+?)\s*$")
+PLAIN_ANSWER = re.compile(
+    r"^\s*(?:【\s*)?答案(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
+)
+ANALYSIS = re.compile(
+    r"^\s*(?:【\s*)?解析(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
+)
+DETAIL = re.compile(
+    r"^\s*(?:【\s*)?详解(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
+)
+QUESTION_DETAIL = re.compile(
+    r"^\s*【\s*(\d{1,3})\s*题详解\s*】\s*(.*?)\s*$"
+)
 CORE = re.compile(r"^\s*题干核心\s*[:：]?\s*(.+?)\s*$")
 
 # Supports "1.A 2.B ..." and "26.甲27.乙" while stopping at the next numbered item.
@@ -69,12 +79,19 @@ COMPACT_ITEM = re.compile(
 
 
 def _compact_items(text: str) -> list[tuple[int, str]]:
+    matches = list(COMPACT_ITEM.finditer(text))
+    if len(matches) < 2 or matches[0].start() > 3:
+        return []
     hits = [
         (int(match.group(1)), match.group(2).strip())
-        for match in COMPACT_ITEM.finditer(text)
+        for match in matches
         if match.group(2).strip()
     ]
-    return hits if len(hits) >= 2 else []
+    # Answer-summary values are short. Long chunks are far more likely to be prose
+    # with incidental numbered phrases and must not become answer evidence.
+    if len(hits) < 2 or any(len(value) > 60 for _, value in hits):
+        return []
+    return hits
 
 
 def _question_prompt_record(
@@ -96,6 +113,8 @@ def _question_prompt_record(
         if (
             PLAIN_ANSWER.match(text)
             or ANALYSIS.match(text)
+            or DETAIL.match(text)
+            or QUESTION_DETAIL.match(text)
             or CORE.match(text)
             or EXPLICIT_NUMBERED_ANSWER.match(text)
         ):
@@ -139,6 +158,7 @@ def extract_evidence_bank(
     current_number: int | None = None
     current_question_paragraphs: list[ParagraphEvidence] = []
     seen_prompt_keys: set[tuple[str | None, int]] = set()
+    pending_detail_number: int | None = None
 
     def emit(
         *,
@@ -189,6 +209,25 @@ def extract_evidence_bank(
             flush_prompt()
             current_section = section[0]
             current_number = None
+            pending_detail_number = None
+            continue
+
+        question_detail = QUESTION_DETAIL.match(text)
+        if question_detail:
+            flush_prompt()
+            current_number = int(question_detail.group(1))
+            inline_detail = question_detail.group(2).strip()
+            if inline_detail:
+                emit(
+                    number=current_number,
+                    field="analysis",
+                    value=inline_detail,
+                    locator=paragraph.locator,
+                    mode="explicit_current",
+                )
+                pending_detail_number = None
+            else:
+                pending_detail_number = current_number
             continue
 
         numbered_answer = EXPLICIT_NUMBERED_ANSWER.match(text)
@@ -202,11 +241,35 @@ def extract_evidence_bank(
                 locator=paragraph.locator,
                 mode="explicit_numbered",
             )
+            pending_detail_number = None
+            continue
+
+        answer = PLAIN_ANSWER.match(text)
+        if answer:
+            answer_text = answer.group(1).strip()
+            compact_answer = _compact_items(answer_text)
+            if compact_answer:
+                for number, value in compact_answer:
+                    emit(
+                        number=number,
+                        field="answer",
+                        value=_answer_value(value),
+                        locator=paragraph.locator,
+                        mode="compact_summary",
+                    )
+                continue
+            if answer_text and current_number is not None:
+                emit(
+                    number=current_number,
+                    field="answer",
+                    value=_answer_value(answer_text),
+                    locator=paragraph.locator,
+                    mode="explicit_current",
+                )
             continue
 
         compact = _compact_items(text)
         if compact:
-            # A compact row is evidence only; it does not establish prompt identity.
             for number, value in compact:
                 emit(
                     number=number,
@@ -217,26 +280,42 @@ def extract_evidence_bank(
                 )
             continue
 
-        answer = PLAIN_ANSWER.match(text)
-        if answer and current_number is not None:
-            emit(
-                number=current_number,
-                field="answer",
-                value=_answer_value(answer.group(1)),
-                locator=paragraph.locator,
-                mode="explicit_current",
-            )
+        analysis = ANALYSIS.match(text)
+        if analysis:
+            analysis_text = analysis.group(1).strip()
+            if analysis_text and current_number is not None:
+                emit(
+                    number=current_number,
+                    field="analysis",
+                    value=analysis_text,
+                    locator=paragraph.locator,
+                    mode="explicit_current",
+                )
             continue
 
-        analysis = ANALYSIS.match(text)
-        if analysis and current_number is not None:
+        detail = DETAIL.match(text)
+        if detail:
+            detail_text = detail.group(1).strip()
+            if detail_text and current_number is not None:
+                emit(
+                    number=current_number,
+                    field="analysis",
+                    value=detail_text,
+                    locator=paragraph.locator,
+                    mode="explicit_current",
+                )
+            continue
+
+        if pending_detail_number is not None and text and not text.startswith("【"):
             emit(
-                number=current_number,
+                number=pending_detail_number,
                 field="analysis",
-                value=analysis.group(1),
+                value=text,
                 locator=paragraph.locator,
                 mode="explicit_current",
             )
+            current_number = pending_detail_number
+            pending_detail_number = None
             continue
 
         core = CORE.match(text)
@@ -255,9 +334,10 @@ def extract_evidence_bank(
             flush_prompt()
             current_number = int(question.group(1))
             current_question_paragraphs = [paragraph]
+            pending_detail_number = None
 
             # In answer-only fill/material sections a numbered row can itself be the answer.
-            if current_section in {"fill_blank", "material_answer"}:
+            if subject == "politics" and current_section in {"fill_blank", "material_answer"}:
                 remainder = question.group(2).strip()
                 if remainder:
                     emit(
@@ -274,8 +354,8 @@ def extract_evidence_bank(
 
     flush_prompt()
 
-    # Same source + question + field can appear in a summary and again in detailed records.
-    # Preserve both as evidence; exact duplicate records are compacted by identity.
+    # Preserve conflicting values. Only byte-identical evidence at the same locator
+    # is compacted.
     unique: dict[tuple[int, str, str, str], dict[str, Any]] = {}
     for item in evidence:
         key = (
