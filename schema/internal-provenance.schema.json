@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/internal-provenance.schema.json",
+  "title": "Private Question Provenance",
+  "description": "Schema only. Records conforming to this schema belong in the private source vault and must not be rendered into publication output.",
+  "type": "object",
+  "required": ["question_id", "source_id", "review_status"],
+  "additionalProperties": false,
+  "properties": {
+    "question_id": {"type": "string"},
+    "source_id": {"type": "string"},
+    "source_file": {"type": "string"},
+    "source_page": {"type": "integer", "minimum": 1},
+    "source_question_number": {"type": ["string", "integer"]},
+    "parser": {"type": "string"},
+    "parser_version": {"type": "string"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "copyright_status": {"enum": ["unknown", "internal_only", "redistributable", "original"]},
+    "review_status": {"enum": ["candidate", "needs_review", "verified", "rejected"]},
+    "notes": {"type": "string"}
+  }
+}
