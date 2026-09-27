@@ -3,19 +3,37 @@
   "$id": "https://example.invalid/schemas/document.schema.json",
   "title": "Workbook Document AST v1",
   "type": "object",
-  "required": ["version", "source_format", "blocks", "warnings"],
+  "required": [
+    "version",
+    "source_format",
+    "blocks",
+    "warnings"
+  ],
   "additionalProperties": false,
   "properties": {
-    "version": {"const": 1},
-    "source_format": {"enum": ["docx", "pdf", "ocr", "image"]},
+    "version": {
+      "const": 1
+    },
+    "source_format": {
+      "enum": [
+        "docx",
+        "pdf",
+        "ocr",
+        "image"
+      ]
+    },
     "warnings": {
       "type": "array",
-      "items": {"type": "string"},
+      "items": {
+        "type": "string"
+      },
       "uniqueItems": true
     },
     "blocks": {
       "type": "array",
-      "items": {"$ref": "#/$defs/block"}
+      "items": {
+        "$ref": "#/$defs/block"
+      }
     }
   },
   "$defs": {
@@ -23,39 +41,78 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["type", "locator", "inlines"],
+          "required": [
+            "type",
+            "locator",
+            "inlines"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": {"const": "paragraph"},
-            "locator": {"type": "string", "minLength": 1},
-            "page": {"type": "integer", "minimum": 1},
+            "type": {
+              "const": "paragraph"
+            },
+            "locator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
             "bbox": {
               "type": "array",
               "prefixItems": [
-                {"type": "number"},
-                {"type": "number"},
-                {"type": "number"},
-                {"type": "number"}
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
               ],
               "minItems": 4,
               "maxItems": 4
             },
             "inlines": {
               "type": "array",
-              "items": {"$ref": "#/$defs/inline"}
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
             }
           }
         },
         {
           "type": "object",
-          "required": ["type", "locator", "feature"],
+          "required": [
+            "type",
+            "locator",
+            "feature"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": {"const": "unsupported"},
-            "locator": {"type": "string", "minLength": 1},
-            "feature": {"type": "string", "minLength": 1},
-            "raw": {"type": "string"},
-            "page": {"type": "integer", "minimum": 1}
+            "type": {
+              "const": "unsupported"
+            },
+            "locator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "feature": {
+              "type": "string",
+              "minLength": 1
+            },
+            "raw": {
+              "type": "string"
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         }
       ]
@@ -64,38 +121,184 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["type", "text"],
+          "required": [
+            "type",
+            "text"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": {"const": "text"},
-            "text": {"type": "string"},
+            "type": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            },
             "styles": {
               "type": "array",
-              "items": {"enum": ["bold", "italic", "underline", "emphasis_dot"]},
+              "items": {
+                "enum": [
+                  "bold",
+                  "italic",
+                  "underline",
+                  "emphasis_dot"
+                ]
+              },
               "uniqueItems": true
             }
           }
         },
         {
           "type": "object",
-          "required": ["type", "xml", "locator", "status"],
+          "required": [
+            "type",
+            "xml",
+            "locator",
+            "status"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": {"const": "math_omml"},
-            "xml": {"type": "string"},
-            "locator": {"type": "string"},
-            "status": {"const": "captured_not_normalized"}
+            "type": {
+              "const": "math_omml"
+            },
+            "xml": {
+              "type": "string"
+            },
+            "locator": {
+              "type": "string"
+            },
+            "status": {
+              "const": "captured_not_normalized"
+            }
           }
         },
         {
           "type": "object",
-          "required": ["type", "relationship_id", "locator", "status"],
+          "required": [
+            "type",
+            "relationship_id",
+            "locator",
+            "status",
+            "source"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": {"const": "image_ref"},
-            "relationship_id": {"type": "string"},
-            "locator": {"type": "string"},
-            "status": {"const": "captured_not_normalized"}
+            "type": {
+              "const": "image_ref"
+            },
+            "relationship_id": {
+              "type": "string"
+            },
+            "locator": {
+              "type": "string"
+            },
+            "status": {
+              "const": "captured_not_normalized"
+            },
+            "source": {
+              "enum": [
+                "drawingml",
+                "vml"
+              ]
+            },
+            "asset_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "asset_target": {
+              "type": "string"
+            },
+            "asset_extension": {
+              "type": "string"
+            },
+            "asset_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cx_emu": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cy_emu": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "locator",
+            "status",
+            "feature",
+            "prog_id",
+            "relationship_id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "ole_object_ref"
+            },
+            "locator": {
+              "type": "string"
+            },
+            "status": {
+              "const": "captured_not_normalized"
+            },
+            "feature": {
+              "enum": [
+                "equation_ole",
+                "ole_object"
+              ]
+            },
+            "prog_id": {
+              "type": "string"
+            },
+            "relationship_id": {
+              "type": "string"
+            },
+            "asset_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "asset_target": {
+              "type": "string"
+            },
+            "asset_extension": {
+              "type": "string"
+            },
+            "asset_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "preview_relationship_id": {
+              "type": "string"
+            },
+            "preview_asset_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "preview_asset_target": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "preview_asset_extension": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "shape_style": {
+              "type": "string"
+            }
           }
         }
       ]
