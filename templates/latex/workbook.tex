@@ -137,6 +137,13 @@
  \noindent\hspace*{\qnumwidth}\makebox[7mm][l]{（#1）}#2\par
  \endgroup}
 
+\newcommand{\groupmaterial}[1]{%
+ \Needspace{5\baselineskip}%
+ \par\begingroup
+ \normalfont\wbsong\fontsize{10.5}{15}\selectfont
+ \noindent #1\par
+ \endgroup\vspace{2mm}}
+
 \newcommand{\teacheranswer}[1]{%
  \Needspace{2\baselineskip}\par
  \noindent\hspace*{\qnumwidth}{\wbhei 答案}\hspace{2mm}#1\par\vspace{1mm}}
