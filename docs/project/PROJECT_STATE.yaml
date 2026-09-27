@@ -1,80 +1,93 @@
 project: single-admission-workbook
-status_version: 1
+status_version: 2
 updated: 2026-09-27
 
 product:
   page_size: A4
-  editions:
-    - student
-    - teacher
-  subjects:
-    - chinese
-    - mathematics
-    - english
-    - politics
+  editions: [student, teacher]
+  subjects: [chinese, mathematics, english, politics]
+  target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: full_corpus_intake_and_eight_book_orchestration
+current_phase: verified_real_source_adapters
 
-active_gates:
-  - id: GATE-A4-VISUAL
-    status: in_progress
-    branch: design/a4-baseline-v03-source-rebase
-    pr: 3
-    criteria:
-      - 页眉与右上角题型/书本图标稳定
-      - 页脚品牌/古诗词/页码稳定
-      - 题号/分值/题干共享水平栅格
-      - 选项与分值列对齐
-      - 数学小问与分值列对齐
-      - 中文加点与数学公式正确
-      - GitHub Actions 可重复构建
-      - 无明显溢出
-  - id: GATE-CONTENT-MODEL
-    status: in_progress
-    branch: foundation/content-model-v01
-    criteria:
-      - 题目数据与排版模板分离
-      - 学生版/教师版同源
-      - 支持语文加点、下划线、数学公式和图片
-      - 章节结构独立于原始资料来源
-      - 内部溯源信息无法默认进入出版层
-      - 发布清单可冻结，构建结果可重复
-
+gates:
   - id: GATE-E2E-FIRST-PUBLISH
     status: passed
-    branch: e2e/first-publish-v01
-    criteria:
-      - 虚构DOCX学生卷与教师卷可自动生成
-      - DOCX解析后可拆成Canonical Question
-      - 学生版与教师版引用同一有序question_ids
-      - 教师版答案/解析可关联，学生版无泄露
-      - XeLaTeX可生成两份A4 PDF
-      - PDF版式、纯净度、字体嵌入、确定性构建检查通过
-      - 政治长题干换行、选项、材料题分值共享同一分值栅格
-      - 学生版材料题自动生成答题横线
+    pr: 7
+    summary: "DOCX -> Canonical Question -> 同源学生/教师A4 PDF闭环已跑通"
+
+  - id: GATE-EIGHT-BOOK-ORCHESTRATION
+    status: passed_fixture_only
+    pr: 9
+    summary: "四科八册虚构验证册、全库intake、缓存与覆盖账本已建立；不代表真实八册完成"
+
+  - id: GATE-QUALITY-HARDENING
+    status: passed
+    pr: 10
+    branch: harden/eight-book-v01
+    summary: "Pairing v2、答案证据冲突阻断、去重、Golden Benchmark、环境感知PDF缓存"
+    latest_success_run: 36319166303
+
+  - id: GATE-DOCUMENT-AST
+    status: passed
+    pr: 11
+    branch: architecture/document-ast-v01
+    summary: "DOCX/PDF统一Document AST v1；加点/下划线/页码/bbox保留；复杂节点fail-closed"
+    latest_success_run: 36319632522
+
+  - id: GATE-PUBLICATION-IMAGE
+    status: passed_equivalence_smoke
+    pr: 12
+    branch: ci/workbook-build-image-v01
+    summary: "预构建Docker出版环境可运行全部测试并在容器内编译8本验证PDF；尚未切生产"
+    latest_success_run: 36320065964
+
+  - id: GATE-DOCX-ASSETS
+    status: in_progress
+    pr: 13
+    branch: architecture/docx-assets-v01
+    summary: "真实数学路径：OLE公式、WMF/PNG/JPEG、DrawingML/VML与二进制资产关系完整捕获"
+
+real_corpus:
+  files: 224
+  pdf_pages: 1033
+  low_text_pdf_pages: 374
+  legacy_doc_files: 31
+  docx_files: 110
+  docx_media_payloads: 492
+  docx_embedding_payloads: 302
+  docx_ole_objects: 302
+  docx_equation_ole_objects: 302
+  docx_drawingml_drawings: 378
+  docx_vml_image_refs: 394
+  docx_omml_objects: 3
+  media_extensions:
+    wmf: 270
+    png: 166
+    jpeg: 56
+  real_books_complete: false
+
+safety_and_quality:
+  fail_closed_on_unsupported_rich_content: true
+  answer_conflicts_block_release: true
+  unresolved_exact_duplicates_block_release: true
+  near_duplicates_auto_merge: false
+  student_teacher_same_source: true
+  private_raw_sources_in_public_repo: false
 
 next:
-  - 将首个E2E闭环扩展到真实私有英语/政治候选题（不公开原始来源）
-  - 由用户审核 A4 视觉基线
-  - 冻结 renderer contract v1
-  - 建立第一批英语/政治结构化题目 PoC
-  - 生成同源学生版与教师版
-  - 再进入批量资料解析
+  - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
+  - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
+  - 建立真实私有Golden Benchmark（四科代表题）
+  - 将真实英语/政治fast lane批量转成Candidate Question Bank
+  - 实现章节候选分类与人工复核队列
+  - 生成首个20-50页真实私有学生版/教师版样章
+  - 完成Integration Gate后将稳定基线整理进main
+  - 发布GHCR workbook-build镜像并做新旧出版产物等价性比较
 
 non_goals_now:
-  - 不把未经保真核验的批量提取结果当作正式题库
-  - 不在公开仓库提交来源不明或无再分发授权的原卷
-  - 不让 AI 输出直接绕过结构校验进入正式成书
-
-full_corpus_pipeline:
-  branch: optimize/eight-book-pipeline
-  real_files_inspected: 224
-  pdf_pages_inspected: 1033
-  low_text_pages_needing_review: 374
-  legacy_doc_converted: 31
-  rich_structure_capture: implemented_not_canonical_verified
-  eight_fixture_pdf_ci: passed_run_36316791563
-  real_books_complete: false
-  auto_chapter_assignment: not_implemented
-  next_gate: lossless_source_adapters_and_verified_occurrence_ledger
+  - 不把文件级“已解析”误称为题目级“已覆盖”
+  - 不把未经保真核验的公式/图片/表格转换结果进入正式题库
+  - 不在公开仓库提交来源不明或无再分发授权的原卷/图片资产
+  - 不让AI推测答案覆盖冲突证据
