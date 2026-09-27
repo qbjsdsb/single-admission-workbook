@@ -59,15 +59,6 @@ def parse_section_score(
 
     if (
         declared_count
-        and full_score is not None
-        and per_question_score is None
-        and declared_count > 0
-    ):
-        per_question_score = full_score / declared_count
-        per_question_source = "derived_from_full_score"
-
-    if (
-        declared_count
         and per_question_score is not None
         and full_score is None
     ):
