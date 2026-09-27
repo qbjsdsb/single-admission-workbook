@@ -16,9 +16,12 @@ class ParagraphEvidence:
     text: str
 
 
-def _normalize_choice(text: str) -> str:
-    value = unicodedata.normalize("NFKC", text).strip()
-    return value.upper()
+def _answer_value(text: str) -> str:
+    raw = text.strip()
+    normalized = unicodedata.normalize("NFKC", raw)
+    if re.fullmatch(r"[A-Da-d]", normalized):
+        return normalized.upper()
+    return raw
 
 
 def _stable_id(*parts: object) -> str:
@@ -166,14 +169,17 @@ def extract_evidence_bank(
         if current_number is None or not current_question_paragraphs:
             current_question_paragraphs = []
             return
-        key = (current_section, current_number)
-        if key not in seen_prompt_keys:
-            record = _question_prompt_record(
-                source_id, subject, current_section, current_number, current_question_paragraphs
-            )
-            if record:
-                question_records.append(record)
-                seen_prompt_keys.add(key)
+        # Politics answer-only fill/material sections commonly use numbered
+        # answer rows that resemble question stems. They are evidence, not prompt identity.
+        if not (subject == "politics" and current_section in {"fill_blank", "material_answer"}):
+            key = (current_section, current_number)
+            if key not in seen_prompt_keys:
+                record = _question_prompt_record(
+                    source_id, subject, current_section, current_number, current_question_paragraphs
+                )
+                if record:
+                    question_records.append(record)
+                    seen_prompt_keys.add(key)
         current_question_paragraphs = []
 
     for paragraph in paragraphs:
@@ -192,7 +198,7 @@ def extract_evidence_bank(
             emit(
                 number=current_number,
                 field="answer",
-                value=_normalize_choice(numbered_answer.group(2)),
+                value=_answer_value(numbered_answer.group(2)),
                 locator=paragraph.locator,
                 mode="explicit_numbered",
             )
@@ -205,7 +211,7 @@ def extract_evidence_bank(
                 emit(
                     number=number,
                     field="answer",
-                    value=_normalize_choice(value),
+                    value=_answer_value(value),
                     locator=paragraph.locator,
                     mode="compact_summary",
                 )
@@ -216,7 +222,7 @@ def extract_evidence_bank(
             emit(
                 number=current_number,
                 field="answer",
-                value=_normalize_choice(answer.group(1)),
+                value=_answer_value(answer.group(1)),
                 locator=paragraph.locator,
                 mode="explicit_current",
             )
