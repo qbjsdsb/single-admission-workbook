@@ -202,6 +202,54 @@ class EvidenceBankTests(unittest.TestCase):
         }
         self.assertEqual(answers, {"A", "C"})
 
+    def test_real_english_range_summary_and_topic_analysis_format(self):
+        texts = [
+            "I. 单项选择",
+            "1. A fictional prompt.",
+            "A. one B. two C. three D. four",
+            "答案：D",
+            "考点与解析：A fictional topic-based explanation.",
+            "VII. 完形填空",
+            "21-25 DACDB        26-30 BCBDA",
+            "VIII. 阅读理解",
+            "31-34 CABD        35-38 BCBA",
+            "39-42 CBDA        43-45 ADD",
+            "IX. 单词拼写",
+            "46. village        47. sharp",
+            "48. season         49. answer",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-RANGE"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        answers = {
+            (e["source_number"], e["value"])
+            for e in bank["evidence"]
+            if e["field"] == "answer"
+        }
+        self.assertIn((1, "D"), answers)
+        self.assertIn((21, "D"), answers)
+        self.assertIn((25, "B"), answers)
+        self.assertIn((26, "B"), answers)
+        self.assertIn((30, "A"), answers)
+        self.assertIn((31, "C"), answers)
+        self.assertIn((45, "D"), answers)
+        self.assertIn((46, "village"), answers)
+        self.assertIn((49, "answer"), answers)
+
+        analysis = next(
+            e for e in bank["evidence"]
+            if e["source_number"] == 1 and e["field"] == "analysis"
+        )
+        self.assertIn("topic-based explanation", analysis["value"])
+
     def test_rich_nodes_are_reported_as_blockers_but_text_evidence_survives(self):
         document = {
             "version": 1,
