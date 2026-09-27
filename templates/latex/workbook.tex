@@ -82,12 +82,16 @@
 
 \newcommand{\chapterhead}[2]{%
  \clearpage
- \refstepcounter{section}\addcontentsline{toc}{section}{#1\quad #2}
+ \refstepcounter{section}%
+ \phantomsection%
+ \addcontentsline{toc}{section}{#1\quad #2}%
  \pagehead{#1\quad #2}
 }
 \newcommand{\sectionhead}[2]{%
  \Needspace{4\baselineskip}\vspace{1mm}
- \refstepcounter{subsection}\addcontentsline{toc}{subsection}{#1\quad #2}
+ \refstepcounter{subsection}%
+ \phantomsection%
+ \addcontentsline{toc}{subsection}{#1\quad #2}%
  {\textcolor{accent}{\rule[3pt]{3mm}{.6pt}}\hspace{2mm}%
  \fontsize{11}{16}\selectfont\wbhei #1\quad #2}\par\vspace{2.2mm}}
 
