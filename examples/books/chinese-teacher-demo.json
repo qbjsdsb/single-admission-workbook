@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "book_id": "chinese-demo-teacher",
+  "title": "语文练习册样章",
+  "subject": "chinese",
+  "edition": "teacher",
+  "paper": "A4",
+  "quote_seed": 20260927,
+  "chapters": [
+    {
+      "key": "language",
+      "title": "语言文字运用",
+      "sections": [
+        {
+          "key": "pronunciation",
+          "title": "字音",
+          "question_ids": ["CN-DEMO-001"]
+        }
+      ]
+    }
+  ]
+}
