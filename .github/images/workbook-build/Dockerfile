@@ -15,6 +15,7 @@ RUN apt-get update \
       texlive-plain-generic \
       texlive-fonts-recommended \
       fonts-croscore \
+      fontconfig \
       poppler-utils \
  && rm -rf /var/lib/apt/lists/*
 
