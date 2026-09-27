@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 7
+status_version: 8
 updated: 2026-09-28
 
 product:
@@ -108,9 +108,8 @@ gates:
 
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
-    pr: 28
-    branch: production/english-real-evidence-v01
-    summary: "12组真实英语DOCX配对已完成首轮业务校准；672候选单元、660编号题答案证据唯一、首个真实完形双版样章已产出"
+    merged_pr: 28
+    summary: "12组真实英语DOCX配对已完成首轮业务校准；672候选单元、660编号题答案证据唯一；下一步切正式XeLaTeX双版样章"
 
   - id: GATE-DOCX-ASSETS
     status: in_progress
@@ -150,21 +149,19 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
-  - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
-  - 建立真实私有Golden Benchmark（四科代表题）
-  - 完成英语真实Evidence校准PR并把新增格式回归固化
-  - 按英语全科Editorial Queue处理P0/P1结构异常
-  - 把第一批真实英语完形Canonical样章切换到正式XeLaTeX/A4发布器
+  - 用合并后的英语校准代码重跑全科Batch Review并冻结新的生产快照
+  - 按英语全科Editorial Queue只处理P0/P1结构异常
   - 生成第一批schema-valid真实Canonical Draft与Teacher Enrichment
-  - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
-  - 核对政治两份31/32题结构异常来源
-  - 用安全Classification Proposal减少人工分类量，阅读/语法/政治语义分类保持defer
-  - 生成首个20-50页真实私有学生版/教师版样章
-  - 完成Integration Gate后将稳定基线整理进main
-  - 发布GHCR workbook-build镜像并做新旧出版产物等价性比较
+  - 把第一批真实英语完形Canonical样章走正式XeLaTeX/A4发布器并做目录、分页、字体、泄漏和视觉QA
+  - 处理英语65个选择结构歧义与1个计分section异常
+  - 补齐或审核缺失教师解析，再扩展为完整英语学生册和教师解析册
+  - 英语双册稳定后整理integration进main并关闭已被吸收的旧stacked Draft PR
+  - 复用同一生产线推进政治，并核对两份31/32题结构异常来源
+  - 再推进语文加点/阅读题组与数学公式、图形、OLE/WMF复杂资产
+  - 建立真实私有Golden Benchmark（四科代表题）并完成最终224文件题目级覆盖验收
 
 non_goals_now:
+  - 不新增与真实处理速度、正确率或出版质量无直接关系的流程层
   - 不把文件级“已解析”误称为题目级“已覆盖”
   - 不把未经保真核验的公式/图片/表格转换结果进入正式题库
   - 不在公开仓库提交来源不明或无再分发授权的原卷/图片资产

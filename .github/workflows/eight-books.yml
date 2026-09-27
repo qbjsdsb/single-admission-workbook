@@ -6,6 +6,7 @@ on:
       - 'engine/**'
       - 'schema/**'
       - 'scripts/workbook.py'
+      - 'scripts/render_private_sample.py'
       - 'scripts/check_pdf_navigation.py'
       - 'scripts/check_golden_benchmark.py'
       - 'tests/**'
@@ -53,7 +54,7 @@ jobs:
           BASE="${{ github.event.pull_request.base.sha }}"
           git diff --name-only "$BASE"...HEAD > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
-          if grep -Eq '^(engine/render/|engine/pipeline/books.py|engine/quality/(build_fingerprint|evidence|dedup)\.py|schema/|scripts/(workbook|check_pdf_navigation).py|templates/latex/|examples/eight-books/|requirements-pipeline\.txt|\.github/workflows/eight-books\.yml)' /tmp/changed-files.txt; then
+          if grep -Eq '^(engine/render/|engine/pipeline/(books|sample_render|sample_selection)\.py|engine/quality/(build_fingerprint|evidence|dedup)\.py|schema/|scripts/(workbook|render_private_sample|check_pdf_navigation)\.py|templates/latex/|examples/eight-books/|requirements-pipeline\.txt|\.github/workflows/eight-books\.yml)' /tmp/changed-files.txt; then
             echo "print_needed=true" >> "$GITHUB_OUTPUT"
           else
             echo "print_needed=false" >> "$GITHUB_OUTPUT"
@@ -80,9 +81,29 @@ jobs:
         run: python scripts/workbook.py build examples/eight-books/dataset.json --compile
       - name: Check printed contents and PDF navigation
         run: python scripts/check_pdf_navigation.py build/eight-books
+      - name: Build fictional private-sample path
+        run: |
+          mkdir -p build/private-sample-input
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = json.loads(Path("examples/eight-books/dataset.json").read_text(encoding="utf-8"))
+          questions = [q for q in source["questions"] if q["subject"] == "english"]
+          Path("build/private-sample-input/canonical.json").write_text(
+              json.dumps({"subject": "english", "questions": questions}, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          Path("build/private-sample-input/curriculum.json").write_text(
+              json.dumps({"english": source["curriculum"]["english"]}, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          PY
+          python scripts/render_private_sample.py             build/private-sample-input/canonical.json             build/private-sample-input/curriculum.json             --out build/private-sample-fixture             --compile
+          python scripts/check_pdf_navigation.py build/private-sample-fixture
       - name: Render every sample page in color and grayscale
         run: |
-          for folder in build/eight-books/*-student build/eight-books/*-teacher; do
+          for folder in build/eight-books/*-student build/eight-books/*-teacher build/private-sample-fixture/*-student build/private-sample-fixture/*-teacher; do
             pdftoppm -scale-to 1200 -png "$folder/main.pdf" "$folder/color"
             pdftoppm -scale-to 1200 -gray -png "$folder/main.pdf" "$folder/gray"
             pdffonts "$folder/main.pdf"
@@ -97,4 +118,10 @@ jobs:
             build/eight-books/*/gray-*.png
             build/eight-books/coverage.json
             build/eight-books/build-complete.json
+            build/private-sample-fixture/*/main.pdf
+            build/private-sample-fixture/*/book.json
+            build/private-sample-fixture/*/color-*.png
+            build/private-sample-fixture/*/gray-*.png
+            build/private-sample-fixture/selection.json
+            build/private-sample-fixture/sample-build.json
           if-no-files-found: error
