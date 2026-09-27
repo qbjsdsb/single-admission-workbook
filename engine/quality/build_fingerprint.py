@@ -18,7 +18,35 @@ def _command_line(command: list[str]) -> str:
     return text.splitlines()[0] if text else f"exit:{result.returncode}"
 
 
-def _font_record(name: str) -> dict[str, str]:
+def _file_record(name: str, path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {"name": name, "match": str(path) or "unavailable", "sha256": "unavailable"}
+    return {
+        "name": name,
+        "match": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
+def _tex_font_record(filename: str) -> dict[str, str]:
+    kpsewhich = shutil.which("kpsewhich")
+    if not kpsewhich:
+        return {"name": filename, "match": "unavailable", "sha256": "unavailable"}
+    try:
+        result = subprocess.run(
+            [kpsewhich, filename],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        path = Path(result.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        path = Path()
+    return _file_record(filename, path)
+
+
+def _system_font_record(name: str) -> dict[str, str]:
     fc_match = shutil.which("fc-match")
     if not fc_match:
         return {"name": name, "match": "unavailable", "sha256": "unavailable"}
@@ -33,10 +61,7 @@ def _font_record(name: str) -> dict[str, str]:
         path = Path(result.stdout.strip())
     except (OSError, subprocess.SubprocessError):
         path = Path()
-    if not path.is_file():
-        return {"name": name, "match": str(path) or "unavailable", "sha256": "unavailable"}
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return {"name": name, "match": str(path), "sha256": digest}
+    return _file_record(name, path)
 
 
 def latex_environment_payload() -> dict:
@@ -45,10 +70,10 @@ def latex_environment_payload() -> dict:
         "xelatex": _command_line(["xelatex", "--version"]),
         "kpsewhich": _command_line(["kpsewhich", "--version"]),
         "fonts": [
-            _font_record("FandolSong"),
-            _font_record("FandolHei"),
-            _font_record("FandolKai"),
-            _font_record("Tinos"),
+            _tex_font_record("FandolSong-Regular.otf"),
+            _tex_font_record("FandolHei-Regular.otf"),
+            _tex_font_record("FandolKai-Regular.otf"),
+            _system_font_record("Tinos"),
         ],
     }
 
