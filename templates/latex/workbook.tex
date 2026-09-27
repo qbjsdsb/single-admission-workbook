@@ -68,20 +68,19 @@
 \setlength{\qscorewidth}{14.85mm}
 \setlength{\qstemgap}{1.2mm}
 
-\newcommand{\pagehead}[2]{%
+\newcommand{\pagehead}[1]{%
  \noindent\begin{tabularx}{\linewidth}{@{}X>{\raggedleft\arraybackslash}p{38mm}@{}}
- {\fontsize{9}{12}\selectfont\wbhei\color{muted}%%SUBJECT_NAME%%} &
- {\fontsize{9}{12}\selectfont\wbsong\color{muted}%%EDITION_NAME%%}\\[1.8mm]
+ {\fontsize{9}{12}\selectfont\wbhei\color{muted}%%SUBJECT_MODULE%%} &
+ {\fontsize{9}{12}\selectfont\wbsong\color{muted}%%PAGE_LABEL%%}\\[1.8mm]
  {\fontsize{16}{20}\selectfont\wbhei #1} & \bookornament
  \end{tabularx}\par
  \vspace{2mm}
  \noindent\hbox to\linewidth{\textcolor{accent}{\rule{14mm}{.7pt}}\hspace{3mm}%
- {\color{rulegray}\leaders\hrule height .35pt\hfill}}\par\vspace{3mm}
- {\fontsize{9}{12}\selectfont\wbsong\color{muted}#2}\par\vspace{3mm}}
+ {\color{rulegray}\leaders\hrule height .35pt\hfill}}\par\vspace{3mm}}
 
 \newcommand{\chapterhead}[2]{%
  \clearpage
- \pagehead{#1\quad #2}{%%BOOK_TITLE%%}
+ \pagehead{#1\quad #2}
 }
 \newcommand{\sectionhead}[2]{%
  \Needspace{4\baselineskip}\vspace{1mm}
@@ -139,6 +138,14 @@
 \newcommand{\teachernote}[1]{%
  \Needspace{2\baselineskip}\par
  \noindent\hspace*{\qnumwidth}{\wbhei 提示}\hspace{2mm}#1\par\vspace{2mm}}
+
+\newcount\answerlinecount
+\newcommand{\answerlines}[1]{%
+ \par\begingroup\offinterlineskip\answerlinecount=0
+ \loop\ifnum\answerlinecount<#1
+ \vbox to8mm{\vfill\color{rulegray}\hrule width\linewidth height .35pt}%
+ \advance\answerlinecount by1
+ \repeat\endgroup\vspace{1mm}}
 
 \begin{document}
 %%BODY%%
