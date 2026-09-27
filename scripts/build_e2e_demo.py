@@ -147,7 +147,7 @@ def build(out: Path):
         manifests[edition] = {
             "schema_version": 1,
             "book_id": f"politics-e2e-{edition}",
-            "title": "政治练习册闭环样章",
+            "title": "政治练习册样章",
             "subject": "politics",
             "edition": edition,
             "paper": "A4",
