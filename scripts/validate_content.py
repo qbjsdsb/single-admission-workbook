@@ -60,9 +60,10 @@ def validate():
     q_schema = load_json(ROOT / "schema/question.schema.json")
     b_schema = load_json(ROOT / "schema/book.schema.json")
     p_schema = load_json(ROOT / "schema/internal-provenance.schema.json")
+    s_schema = load_json(ROOT / "schema/source-manifest.schema.json")
 
     # Validate the schemas themselves first.
-    for schema in (q_schema, b_schema, p_schema):
+    for schema in (q_schema, b_schema, p_schema, s_schema):
         Draft202012Validator.check_schema(schema)
 
     q_validator = Draft202012Validator(q_schema)
