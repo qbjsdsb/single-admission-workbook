@@ -8,6 +8,9 @@ import importlib.metadata
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import shutil
+import threading
 import zipfile
 
 from engine.ingest.inventory import inventory_zip, summarize
@@ -15,7 +18,9 @@ from engine.ingest.pairing import exact_pair_candidates
 from engine.ingest.probe import probe_docx
 from engine.parse.docx_text import extract_docx_paragraphs
 
-VERSION = 'intake-1'
+VERSION = 'intake-2'
+PDF_LOCK = threading.Lock()
+CONVERSION_LIMIT = threading.Semaphore(2)
 
 
 def write_json(path, data):
@@ -27,18 +32,32 @@ def write_json(path, data):
 
 
 def extract(path):
+    if path.suffix == '.doc' and shutil.which('soffice'):
+        with CONVERSION_LIMIT, tempfile.TemporaryDirectory() as td:
+            destination = Path(td)
+            result = subprocess.run(['soffice', '-env:UserInstallation=' + (destination / 'profile').as_uri(),
+                                     '--headless', '--convert-to', 'docx', '--outdir', str(destination), str(path)],
+                                    capture_output=True, timeout=120)
+            converted = destination / (path.stem + '.docx')
+            if result.returncode or not converted.exists():
+                raise ValueError('legacy conversion failed')
+            content = extract(converted)
+            content['converted_from'] = 'doc'
+            content['required_work'].append('conversion_fidelity_review')
+            return content
     if path.suffix == '.docx':
+        from engine.parse.docx_structure import extract_structure
         probe = asdict(probe_docx(path))
         warnings = [key for key in ('tables', 'emphasis_marks', 'underlines',
                                     'math_objects', 'media_files', 'embedded_files') if probe[key]]
         return {'format': 'docx', 'probe': probe,
-                'paragraphs': extract_docx_paragraphs(path),
+                'paragraphs': extract_docx_paragraphs(path), 'structure': extract_structure(path),
                 'required_work': ['rich_structure_review'] if warnings else ['question_segmentation'],
                 'rich_features': warnings}
     if path.suffix == '.pdf':
         import fitz
         pages = []
-        with fitz.open(path) as doc:
+        with PDF_LOCK, fitz.open(path) as doc:
             for index, page in enumerate(doc):
                 text = page.get_text(sort=True)
                 images = len(page.get_images(full=True))
@@ -56,6 +75,10 @@ def extract(path):
 def intake(archive: Path, out: Path, workers=4):
     if workers < 1 or workers > 8:
         raise ValueError('workers must be between 1 and 8')
+    with zipfile.ZipFile(archive) as zf:
+        names = [i.filename for i in zf.infolist() if not i.is_dir()]
+        if len(names) != len(set(names)):
+            raise ValueError('Duplicate ZIP member names require disambiguation before intake')
     items = inventory_zip(archive)
     cache = out / 'cache'
     cache.mkdir(parents=True, exist_ok=True)
@@ -63,7 +86,10 @@ def intake(archive: Path, out: Path, workers=4):
         pdf_version = importlib.metadata.version('PyMuPDF')
     except importlib.metadata.PackageNotFoundError:
         pdf_version = 'unavailable'
-    engine_digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    dependencies = [Path(__file__), Path(__file__).parents[1] / 'parse/docx_structure.py',
+                    Path(__file__).parents[1] / 'parse/docx_text.py', Path(__file__).parents[1] / 'ingest/probe.py']
+    converter = subprocess.run(['soffice', '--version'], capture_output=True, timeout=15).stdout if shutil.which('soffice') else b'unavailable'
+    engine_digest = hashlib.sha256(b''.join(p.read_bytes() for p in dependencies) + converter).hexdigest()
     # Inputs and parser implementation/version all affect cache identity.
     unique = {(i.sha256, i.extension): i for i in items}
 
@@ -97,7 +123,8 @@ def intake(archive: Path, out: Path, workers=4):
     manifest = []
     for i in items:
         key, result = lookup[i.sha256, i.extension]
-        manifest.append({**asdict(i), 'cache_key': key,
+        source_id = 'SRC-' + hashlib.sha256((i.path + ':' + i.sha256).encode()).hexdigest()[:24]
+        manifest.append({**asdict(i), 'source_id': source_id, 'cache_key': key,
                          'required_work': result['required_work'], 'coverage_status': 'unsegmented'})
     summary = summarize(items)
     summary.update({'unique_payloads': len(unique), 'cache_hits': sum(r[4] for r in processed),
@@ -108,6 +135,7 @@ def intake(archive: Path, out: Path, workers=4):
                     'publication_ready': False,
                     'note': 'File inventory and text extraction are NOT question coverage.'})
     write_json(out / 'sources.private.json', manifest)
+    write_json(out / 'expected-source-ids.private.json', [i['source_id'] for i in manifest])
     write_json(out / 'pairs.private.json', [asdict(p) for p in exact_pair_candidates(manifest)])
     write_json(out / 'summary.json', summary)
     return summary

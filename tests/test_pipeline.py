@@ -50,6 +50,7 @@ class PipelineTests(unittest.TestCase):
         occurrence = copy.deepcopy(self.data['ledger']['occurrences'][0])
         occurrence.update(id='copy-occurrence', source_id='copy-source')
         self.data['ledger']['sources'].append(source)
+        self.data['ledger']['expected_source_ids'].append('copy-source')
         self.data['ledger']['occurrences'].append(occurrence)
         books, bank = self.plan()
         self.assertEqual(len(bank), 4)
@@ -66,14 +67,14 @@ class PipelineTests(unittest.TestCase):
             root = Path(td)
             archive = root / 'input.zip'
             with zipfile.ZipFile(archive, 'w') as z:
-                z.writestr('../../escaped.doc', b'legacy payload')
-                z.writestr('数学/copy.doc', b'legacy payload')
+                z.writestr('../../escaped.bin', b'legacy payload')
+                z.writestr('数学/copy.bin', b'legacy payload')
             first = intake(archive, root / 'out')
             second = intake(archive, root / 'out')
             self.assertEqual(first['files'], 2)
             self.assertEqual(first['unique_payloads'], 1)
             self.assertEqual(second['cache_hits'], 1)
-            self.assertFalse((root / 'escaped.doc').exists())
+            self.assertFalse((root / 'escaped.bin').exists())
 
     def test_pdf_later_scan_is_not_lost(self):
         try:
@@ -95,3 +96,30 @@ class PipelineTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class RichCaptureTests(unittest.TestCase):
+    def test_marks_math_and_tables_remain_explicit(self):
+        from engine.parse.docx_structure import extract_structure
+        xml = '''<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><w:body><w:p><w:r><w:rPr><w:em w:val="dot"/><w:u w:val="single"/></w:rPr><w:t>春</w:t></w:r><m:oMath><m:r><m:t>x</m:t></m:r></m:oMath></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>保留单元格</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>'''
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / 'source.docx'
+            with zipfile.ZipFile(path, 'w') as z:
+                z.writestr('word/document.xml', xml)
+            blocks = extract_structure(path)['blocks']
+            self.assertEqual(blocks[0]['runs'][0]['properties']['em'], 'dot')
+            self.assertEqual(blocks[0]['runs'][0]['properties']['u'], 'single')
+            self.assertEqual(len(blocks[0]['math_omml']), 1)
+            self.assertEqual(blocks[1]['kind'], 'tbl')
+            self.assertIn('保留单元格', blocks[1]['xml'])
+
+    def test_duplicate_archive_names_are_blocked(self):
+        import warnings
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                with zipfile.ZipFile(root / 'source.zip', 'w') as z:
+                    z.writestr('same.docx', b'first')
+                    z.writestr('same.docx', b'second')
+            with self.assertRaisesRegex(ValueError, 'Duplicate ZIP'):
+                intake(root / 'source.zip', root / 'out')

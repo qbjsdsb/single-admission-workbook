@@ -72,6 +72,9 @@ full_corpus_pipeline:
   real_files_inspected: 224
   pdf_pages_inspected: 1033
   low_text_pages_needing_review: 374
+  legacy_doc_converted: 31
+  rich_structure_capture: implemented_not_canonical_verified
+  eight_fixture_pdf_ci: passed_run_36316791563
   real_books_complete: false
   auto_chapter_assignment: not_implemented
   next_gate: lossless_source_adapters_and_verified_occurrence_ledger

@@ -42,13 +42,18 @@
   "pdf_pages": 1033,
   "ocr_pages": 374,
   "required_work": {
-    "rich_structure_review": 105,
+    "rich_structure_review": 136,
     "ocr": 52,
     "layout_segmentation": 31,
-    "legacy_conversion": 31,
+    "conversion_fidelity_review": 31,
     "question_segmentation": 5
   },
   "publication_ready": false,
   "note": "File inventory and text extraction are NOT question coverage.",
-  "warm_cache_result": "pending"
+  "legacy_doc_converted": 31,
+  "warm_cache_before_rich_capture": {
+    "hits": 224,
+    "seconds": 1.9,
+    "note": "single observed run, not a general performance guarantee"
+  }
 }

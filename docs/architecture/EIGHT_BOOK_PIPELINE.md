@@ -6,6 +6,7 @@
 ## 已实现
 
 - `python scripts/workbook.py intake sources.zip`：读取整库、计算指纹、限流并行处理、逐文件原子写入缓存；逐页检查 PDF，不用前五页代表全卷。
+- 自动调用 LibreOffice 转换旧 DOC，最多同时两份，31份真实文件已成功转换并提取，仍需保真复核。
 - 相同内容复用提取结果；修改提取器或 PDF 引擎版本后缓存失效；失败文件下次重试。
 - DOCX 复杂结构明确标记，不将普通文本提取当作公式、加点字和图形的完整还原。
 - `python scripts/workbook.py build dataset.json --compile`：验证来源台账和全题库覆盖，按明确章节及难度排序，同时生成八份成书清单和 PDF。
@@ -25,8 +26,8 @@
 
 ## 尚未实现，不能承诺已自动完成
 
-- DOC -> DOCX 转换执行器；OCR、数学公式及图形还原。
-- 富文本 DOCX 到 canonical 的保真适配；原解析器仅能安全用于受控示例。
+- OCR、数学公式及图形还原；DOC 转换后的保真对照验收。
+- 富文本 DOCX 到 canonical 的保真适配；已保留逐块 XML、加点/下划线属性、公式 OMML 和图像关联，尚不等于可直接出版。
 - 四科学科知识点自动分类与交叉审查；当前编排读取已经审核的 chapter_key/section_key。
 - 全库逐题切分及独立题数核对；当前 ledger 为正式接入契约，不是自动数题完成证明。
 - 全部答案解析匹配、缺失解析补全及准确性核验（政治须保留历史题并标注适用背景）。
@@ -37,7 +38,8 @@
 
 参照 `examples/eight-books/dataset.json`（四道自编题，不是真实题库）。
 `questions` 为现有 canonical schema；`curriculum` 为按学科排列的章节/小节；
-私有 `ledger.sources` 保存来源 ID、经核实题数与核验状态，
+私有 `ledger.expected_source_ids` 必须对应整库冻结清单，不能通过遗漏整个文件来通过覆盖核对。
+`ledger.sources` 保存来源 ID、经核实题数与核验状态，
 `ledger.occurrences` 保存每次出现的位置和规范题 ID。零题来源必须有 non_question_reason。
 学生教师卷配对只是候选关系，不能当作答案匹配已经正确。
 

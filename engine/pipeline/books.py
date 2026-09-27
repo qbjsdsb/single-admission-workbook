@@ -47,6 +47,9 @@ def validate_inputs(questions, ledger, curriculum):
     source_ids = [s['id'] for s in sources]
     if not sources or len(source_ids) != len(set(source_ids)):
         errors.append('empty or duplicate source ledger')
+    expected_sources = ledger.get('expected_source_ids', [])
+    if not expected_sources or set(expected_sources) != set(source_ids):
+        errors.append('source ledger does not match frozen intake source IDs')
     occurrences = ledger.get('occurrences', [])
     occurrence_ids = [o['id'] for o in occurrences]
     if len(occurrence_ids) != len(set(occurrence_ids)):
