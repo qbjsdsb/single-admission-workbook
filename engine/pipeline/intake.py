@@ -62,9 +62,11 @@ def extract(path):
     if path.suffix == '.pdf':
         with PDF_LOCK:
             document_ast, pages = read_pdf_document_with_pages(path)
+        required_work = ['ocr' if any(p['needs_ocr'] for p in pages) else 'layout_segmentation']
+        if any(p['needs_visual_review'] for p in pages):
+            required_work.append('visual_content_review')
         return {'format': 'pdf', 'pages': pages, 'document_ast': document_ast.to_dict(),
-                'required_work':
-                ['ocr' if any(p['needs_ocr'] for p in pages) else 'layout_segmentation']}
+                'required_work': required_work}
     return {'format': path.suffix.lstrip('.'), 'required_work':
             ['legacy_conversion' if path.suffix == '.doc' else 'ocr' if path.suffix in
              ('.png', '.jpg', '.jpeg') else 'unsupported_format']}
