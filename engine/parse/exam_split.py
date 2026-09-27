@@ -9,20 +9,20 @@ from typing import Iterable
 QUESTION_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$")
 
 SECTION_LEAD = (
-    r"^\\s*(?:(?:[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
+    r"^\\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
     r"\\s*[.．、:：]?\\s*)?"
 )
 
 SECTION_PATTERNS = {
     "english": [
-        (re.compile(SECTION_LEAD + r"单项选择(?:题)?", re.IGNORECASE), "single_choice", "single_choice"),
+        (re.compile(SECTION_LEAD + r"(?:单项选择(?:题)?|选择题)", re.IGNORECASE), "single_choice", "single_choice"),
         (re.compile(SECTION_LEAD + r"完形填空", re.IGNORECASE), "cloze", "cloze_group"),
         (re.compile(SECTION_LEAD + r"阅读理解", re.IGNORECASE), "reading", "reading_group"),
         (re.compile(SECTION_LEAD + r"单词拼写", re.IGNORECASE), "word_spelling", "fill_blank"),
         (re.compile(SECTION_LEAD + r"(?:书面表达|写作)", re.IGNORECASE), "writing", "composition"),
     ],
     "politics": [
-        (re.compile(SECTION_LEAD + r"(?:单选题|单项选择(?:题)?)"), "single_choice", "single_choice"),
+        (re.compile(SECTION_LEAD + r"(?:单选题|单项选择(?:题)?|选择题)"), "single_choice", "single_choice"),
         (re.compile(SECTION_LEAD + r"填空题"), "fill_blank", "fill_blank"),
         (re.compile(SECTION_LEAD + r"(?:问答题|材料题)"), "material_answer", "material_question"),
     ],
