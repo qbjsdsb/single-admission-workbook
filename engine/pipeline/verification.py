@@ -120,6 +120,8 @@ def build_verified_candidate_bank(
         raise ValueError("candidate bank and aggregate review source mismatch")
     if candidate_bank.get("subject") != aggregate_review.get("subject"):
         raise ValueError("candidate bank and aggregate review subject mismatch")
+    if verification_manifest.get("candidate_source_id") != candidate_bank.get("source_id"):
+        raise ValueError("verification manifest source mismatch")
 
     candidates = {
         str(item["candidate_id"]): item
@@ -156,11 +158,24 @@ def build_verified_candidate_bank(
         if action != "approve":
             raise ValueError(f"unsupported verification decision for {candidate_id}: {action}")
 
-        if candidate.get("status") != "parsed" and decision.get("method") != "human_review":
+        method = decision.get("method")
+        aggregate_status = aggregate.get("aggregate_status")
+        if method == "machine_corroborated_accepted" and aggregate_status != "machine_corroborated":
+            raise ValueError(
+                f"{candidate_id}: machine_corroborated_accepted requires machine_corroborated aggregate"
+            )
+        if method == "source_pair_manual_approval" and aggregate_status not in {
+            "single_source_consistent", "machine_corroborated"
+        }:
+            raise ValueError(
+                f"{candidate_id}: source_pair_manual_approval requires consistent strong evidence"
+            )
+
+        if candidate.get("status") != "parsed" and method != "human_review":
             raise ValueError(
                 f"{candidate_id}: ambiguous candidate requires human_review approval"
             )
-        if aggregate.get("aggregate_status") == "conflict" and decision.get("method") != "human_review":
+        if aggregate_status == "conflict" and method != "human_review":
             raise ValueError(
                 f"{candidate_id}: conflicting machine evidence requires human_review"
             )
@@ -191,7 +206,7 @@ def build_verified_candidate_bank(
             "group_id": candidate.get("group_id"),
             "locators": candidate.get("locators") or [],
             "verified_answer": verified_answer,
-            "verification_method": decision.get("method"),
+            "verification_method": method,
             "verification_note": str(decision.get("note") or ""),
             "override_reason": str(decision.get("override_reason") or ""),
             "machine_aggregate_status": aggregate.get("aggregate_status"),
