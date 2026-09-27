@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/pairing-review.schema.json",
+  "title": "Candidate / Evidence Pairing Review",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "candidate_source_id",
+    "evidence_source_id",
+    "source_pair_confidence",
+    "rows",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "subject": {
+      "enum": [
+        "english",
+        "politics"
+      ]
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_pair_confidence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "required": [
+        "candidate_id",
+        "source_number",
+        "section_key",
+        "candidate_status",
+        "companion_question_id",
+        "prompt_pair_confidence",
+        "prompt_pair_score",
+        "prompt_pair_reason",
+        "binding_strength",
+        "answer_status",
+        "normalized_answer",
+        "answer_variants",
+        "evidence_ids",
+        "review_status",
+        "review_reasons",
+        "source_pair_confidence",
+        "companion_section_key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_number": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "section_key": {
+          "type": "string"
+        },
+        "candidate_status": {
+          "enum": [
+            "parsed",
+            "needs_review"
+          ]
+        },
+        "companion_question_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt_pair_confidence": {
+          "enum": [
+            "exact",
+            "high",
+            "ambiguous",
+            "unmatched"
+          ]
+        },
+        "prompt_pair_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "prompt_pair_reason": {
+          "type": "string"
+        },
+        "binding_strength": {
+          "enum": [
+            "content_exact",
+            "content_high",
+            "paired_source_number",
+            "number_only",
+            "none"
+          ]
+        },
+        "answer_status": {
+          "enum": [
+            "unique",
+            "conflict",
+            "missing"
+          ]
+        },
+        "normalized_answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "answer_variants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "review_status": {
+          "enum": [
+            "ready_for_verification",
+            "review_required",
+            "conflict"
+          ]
+        },
+        "review_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "source_pair_confidence": {
+          "type": "string"
+        },
+        "companion_section_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "ready_for_verification",
+        "review_required",
+        "conflicts",
+        "missing_answers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_verification": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conflicts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_answers": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
