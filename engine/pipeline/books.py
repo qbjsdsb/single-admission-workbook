@@ -8,6 +8,7 @@ import jsonschema
 
 from engine.render.latex import SUBJECT_NAMES, render_book
 from engine.pipeline.intake import write_json
+from engine.quality.evidence import validate_release_evidence
 
 ROOT = Path(__file__).resolve().parents[2]
 SUBJECTS = tuple(SUBJECT_NAMES)
@@ -43,6 +44,12 @@ def validate_inputs(questions, ledger, curriculum):
             errors.append(f"{q['id']}: missing answer or analysis")
         if q['kind'] in ('reading_group', 'cloze_group'):
             errors.append(f"{q['id']}: grouped child rendering not yet supported")
+    if ledger.get('strict_answer_evidence'):
+        errors.extend(validate_release_evidence(
+            ids,
+            ledger.get('answer_evidence', []),
+            require_verified=True,
+        ))
     sources = ledger.get('sources', [])
     source_ids = [s['id'] for s in sources]
     if not sources or len(source_ids) != len(set(source_ids)):
