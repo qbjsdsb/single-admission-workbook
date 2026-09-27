@@ -1,0 +1,8 @@
+.git
+build
+.cache
+__pycache__
+*.pyc
+*.pdf
+*.png
+单招教研.zip
