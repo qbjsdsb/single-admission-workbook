@@ -67,7 +67,10 @@ class CandidateBankTests(unittest.TestCase):
             ],
         )
 
-        q1 = next(q for q in bank["candidates"] if q["candidate_id"] == "ENG-FIX:q:1")
+        q1 = next(
+            q for q in bank["candidates"]
+            if q["source_number"] == 1 and q["section_key"] == "single_choice"
+        )
         self.assertEqual(q1["stem_text"], "A fictional stem")
         self.assertEqual([o["label"] for o in q1["options"]], list("ABCD"))
         self.assertEqual(q1["status"], "parsed")
@@ -83,6 +86,61 @@ class CandidateBankTests(unittest.TestCase):
         writing = next(q for q in bank["candidates"] if q["kind"] == "composition")
         self.assertIsNone(writing["source_number"])
         self.assertIn("fictional email", writing["stem_text"])
+
+    def test_glued_english_options_and_arabic_section_heading(self):
+        texts = [
+            "1. 单项选择（共1小题）",
+            "1. —How much is the desk?",
+            "A. costsB. paysC. spendsD. takes",
+            "II.完形填空（共1小题）",
+            "Shared fictional passage.",
+            "21. A. oneB. twoC. threeD. four"
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(document, subject="english", source_id="ENG-GLUED")
+        q1 = next(q for q in bank["candidates"] if q["source_number"] == 1)
+        self.assertEqual(q1["status"], "parsed")
+        self.assertEqual([o["text"] for o in q1["options"]], ["costs", "pays", "spends", "takes"])
+        self.assertEqual(bank["sections"][0]["section_key"], "single_choice")
+        self.assertFalse(bank["sections"][0]["inferred"])
+
+    def test_missing_first_heading_recovers_long_run_but_marks_review(self):
+        texts = [
+            "考试说明",
+            "1. 注意事项一。",
+            "2. 注意事项二。",
+            "1. Fictional q1 A. aB. bC. cD. d",
+            "2. Fictional q2 A. aB. bC. cD. d",
+            "3. Fictional q3 A. aB. bC. cD. d",
+            "4. Fictional q4 A. aB. bC. cD. d",
+            "5. Fictional q5 A. aB. bC. cD. d",
+            "II.完形填空",
+            "Shared passage.",
+            "21. A. oneB. twoC. threeD. four"
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(document, subject="english", source_id="ENG-NOHEAD")
+        inferred = [
+            q for q in bank["candidates"]
+            if q["section_key"] == "single_choice"
+        ]
+        self.assertEqual([q["source_number"] for q in inferred], [1, 2, 3, 4, 5])
+        self.assertTrue(all(q["status"] == "needs_review" for q in inferred))
+        self.assertTrue(all(
+            "section_heading_missing_inferred_single_choice" in q["review_reasons"]
+            for q in inferred
+        ))
+        self.assertTrue(bank["sections"][0]["inferred"])
 
     def test_politics_simple_sections_and_locators(self):
         texts = [
