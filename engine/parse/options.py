@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import re
+from typing import Iterable
+
+# Word exports can glue labels directly to the previous option text, e.g.
+# "oneB. two". Keep that recovery path, but reject capital-letter acronym tails
+# such as "TTEC." from becoming a fake C option marker.
+STRICT_MARKER = re.compile(r"(?<![A-Z0-9])([A-D])[.．、)]\s*")
+# Page/volume separators can remain at the tail of the final question in a section.
+# They are not option text and may be ignored only after a complete A-D set exists.
+VOLUME_TAIL = re.compile(
+    r"^\s*(?:第)?[一二三四五六七八九十0-9]+\s*卷"
+    r"(?:\s*[（(].*?[）)])?\s*$"
+)
+
+
+@dataclass(frozen=True)
+class ParsedOptions:
+    stem_paragraphs: tuple[str, ...]
+    options: tuple[tuple[str, str], ...]
+    status: str
+
+
+def _strict_pieces(text: str) -> tuple[str, list[tuple[str, str]], bool]:
+    matches = list(STRICT_MARKER.finditer(text))
+    if not matches:
+        return text.strip(), [], False
+    prefix = text[:matches[0].start()].strip()
+    out: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        content = text[match.end():end].strip()
+        out.append((match.group(1), content))
+    starts_with_marker = bool(re.match(r"^\s*[A-D][.．、)]", text))
+    return prefix, out, starts_with_marker
+
+
+def _split_inline_options(
+    text: str,
+    *,
+    expected_label: str,
+    next_text: str | None,
+) -> tuple[str, list[tuple[str, str]], bool]:
+    """Split one option paragraph while recovering narrowly safe missing punctuation.
+
+    Private English calibration found lines such as "A choice    B. choice",
+    standalone later labels such as "C choice", and a few cases where bare A is
+    on its own line followed by a strict B line.
+
+    Bare-label recovery is deliberately sequence-driven:
+    - A requires either a later strict B/C/D marker in the same paragraph or a
+      strict B marker at the start of the next paragraph;
+    - B/C/D are accepted only when they are exactly the next expected label after
+      option parsing has already started.
+
+    An ordinary stem beginning with "A ..." therefore stays stem text.
+    """
+    prefix, strict, starts_strict = _strict_pieces(text)
+
+    bare = re.match(
+        rf"^\s*{re.escape(expected_label)}\s+(?=\S)",
+        text,
+    )
+    if bare is None:
+        return prefix, strict, starts_strict
+
+    strict_after = [
+        match
+        for match in STRICT_MARKER.finditer(text)
+        if match.start() >= bare.end()
+    ]
+    order = "ABCD"
+    strict_labels = [match.group(1) for match in strict_after]
+    next_is_strict_b = bool(
+        next_text is not None
+        and re.match(r"^\s*B[.．、)]", next_text)
+    )
+    allow_bare = (
+        expected_label != "A"
+        or (
+            "A" not in strict_labels
+            and (
+                any(
+                    order.index(label) > order.index(expected_label)
+                    for label in strict_labels
+                )
+                or next_is_strict_b
+            )
+        )
+    )
+    if not allow_bare:
+        return prefix, strict, starts_strict
+
+    markers: list[tuple[str, int, int]] = [
+        (expected_label, bare.start(), bare.end())
+    ]
+    markers.extend(
+        (match.group(1), match.start(), match.end())
+        for match in strict_after
+    )
+
+    out: list[tuple[str, str]] = []
+    for index, (label, _start, end_marker) in enumerate(markers):
+        end = markers[index + 1][1] if index + 1 < len(markers) else len(text)
+        out.append((label, text[end_marker:end].strip()))
+
+    return text[:bare.start()].strip(), out, True
+
+
+def _sequence_like(labels: list[str]) -> bool:
+    order = "ABCD"
+    try:
+        indices = [order.index(label) for label in labels]
+    except ValueError:
+        return False
+    return indices == sorted(indices) and len(indices) == len(set(indices))
+
+
+def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
+    """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
+    texts = [raw.strip() for raw in paragraphs if raw.strip()]
+    stem: list[str] = []
+    found: list[tuple[str, str]] = []
+    started = False
+
+    for index, text in enumerate(texts):
+        if len(found) >= 4:
+            if VOLUME_TAIL.match(text):
+                continue
+            return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
+
+        expected_label = "ABCD"[len(found)]
+        next_text = texts[index + 1] if index + 1 < len(texts) else None
+        prefix, pieces, starts_with_marker = _split_inline_options(
+            text,
+            expected_label=expected_label,
+            next_text=next_text,
+        )
+        labels_here = [label for label, _ in pieces]
+        valid_marker_shape = (
+            bool(pieces)
+            and _sequence_like(labels_here)
+            and labels_here[0] == expected_label
+        )
+        bare_a_confirmed_by_next_b = (
+            expected_label == "A"
+            and len(pieces) == 1
+            and next_text is not None
+            and bool(re.match(r"^\s*B[.．、)]", next_text))
+        )
+
+        if valid_marker_shape and (
+            starts_with_marker
+            or len(pieces) >= 2
+            or bare_a_confirmed_by_next_b
+        ):
+            if prefix:
+                if started:
+                    return ParsedOptions(
+                        tuple(stem),
+                        tuple(found),
+                        "ambiguous_continuation",
+                    )
+                stem.append(prefix)
+            started = True
+            found.extend(pieces)
+        elif started:
+            if len(found) == 4 and VOLUME_TAIL.match(text):
+                continue
+            # Once option parsing starts, free text is ambiguous: it may be a wrapped
+            # option or the next structural block. Do not append it to an option.
+            return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
+        else:
+            stem.append(text)
+
+    labels = [label for label, _ in found]
+    if not found:
+        return ParsedOptions(tuple(stem), (), "none")
+    if labels != ["A", "B", "C", "D"] or any(not value for _, value in found):
+        return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
+    return ParsedOptions(tuple(stem), tuple(found), "ok")

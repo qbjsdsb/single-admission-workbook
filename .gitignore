@@ -19,3 +19,8 @@ build/
 Thumbs.db
 
 
+# Private corpus, OCR caches and generated books
+private/
+.sources/
+__pycache__/
+*.pyc

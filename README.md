@@ -1,10 +1,27 @@
+# 四科八册自动成书工程
+
+目标：从私有原始资料生成语文、数学、英语、政治四本练习册与四本教师解析册。
+
+**当前：全库提取、证据配对、逐题核验、分值/分类Gate、Canonical晋升、双版样章与八册严格编排已接通；真实英语已进入业务生产循环。真实全库保真解析、异常复核和四科内容生产仍未完成，不能视为八本正式成品。**
+
+```bash
+pip install -r requirements-pipeline.txt
+python scripts/workbook.py intake /path/to/sources.zip
+python scripts/workbook.py build examples/eight-books/dataset.json --compile
+```
+
+第二条构建命令只生成自编验证样例，需 XeLaTeX 和中文字体。真实资料在 `build/private/` 处理，不进入 Git。
+详见 [八册流水线与剩余工作](docs/architecture/EIGHT_BOOK_PIPELINE.md)。
+
+---
+
 # 体育单招文化课习题册 LaTeX 模板
 
 这是一个面向体育单招文化课语文、政治习题册的公开工程骨架。
 
 本仓库关注的是：
 
-- B5 书芯与中文教辅版式；
+- A4 书芯与中文教辅版式；
 - LaTeX / XeLaTeX 的可重复编译；
 - 语文、政治题目组件的统一管理；
 - 学生版与教师版的分离；
@@ -54,4 +71,73 @@ Set-Location .\single-admission-workbook-public
 
 本仓库暂未附加开源许可证。许可证确定前，其他人可以查看和讨论代码，但请勿直接复制、再发布或用于商业出版。
 
+## 目录与速度优化
 
+八册构建默认生成章/节两级目录、独立页码与PDF书签；目录复用章节清单，无需另填。
+保留原校验要求，并减少重复schema检查与全库扫描。详见 [目录与轻量提速](docs/architecture/TOC_AND_SPEED.md)。
+
+### 一条命令预检原卷与解析版
+
+```bash
+python scripts/review_docx_pair.py build/private/student.docx build/private/teacher.docx \
+  --subject english --out build/private/review
+```
+
+支持已归一化的英语、政治 DOCX。复用现有提取、答案配对、分值、分类建议、
+教师解析和编辑队列，输出九份 JSON；不会自动批准答案或生成可出版状态。
+原卷、解析版及包含题文的结果必须保存在私有目录，不能提交到公开仓库。
+
+### 按科目批量预检 intake 配对
+
+已有 `workbook.py intake` 缓存后，可以一次复核全部精确配对而不重新解析源文件：
+
+```bash
+python scripts/review_intake_pairs.py build/private/intake \
+  --subject english --out build/private/review-english
+```
+
+批量命令复用 `sources.private.json`、`pairs.private.json` 与 Document AST 缓存，输出每套卷的私有复核结果、总摘要和 UTF-8-BOM 教研队列 CSV；不会自动批准答案或生成可出版状态。
+
+### 把真实 Canonical 样章走正式 XeLaTeX 路径
+
+完成核验、分值、分类和 Canonical 晋升后，可以直接把私有样章交给正式 A4 出版器：
+
+```bash
+python scripts/render_private_sample.py \
+  build/private/english/canonical-draft.json \
+  build/private/english/curriculum.json \
+  --out build/private/english-xelatex-sample \
+  --compile
+python scripts/check_pdf_navigation.py build/private/english-xelatex-sample
+```
+
+该命令只选择通过现有样章 Gate 的题目，生成同源学生版和教师版，并检查 A4 页面、空页、溢出、缺字和学生版教师内容泄漏。输出仍是私有样章，必须完成视觉复核后才能继续扩成整册。
+
+
+### 冻结真实生产进度快照
+
+批量预检后，不必再人工翻整份 CSV 才知道下一步处理什么。可以从私有 Batch Review 结果生成不含题文和源路径的生产摘要：
+
+```bash
+python scripts/build_production_snapshot.py \
+  build/private/review-english \
+  --out build/private/english-snapshot
+```
+
+输出 `production-snapshot.json` 和 `production-snapshot.md`，汇总各优先级、阻断项、可进样章题量和下一批应处理的 source IDs。它只是生产调度视图，不会自动核验答案，也不会授予出版状态。
+
+### 来源缺解析时的补全边界
+
+来源本身没有教师解析时，不把 AI 文本伪装成 source evidence。先生成独立的 supplement manifest，明确标记来源为 generated/editorial 和审核决定；只有 `approve` 且带审核说明的条目才能在 Canonical 晋升前补入教师解析：
+
+```bash
+python scripts/build_canonical_draft.py \
+  build/private/verified-scored.json \
+  build/private/classification.json \
+  --teacher-enrichment build/private/teacher-enrichment.json \
+  --analysis-supplement build/private/reviewed-analysis-supplement.json \
+  --candidate-bank build/private/candidate-bank.json \
+  --out build/private/canonical-draft.json
+```
+
+补充解析只能填空，不能覆盖不同的来源原解析；未审核、延期或拒绝的 AI 草稿不会进入成书输入。

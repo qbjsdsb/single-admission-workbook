@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/teacher-enrichment-batch.schema.json",
+  "title": "Teacher Enrichment Batch",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "candidate_source_id",
+    "evidence_source_id",
+    "items",
+    "unresolved",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "analysis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "teacher_notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "enriched",
+        "unresolved"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enriched": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

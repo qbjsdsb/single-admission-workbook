@@ -1,0 +1,127 @@
+name: Eight-book pipeline
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/**'
+      - 'schema/**'
+      - 'scripts/workbook.py'
+      - 'scripts/render_private_sample.py'
+      - 'scripts/check_pdf_navigation.py'
+      - 'scripts/check_golden_benchmark.py'
+      - 'tests/**'
+      - 'examples/eight-books/**'
+      - 'examples/benchmarks/**'
+      - 'templates/latex/**'
+      - 'requirements-pipeline.txt'
+      - '.github/workflows/eight-books.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eight-books-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      print_needed: ${{ steps.changes.outputs.print_needed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+      - run: pip install -r requirements-pipeline.txt
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Run parser golden benchmark
+        run: python scripts/check_golden_benchmark.py
+      - name: Detect whether publication build is required
+        id: changes
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "print_needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BASE="${{ github.event.pull_request.base.sha }}"
+          git diff --name-only "$BASE"...HEAD > /tmp/changed-files.txt
+          cat /tmp/changed-files.txt
+          if grep -Eq '^(engine/render/|engine/pipeline/(books|sample_render|sample_selection)\.py|engine/quality/(build_fingerprint|evidence|dedup)\.py|schema/|scripts/(workbook|render_private_sample|check_pdf_navigation)\.py|templates/latex/|examples/eight-books/|requirements-pipeline\.txt|\.github/workflows/eight-books\.yml)' /tmp/changed-files.txt; then
+            echo "print_needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "print_needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  print-build:
+    needs: quality
+    if: needs.quality.outputs.print_needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+      - run: pip install -r requirements-pipeline.txt
+      - name: Install print engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-xetex texlive-lang-chinese texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-croscore poppler-utils
+      - name: Build eight fictional verification books
+        run: python scripts/workbook.py build examples/eight-books/dataset.json --compile
+      - name: Check printed contents and PDF navigation
+        run: python scripts/check_pdf_navigation.py build/eight-books
+      - name: Build fictional private-sample path
+        run: |
+          mkdir -p build/private-sample-input
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = json.loads(Path("examples/eight-books/dataset.json").read_text(encoding="utf-8"))
+          questions = [q for q in source["questions"] if q["subject"] == "english"]
+          Path("build/private-sample-input/canonical.json").write_text(
+              json.dumps({"subject": "english", "questions": questions}, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          Path("build/private-sample-input/curriculum.json").write_text(
+              json.dumps({"english": source["curriculum"]["english"]}, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          PY
+          python scripts/render_private_sample.py             build/private-sample-input/canonical.json             build/private-sample-input/curriculum.json             --out build/private-sample-fixture             --compile
+          python scripts/check_pdf_navigation.py build/private-sample-fixture
+      - name: Render every sample page in color and grayscale
+        run: |
+          for folder in build/eight-books/*-student build/eight-books/*-teacher build/private-sample-fixture/*-student build/private-sample-fixture/*-teacher; do
+            pdftoppm -scale-to 1200 -png "$folder/main.pdf" "$folder/color"
+            pdftoppm -scale-to 1200 -gray -png "$folder/main.pdf" "$folder/gray"
+            pdffonts "$folder/main.pdf"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eight-books-fictional-verification
+          path: |
+            build/eight-books/*/main.pdf
+            build/eight-books/*/book.json
+            build/eight-books/*/color-*.png
+            build/eight-books/*/gray-*.png
+            build/eight-books/coverage.json
+            build/eight-books/build-complete.json
+            build/private-sample-fixture/*/main.pdf
+            build/private-sample-fixture/*/book.json
+            build/private-sample-fixture/*/color-*.png
+            build/private-sample-fixture/*/gray-*.png
+            build/private-sample-fixture/selection.json
+            build/private-sample-fixture/sample-build.json
+          if-no-files-found: error

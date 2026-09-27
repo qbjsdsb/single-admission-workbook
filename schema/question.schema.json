@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/question.schema.json",
+  "title": "Canonical Question",
+  "type": "object",
+  "required": [
+    "id",
+    "subject",
+    "kind",
+    "score",
+    "stem"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_-]*$"
+    },
+    "subject": {
+      "enum": [
+        "chinese",
+        "mathematics",
+        "english",
+        "politics"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "single_choice",
+        "multiple_choice",
+        "fill_blank",
+        "short_answer",
+        "material_question",
+        "solution",
+        "composition",
+        "reading_group",
+        "cloze_group"
+      ]
+    },
+    "chapter_key": {
+      "type": "string"
+    },
+    "section_key": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "difficulty": {
+      "enum": [
+        "basic",
+        "standard",
+        "advanced"
+      ]
+    },
+    "score": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "stem": {
+      "$ref": "#/$defs/richText"
+    },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "content"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "$ref": "#/$defs/richText"
+          }
+        }
+      }
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "stem"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "stem": {
+            "$ref": "#/$defs/richText"
+          },
+          "answer_space_mm": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "answer": {},
+    "analysis": {
+      "$ref": "#/$defs/richText"
+    },
+    "teacher_notes": {
+      "$ref": "#/$defs/richText"
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "choice_mode": {
+          "enum": [
+            "auto",
+            "four_columns",
+            "two_columns",
+            "single_column"
+          ]
+        },
+        "keep_together": {
+          "type": "boolean"
+        },
+        "answer_space_mm": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "children": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/groupChild"
+      }
+    }
+  },
+  "$defs": {
+    "richText": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inlineNode"
+      }
+    },
+    "inlineNode": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "text"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "children"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "emphasis_dot",
+                "underline",
+                "bold",
+                "italic"
+              ]
+            },
+            "children": {
+              "$ref": "#/$defs/richText"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "tex"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "math"
+            },
+            "tex": {
+              "type": "string"
+            },
+            "display": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "asset"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "image"
+            },
+            "asset": {
+              "type": "string"
+            },
+            "alt": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "blank"
+            },
+            "width_mm": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "groupChild": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "score",
+        "stem"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_-]*$"
+        },
+        "kind": {
+          "enum": [
+            "single_choice",
+            "multiple_choice",
+            "fill_blank",
+            "short_answer",
+            "material_question",
+            "solution",
+            "composition"
+          ]
+        },
+        "score": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stem": {
+          "$ref": "#/$defs/richText"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "content"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content": {
+                "$ref": "#/$defs/richText"
+              }
+            }
+          }
+        },
+        "answer": {},
+        "analysis": {
+          "$ref": "#/$defs/richText"
+        },
+        "teacher_notes": {
+          "$ref": "#/$defs/richText"
+        },
+        "layout": {
+          "$ref": "#/$defs/childLayout"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "single_choice",
+                  "multiple_choice"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          }
+        }
+      ]
+    },
+    "childLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "choice_mode": {
+          "enum": [
+            "auto",
+            "four_columns",
+            "two_columns",
+            "single_column"
+          ]
+        },
+        "keep_together": {
+          "type": "boolean"
+        },
+        "answer_space_mm": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "single_choice",
+              "multiple_choice"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "options"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "reading_group",
+              "cloze_group"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "children"
+        ]
+      }
+    }
+  ]
+}
