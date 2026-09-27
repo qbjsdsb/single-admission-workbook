@@ -12,6 +12,20 @@ SUBJECT_NAMES = {
     "politics": "政治",
 }
 
+SUBJECT_MODULES = {
+    "chinese": "语文\\quad 基础与阅读",
+    "mathematics": "数学\\quad 基础与综合",
+    "english": "英语\\quad 词汇、语法与阅读",
+    "politics": "政治\\quad 基础知识与材料分析",
+}
+
+PAGE_LABELS = {
+    "chinese": "阅读与选择",
+    "mathematics": "选择·填空·解答",
+    "english": "阅读·词汇·写作",
+    "politics": "选择·填空·问答",
+}
+
 LATEX_ESCAPES = {
     "\\": r"\textbackslash{}",
     "{": r"\{",
@@ -123,7 +137,11 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
 
     if edition == "student" and question["kind"] in {"short_answer", "material_question", "solution"}:
         space = (question.get("layout") or {}).get("answer_space_mm", 38)
-        out.append(rf"\vspace{{{space}mm}}")
+        if question["kind"] in {"short_answer", "material_question"}:
+            lines = max(3, round(float(space) / 8))
+            out.append(rf"\answerlines{{{lines}}}")
+        else:
+            out.append(rf"\vspace{{{space}mm}}")
 
     if edition == "teacher":
         if question.get("answer") not in (None, ""):
@@ -151,11 +169,11 @@ def render_body(book: dict[str, Any], questions: dict[str, dict[str, Any]]) -> s
 def render_book(*, template: str, book: dict[str, Any], questions: dict[str, dict[str, Any]]) -> str:
     body = render_body(book, questions)
     subject_name = SUBJECT_NAMES[book["subject"]]
-    edition_name = "教师版" if book["edition"] == "teacher" else "学生版"
     replacements = {
         "%%BOOK_TITLE%%": escape_text(book["title"]),
         "%%SUBJECT_NAME%%": subject_name,
-        "%%EDITION_NAME%%": edition_name,
+        "%%SUBJECT_MODULE%%": SUBJECT_MODULES[book["subject"]],
+        "%%PAGE_LABEL%%": PAGE_LABELS[book["subject"]],
         "%%QUOTE_SEED%%": str(int(book["quote_seed"]) % 997),
         "%%BODY%%": body,
     }
