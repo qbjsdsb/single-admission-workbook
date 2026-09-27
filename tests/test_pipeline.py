@@ -53,7 +53,7 @@ class PipelineTests(unittest.TestCase):
         self.data['ledger']['expected_source_ids'].append('copy-source')
         self.data['ledger']['occurrences'].append(occurrence)
         books, bank = self.plan()
-        self.assertEqual(len(bank), 4)
+        self.assertEqual(len(bank), len(self.data['questions']))
         self.assertEqual(len(books[0]['chapters'][0]['sections'][0]['question_ids']), 1)
 
     def test_teacher_volume_and_spaces(self):
