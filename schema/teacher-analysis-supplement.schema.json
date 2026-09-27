@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/teacher-analysis-supplement.schema.json",
+  "title": "Reviewed Teacher Analysis Supplement",
+  "type": "object",
+  "required": ["schema_version", "candidate_source_id", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "candidate_source_id": {"type": "string", "minLength": 1},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["candidate_id", "analysis", "origin", "decision"],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {"type": "string", "minLength": 1},
+          "analysis": {"type": "string", "minLength": 1},
+          "origin": {"enum": ["generated", "editorial"]},
+          "decision": {"enum": ["approve", "defer", "reject"]},
+          "review_note": {"type": "string"}
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {"decision": {"const": "approve"}},
+              "required": ["decision"]
+            },
+            "then": {
+              "required": ["review_note"],
+              "properties": {
+                "review_note": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
