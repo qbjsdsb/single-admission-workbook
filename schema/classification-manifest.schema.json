@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/classification-manifest.schema.json",
+  "title": "Editorial Classification Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "candidate_source_id",
+    "subject",
+    "decisions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject": {
+      "enum": [
+        "english",
+        "politics"
+      ]
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "decision"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "enum": [
+              "assign",
+              "defer"
+            ]
+          },
+          "chapter_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "difficulty": {
+            "enum": [
+              "basic",
+              "standard",
+              "advanced"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "decision": {
+                  "const": "assign"
+                }
+              },
+              "required": [
+                "decision"
+              ]
+            },
+            "then": {
+              "required": [
+                "chapter_key",
+                "section_key",
+                "difficulty"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}
