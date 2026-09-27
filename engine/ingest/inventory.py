@@ -62,12 +62,12 @@ def infer_source_class(path: str) -> str:
             return "syllabus"
         if "思维导图" in name:
             return "mind_map"
-        if "公式" in name or "速查" in name or "秘籍" in name:
+        if re.search(r"公式|速查|秘籍|考点清单|知识点", name):
             return "reference"
         return "study_note"
-    if re.search(r"模拟|全真|检测", name):
+    if re.search(r"模拟|全真|检测|押题|冲刺|预测|密卷|仿真", name):
         return "mock_exam"
-    if re.search(r"真题|统一招生考试.*试卷|单招.*试卷", name) and not re.search(r"模拟|全真|检测", name):
+    if re.search(r"真题|统一招生考试.*试卷|单招.*试卷", name) or "全国体育单招真题" in path:
         return "past_exam"
     return "other"
 
