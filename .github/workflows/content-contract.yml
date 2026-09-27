@@ -8,6 +8,8 @@ on:
     paths:
       - "schema/**"
       - "examples/**"
+      - "engine/**"
+      - "tests/**"
       - "content/quotes.yaml"
       - "scripts/validate_content.py"
       - "requirements-ci.txt"
@@ -31,3 +33,5 @@ jobs:
         run: pip install -r requirements-ci.txt
       - name: Validate canonical content contract
         run: python scripts/validate_content.py
+      - name: Run ingestion unit tests
+        run: python -m unittest discover -s tests -p "test_*.py"
