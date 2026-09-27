@@ -2,6 +2,10 @@ name: E2E first publish
 
 # End-to-end gate: fictional DOCX sources -> canonical data -> student/teacher A4 PDFs.
 
+concurrency:
+  group: e2e-first-publish
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
