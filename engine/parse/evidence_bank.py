@@ -62,7 +62,7 @@ PLAIN_ANSWER = re.compile(
     r"^\s*(?:【\s*)?答案(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
 )
 ANALYSIS = re.compile(
-    r"^\s*(?:【\s*)?解析(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
+    r"^\s*(?:【\s*)?(?:考点与)?解析(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
 )
 DETAIL = re.compile(
     r"^\s*(?:【\s*)?详解(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
@@ -76,6 +76,26 @@ CORE = re.compile(r"^\s*题干核心\s*[:：]?\s*(.+?)\s*$")
 COMPACT_ITEM = re.compile(
     r"(\d{1,3})\s*[.．、]\s*(.+?)(?=(?:\s*\d{1,3}\s*[.．、])|$)"
 )
+ANSWER_RANGE = re.compile(
+    r"(\d{1,3})\s*[-—–~～]\s*(\d{1,3})\s*([A-DＡ-Ｄ\s]+)"
+)
+
+
+def _answer_range_items(text: str) -> list[tuple[int, str]]:
+    out: list[tuple[int, str]] = []
+    for match in ANSWER_RANGE.finditer(text):
+        start = int(match.group(1))
+        end = int(match.group(2))
+        if end < start:
+            continue
+        letters = "".join(
+            ch for ch in unicodedata.normalize("NFKC", match.group(3)).upper()
+            if ch in "ABCD"
+        )
+        if len(letters) != end - start + 1:
+            continue
+        out.extend((start + offset, letter) for offset, letter in enumerate(letters))
+    return out
 
 
 def _compact_items(text: str) -> list[tuple[int, str]]:
@@ -265,6 +285,18 @@ def extract_evidence_bank(
                     value=_answer_value(answer_text),
                     locator=paragraph.locator,
                     mode="explicit_current",
+                )
+            continue
+
+        answer_range = _answer_range_items(text)
+        if answer_range:
+            for number, value in answer_range:
+                emit(
+                    number=number,
+                    field="answer",
+                    value=_answer_value(value),
+                    locator=paragraph.locator,
+                    mode="compact_summary",
                 )
             continue
 
