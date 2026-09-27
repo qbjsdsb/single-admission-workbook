@@ -29,8 +29,8 @@ class NavigationTests(unittest.TestCase):
 
     def test_template_uses_explicit_navigation_anchors(self):
         template=(ROOT/'templates/latex/workbook.tex').read_text()
-        self.assertIn('\\\\phantomsection', template)
-        self.assertGreaterEqual(template.count('\\\\addcontentsline{toc}'), 2)
+        self.assertIn('\\phantomsection', template)
+        self.assertGreaterEqual(template.count('\\addcontentsline{toc}'), 2)
 
     def test_compile_until_directory_stable_not_fixed_two_passes(self):
         with tempfile.TemporaryDirectory() as td:
