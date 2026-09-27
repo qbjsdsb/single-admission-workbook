@@ -13,6 +13,16 @@ class OptionCalibrationTests(unittest.TestCase):
         self.assertEqual([label for label, _ in result.options], list("ABCD"))
         self.assertEqual(result.options[0][1], "first choice")
 
+    def test_recovers_bare_initial_a_on_own_line_when_next_line_is_strict_b(self):
+        result = parse_options([
+            "A first choice",
+            "B. second choice",
+            "C. third choice",
+            "D. fourth choice",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(result.options[0], ("A", "first choice"))
+
     def test_recovers_bare_later_labels_after_option_parsing_started(self):
         result = parse_options([
             "A. first choice",
@@ -44,6 +54,25 @@ class OptionCalibrationTests(unittest.TestCase):
         self.assertEqual(
             result.options,
             (("A", "One"), ("B", "Two"), ("C", "Three"), ("D", "Four")),
+        )
+
+    def test_acronym_tail_does_not_become_fake_option_marker(self):
+        result = parse_options([
+            "A. TTEC.    B. Hopper.",
+            "C. Kaplan.  D. Zoom.",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(result.options[0], ("A", "TTEC."))
+        self.assertEqual(result.options[1], ("B", "Hopper."))
+
+    def test_glued_label_after_lowercase_text_still_parses(self):
+        result = parse_options([
+            "A. oneB. twoC. threeD. four",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(
+            result.options,
+            (("A", "one"), ("B", "two"), ("C", "three"), ("D", "four")),
         )
 
     def test_volume_marker_after_complete_options_is_ignored(self):
