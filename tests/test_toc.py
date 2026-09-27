@@ -27,6 +27,11 @@ class NavigationTests(unittest.TestCase):
         legacy=render_book(template=template,book=sample,questions=bank)
         self.assertNotIn('\\begin{document}\n\\workbookcontents',legacy)
 
+    def test_template_uses_explicit_navigation_anchors(self):
+        template=(ROOT/'templates/latex/workbook.tex').read_text()
+        self.assertIn('\\\\phantomsection', template)
+        self.assertGreaterEqual(template.count('\\\\addcontentsline{toc}'), 2)
+
     def test_compile_until_directory_stable_not_fixed_two_passes(self):
         with tempfile.TemporaryDirectory() as td:
             folder=Path(td);values=iter(['1','2','2'])
