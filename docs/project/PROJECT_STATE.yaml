@@ -123,7 +123,7 @@ gates:
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
     merged_prs: [28, 29, 30, 31, 32, 33, 34, 35]
-    summary: "12组真实英语已进入生产：Evidence校准、正式XeLaTeX双版通道、分页修复、选项结构校准、生产快照、解析证据修复与来源支持分类均已合入"
+    summary: "本轮 Library snapshot 完整 intake 75 个英语源文件；22 个学生/教师组进入最新 Batch Review，共1193个候选单元、0个失败组。当前363个P0、830个P1、5个答案冲突；仍为复核态，不代表内容核验或成书完成"
 
   - id: GATE-ENGLISH-REAL-XELATEX
     status: private_smoke_passed
@@ -152,20 +152,21 @@ real_corpus:
     wmf: 270
     png: 166
     jpeg: 56
-  english_fast_lane_source_docs_audited: 12
-  english_fast_lane_candidate_units: 672
-  english_preflight:
-    numbered_answer_evidence_unique: "660/660"
-    teacher_analysis_evidence_expected_after_rerun: "585/660"
-    genuine_numbered_analysis_gaps: 75
-    explicit_heading_choice_structure: "520/520"
-    inferred_first_section_candidates_still_review_gated: 20
-    score_sections_usable: "59/60"
-    classification_placement_expected_after_rerun: "672/672"
-    private_cloze_sample_groups: 9
-    private_cloze_sample_children: 90
-    private_cloze_sample_pages_student: 13
-    private_cloze_sample_pages_teacher: 22
+  english_batch_review_2026_09_28:
+    source_files_intaken: 75
+    exact_student_companion_groups: 22
+    companion_sources: 22
+    candidate_units: 1193
+    failed_groups: 0
+    P0: 363
+    P1: 830
+    answer_conflicts: 5
+    score_conflict_units: 361
+    score_missing_units: 99
+    source_analysis_gaps: 291
+    ready_for_canonical: 0
+    status: review_only_not_verified_or_publishable
+    note: "This snapshot supersedes older English counts. File extraction is not question occurrence coverage."
   politics_fast_lane_source_docs_audited: 17
   politics_fast_lane_candidate_units: 558
   real_books_complete: false
@@ -179,13 +180,12 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 用最新合并基线重跑12组英语全科Batch Review，并让production-snapshot自动冻结新的P0/P1/P2/P3与ready数量
-  - 只人工/Agent复核重跑后仍存在的P0/P1；重点是缺失首节标题导致的20个候选与1个计分section，不再按旧65项数字工作
-  - 批量生成真实Verified Candidate与Canonical Draft；分类不再成为英语批量晋升瓶颈
-  - 将所有已满足答案、分值、来源结构和教师解析条件的英语题扩入正式XeLaTeX学生版/教师版
-  - 对75个来源确实缺失的编号题解析建立“AI草稿→显式审核→教师版”独立补全路线，绝不混入source evidence
-  - 完成英语两册题目级覆盖、去重、目录、导航、视觉QA与最终coverage Gate
-  - 英语全册通过题目级coverage和最终QA后，复用同一流水线推进政治
+  - 针对本轮1193个英语候选核验题号分段与学生/教师绑定，先复核5个答案冲突、110个结构问题及来源富内容阻断
+  - 按学生/教师源对复核答案与分值；解决361个计分冲突和99个计分缺失，不允许多数投票或AI覆盖来源冲突
+  - 对291个来源缺解析候选执行独立解题与解析审计；approved supplement与source analysis分开保存
+  - 扩展Occurrence Ledger覆盖全部75个英语文件中的真实题目出现位置，并解释每个未入正文的题目去向
+  - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册
+  - 英语全册通过Coverage与全页终审后，复用同一流水线继续推进政治、语文、数学
   - 复用同一生产线推进政治，并核对两份31/32题结构异常来源
   - 再推进语文加点/阅读题组与数学公式、图形、OLE/WMF复杂资产
   - 建立真实私有Golden Benchmark（四科代表题）并完成最终224文件题目级覆盖验收

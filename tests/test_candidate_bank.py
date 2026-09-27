@@ -199,22 +199,30 @@ class CandidateBankTests(unittest.TestCase):
         )
 
     def test_rich_content_becomes_explicit_blocker_not_plain_text(self):
+        rich_paragraph = paragraph(
+            1,
+            "1. 带图的虚构题。",
+            {
+                "type": "image_ref",
+                "relationship_id": "rId1",
+                "locator": "word/document.xml/body/1/drawing/0",
+                "status": "captured_not_normalized",
+                "source": "drawingml",
+            },
+        )
+        rich_paragraph["inlines"].append({
+            "type": "image_ref",
+            "relationship_id": "rId2",
+            "locator": "word/document.xml/body/1/drawing/1",
+            "status": "captured_not_normalized",
+            "source": "drawingml",
+        })
         document = {
             "version": 1,
             "source_format": "docx",
             "blocks": [
                 paragraph(0, "一、单项选择题"),
-                paragraph(
-                    1,
-                    "1. 带图的虚构题。",
-                    {
-                        "type": "image_ref",
-                        "relationship_id": "rId1",
-                        "locator": "word/document.xml/body/1/drawing/0",
-                        "status": "captured_not_normalized",
-                        "source": "drawingml",
-                    },
-                ),
+                rich_paragraph,
                 paragraph(2, "A. 甲 B. 乙 C. 丙 D. 丁"),
             ],
             "warnings": ["image_relationship_not_normalized"],
@@ -222,6 +230,7 @@ class CandidateBankTests(unittest.TestCase):
         bank = extract_candidate_bank(document, subject="politics", source_id="POL-RICH")
         self.assertEqual(bank["summary"]["blocker_count"], 1)
         self.assertIn("unsupported_inline:image_ref", bank["blockers"][0]["reasons"])
+        self.assertEqual(bank["blockers"][0]["reasons"], ["unsupported_inline:image_ref"])
         # The rich paragraph is not silently flattened into a publishable stem.
         self.assertEqual(bank["summary"]["candidate_count"], 0)
 
