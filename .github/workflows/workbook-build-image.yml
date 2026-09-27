@@ -52,7 +52,13 @@ jobs:
           docker run --rm \
             -v "$PWD:/workspace" \
             "${{ steps.image.outputs.image }}:${{ steps.image.outputs.hash }}" \
-            bash -lc 'python3 -m unittest discover -s tests -v && python3 scripts/check_golden_benchmark.py'
+            bash -lc '
+              python3 -m unittest discover -s tests -v
+              python3 scripts/check_golden_benchmark.py
+              rm -rf build/eight-books
+              python3 scripts/workbook.py build examples/eight-books/dataset.json --compile
+              test "$(find build/eight-books -name main.pdf -type f | wc -l)" -eq 8
+            '
 
       - name: Login to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
