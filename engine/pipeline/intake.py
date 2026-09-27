@@ -17,8 +17,10 @@ from engine.ingest.inventory import inventory_zip, summarize
 from engine.ingest.pairing import exact_pair_candidates
 from engine.ingest.probe import probe_docx
 from engine.parse.docx_text import extract_docx_paragraphs
+from engine.document.docx_reader import structure_to_document_ast
+from engine.document.pdf_reader import read_pdf_document_with_pages
 
-VERSION = 'intake-2'
+VERSION = 'intake-3-document-ast'
 PDF_LOCK = threading.Lock()
 CONVERSION_LIMIT = threading.Semaphore(2)
 
@@ -50,22 +52,18 @@ def extract(path):
         probe = asdict(probe_docx(path))
         warnings = [key for key in ('tables', 'emphasis_marks', 'underlines',
                                     'math_objects', 'media_files', 'embedded_files') if probe[key]]
+        structure = extract_structure(path)
+        document_ast = structure_to_document_ast(structure).to_dict()
         return {'format': 'docx', 'probe': probe,
-                'paragraphs': extract_docx_paragraphs(path), 'structure': extract_structure(path),
+                'paragraphs': extract_docx_paragraphs(path), 'structure': structure,
+                'document_ast': document_ast,
                 'required_work': ['rich_structure_review'] if warnings else ['question_segmentation'],
                 'rich_features': warnings}
     if path.suffix == '.pdf':
-        import fitz
-        pages = []
-        with PDF_LOCK, fitz.open(path) as doc:
-            for index, page in enumerate(doc):
-                text = page.get_text(sort=True)
-                images = len(page.get_images(full=True))
-                # Every page is accounted for: a good first page must not hide later scans.
-                pages.append({'page': index + 1, 'text': text, 'images': images,
-                              'needs_ocr': len(text.strip()) < 80,
-                              'needs_visual_review': images > 0})
-        return {'format': 'pdf', 'pages': pages, 'required_work':
+        with PDF_LOCK:
+            document_ast, pages = read_pdf_document_with_pages(path)
+        return {'format': 'pdf', 'pages': pages, 'document_ast': document_ast.to_dict(),
+                'required_work':
                 ['ocr' if any(p['needs_ocr'] for p in pages) else 'layout_segmentation']}
     return {'format': path.suffix.lstrip('.'), 'required_work':
             ['legacy_conversion' if path.suffix == '.doc' else 'ocr' if path.suffix in
@@ -87,7 +85,10 @@ def intake(archive: Path, out: Path, workers=4):
     except importlib.metadata.PackageNotFoundError:
         pdf_version = 'unavailable'
     dependencies = [Path(__file__), Path(__file__).parents[1] / 'parse/docx_structure.py',
-                    Path(__file__).parents[1] / 'parse/docx_text.py', Path(__file__).parents[1] / 'ingest/probe.py']
+                    Path(__file__).parents[1] / 'parse/docx_text.py', Path(__file__).parents[1] / 'ingest/probe.py',
+                    Path(__file__).parents[1] / 'document/model.py',
+                    Path(__file__).parents[1] / 'document/docx_reader.py',
+                    Path(__file__).parents[1] / 'document/pdf_reader.py']
     converter = subprocess.run(['soffice', '--version'], capture_output=True, timeout=15).stdout if shutil.which('soffice') else b'unavailable'
     engine_digest = hashlib.sha256(b''.join(p.read_bytes() for p in dependencies) + converter).hexdigest()
     # Inputs and parser implementation/version all affect cache identity.
