@@ -14,16 +14,17 @@ class ParsedOptions:
     status: str
 
 
-def _split_inline_options(text: str) -> list[tuple[str, str]]:
+def _split_inline_options(text: str) -> tuple[str, list[tuple[str, str]]]:
     matches = list(MARKER.finditer(text))
     if not matches:
-        return []
+        return text.strip(), []
+    prefix = text[:matches[0].start()].strip()
     out: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         content = text[match.end():end].strip()
         out.append((match.group(1), content))
-    return out
+    return prefix, out
 
 
 def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
@@ -36,9 +37,13 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
         text = raw.strip()
         if not text:
             continue
-        pieces = _split_inline_options(text)
+        prefix, pieces = _split_inline_options(text)
         starts_with_marker = bool(re.match(r"^\s*[A-D][.．、)]", text))
         if pieces and (starts_with_marker or len(pieces) >= 2):
+            if prefix:
+                if started:
+                    return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
+                stem.append(prefix)
             started = True
             found.extend(pieces)
         elif started:
