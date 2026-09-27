@@ -75,6 +75,10 @@ def promote_to_canonical_draft(
         raise ValueError("classification manifest subject mismatch")
 
     classifications = _classification_index(classification_manifest)
+    if teacher_enrichment is not None:
+        enrichment_source = teacher_enrichment.get("candidate_source_id")
+        if enrichment_source not in {None, candidate_source_id}:
+            raise ValueError("teacher enrichment source mismatch")
     teacher = _teacher_index(teacher_enrichment)
 
     questions: list[dict[str, Any]] = []
