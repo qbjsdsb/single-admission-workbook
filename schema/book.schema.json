@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/book.schema.json",
+  "title": "Frozen Workbook Manifest",
+  "type": "object",
+  "required": ["schema_version", "book_id", "title", "subject", "edition", "paper", "quote_seed", "chapters"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "book_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "subject": {"enum": ["chinese", "mathematics", "english", "politics"]},
+    "edition": {"enum": ["student", "teacher"]},
+    "paper": {"const": "A4"},
+    "quote_seed": {"type": "integer", "minimum": 0},
+    "chapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "title", "sections"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {"type": "string"},
+          "title": {"type": "string"},
+          "sections": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["key", "title", "question_ids"],
+              "additionalProperties": false,
+              "properties": {
+                "key": {"type": "string"},
+                "title": {"type": "string"},
+                "question_ids": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
