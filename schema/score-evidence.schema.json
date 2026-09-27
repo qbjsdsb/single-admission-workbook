@@ -78,7 +78,6 @@
           "per_question_source": {
             "enum": [
               "explicit",
-              "derived_from_full_score",
               null
             ]
           },
