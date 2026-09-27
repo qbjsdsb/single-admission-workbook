@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 8
+status_version: 9
 updated: 2026-09-28
 
 product:
@@ -108,8 +108,13 @@ gates:
 
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
-    merged_pr: 28
-    summary: "12组真实英语DOCX配对已完成首轮业务校准；672候选单元、660编号题答案证据唯一；下一步切正式XeLaTeX双版样章"
+    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35]
+    summary: "12组真实英语已进入生产：Evidence校准、正式XeLaTeX双版通道、分页修复、选项结构校准、生产快照、解析证据修复与来源支持分类均已合入"
+
+  - id: GATE-ENGLISH-REAL-XELATEX
+    status: private_smoke_passed
+    merged_prs: [29, 30]
+    summary: "正式A4/XeLaTeX真实内容链路已验证；私有9组完形/90子题扩展样章为学生13页、教师22页，无overfull、缺字或学生版答案解析泄漏"
 
   - id: GATE-DOCX-ASSETS
     status: in_progress
@@ -136,6 +141,18 @@ real_corpus:
     jpeg: 56
   english_fast_lane_source_docs_audited: 12
   english_fast_lane_candidate_units: 672
+  english_preflight:
+    numbered_answer_evidence_unique: "660/660"
+    teacher_analysis_evidence_expected_after_rerun: "585/660"
+    genuine_numbered_analysis_gaps: 75
+    explicit_heading_choice_structure: "520/520"
+    inferred_first_section_candidates_still_review_gated: 20
+    score_sections_usable: "59/60"
+    classification_placement_expected_after_rerun: "672/672"
+    private_cloze_sample_groups: 9
+    private_cloze_sample_children: 90
+    private_cloze_sample_pages_student: 13
+    private_cloze_sample_pages_teacher: 22
   politics_fast_lane_source_docs_audited: 17
   politics_fast_lane_candidate_units: 558
   real_books_complete: false
@@ -149,12 +166,12 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 用合并后的英语校准代码重跑全科Batch Review并冻结新的生产快照
-  - 按英语全科Editorial Queue只处理P0/P1结构异常
-  - 生成第一批schema-valid真实Canonical Draft与Teacher Enrichment
-  - 把第一批真实英语完形Canonical样章走正式XeLaTeX/A4发布器并做目录、分页、字体、泄漏和视觉QA
-  - 处理英语65个选择结构歧义与1个计分section异常
-  - 补齐或审核缺失教师解析，再扩展为完整英语学生册和教师解析册
+  - 用最新合并基线重跑12组英语全科Batch Review，并让production-snapshot自动冻结新的P0/P1/P2/P3与ready数量
+  - 只人工/Agent复核重跑后仍存在的P0/P1；重点是缺失首节标题导致的20个候选与1个计分section，不再按旧65项数字工作
+  - 批量生成真实Verified Candidate与Canonical Draft；分类不再成为英语批量晋升瓶颈
+  - 将所有已满足答案、分值、来源结构和教师解析条件的英语题扩入正式XeLaTeX学生版/教师版
+  - 对75个来源确实缺失的编号题解析建立“AI草稿→显式审核→教师版”独立补全路线，绝不混入source evidence
+  - 完成英语两册题目级覆盖、去重、目录、导航、视觉QA与最终coverage Gate
   - 英语双册稳定后整理integration进main并关闭已被吸收的旧stacked Draft PR
   - 复用同一生产线推进政治，并核对两份31/32题结构异常来源
   - 再推进语文加点/阅读题组与数学公式、图形、OLE/WMF复杂资产
