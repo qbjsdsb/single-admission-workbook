@@ -16,18 +16,18 @@ SUBJECT_MARKERS = {
     "politics": ("政治",),
 }
 
-YEAR_RE = re.compile(r"(?<!\\d)(20(?:1[0-9]|2[0-9]))年?")
+YEAR_RE = re.compile(r"(?<!\d)(20(?:1[0-9]|2[0-9]))年?")
 
 ROLE_RULES = (
-    ("teacher", re.compile(r"教师版")),
-    ("student", re.compile(r"学生版|学生卷|原卷版|（原卷）|\\(原卷\\)")),
+    ("teacher", re.compile(r"教师版|教师卷")),
+    ("student", re.compile(r"学生版|学生卷|原卷版|（原卷）|\(原卷\)")),
     ("solution", re.compile(r"解析版|答案解析|含解析")),
     ("answer", re.compile(r"答案")),
 )
 
 PAIR_NOISE = re.compile(
-    r"(学生版|学生卷|教师版|原卷版|解析版|原卷|答案解析|含解析|含答案|及答案解析|及答案|答案|"
-    r"_?\\d{8,14}|【|】|\\[|\\]|（|）|\\(|\\)|\\s+)"
+    r"(学生版|学生卷|教师版|教师卷|原卷版|解析版|原卷|答案解析|含解析|含答案|及答案解析|及答案|答案|"
+    r"_?\d{8,14}|【|】|\[|\]|（|）|\(|\)|\s+)"
 )
 
 @dataclass(frozen=True)

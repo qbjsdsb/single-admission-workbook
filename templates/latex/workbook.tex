@@ -3,7 +3,7 @@
 \usepackage{fancyhdr,tabularx,tikz,hyperref,graphicx}
 \geometry{a4paper,left=18mm,right=16mm,top=16mm,bottom=20mm,footskip=10mm}
 
-\newfontfamily\wblatin{Tinos}
+\IfFontExistsTF{Tinos}{\newfontfamily\wblatin{Tinos}}{\newfontfamily\wblatin{TeX Gyre Termes}}
 % Fandol is shipped with TeX Live and gives a more traditional Chinese
 % teaching-material texture than the Noto screen-oriented fallback.
 \newCJKfontfamily\wbsong{FandolSong-Regular.otf}

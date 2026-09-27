@@ -1,0 +1,54 @@
+name: Eight-book pipeline
+on:
+  workflow_dispatch:
+  push:
+    branches: [optimize/eight-book-pipeline]
+  pull_request:
+    paths:
+      - 'engine/**'
+      - 'scripts/workbook.py'
+      - 'tests/**'
+      - 'examples/eight-books/**'
+      - 'templates/latex/**'
+      - '.github/workflows/eight-books.yml'
+permissions:
+  contents: read
+concurrency:
+  group: eight-books-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+      - run: pip install -r requirements-pipeline.txt
+      - run: python -m unittest discover -s tests -v
+      - name: Install print engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-xetex texlive-lang-chinese texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-croscore poppler-utils
+      - name: Build eight fictional verification books
+        run: python scripts/workbook.py build examples/eight-books/dataset.json --compile
+      - name: Render every sample page in color and grayscale
+        run: |
+          for folder in build/eight-books/*-student build/eight-books/*-teacher; do
+            pdftoppm -scale-to 1200 -png "$folder/main.pdf" "$folder/color"
+            pdftoppm -scale-to 1200 -gray -png "$folder/main.pdf" "$folder/gray"
+            pdffonts "$folder/main.pdf"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eight-books-fictional-verification
+          path: |
+            build/eight-books/*/main.pdf
+            build/eight-books/*/color-*.png
+            build/eight-books/*/gray-*.png
+            build/eight-books/coverage.json
+            build/eight-books/build-complete.json
+          if-no-files-found: error

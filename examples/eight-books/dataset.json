@@ -1,0 +1,400 @@
+{
+  "questions": [
+    {
+      "id": "DEMO-1",
+      "subject": "chinese",
+      "kind": "single_choice",
+      "score": 4,
+      "stem": [
+        {
+          "type": "text",
+          "text": "下列词语中，加点字读音为“chūn”的一项是（　）。"
+        }
+      ],
+      "options": [
+        {
+          "label": "A",
+          "content": [
+            {
+              "type": "emphasis_dot",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "春"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "风"
+            }
+          ]
+        },
+        {
+          "label": "B",
+          "content": [
+            {
+              "type": "emphasis_dot",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "山"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "川"
+            }
+          ]
+        },
+        {
+          "label": "C",
+          "content": [
+            {
+              "type": "emphasis_dot",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "明"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "月"
+            }
+          ]
+        },
+        {
+          "label": "D",
+          "content": [
+            {
+              "type": "emphasis_dot",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "清"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "水"
+            }
+          ]
+        }
+      ],
+      "answer": "A",
+      "analysis": [
+        {
+          "type": "text",
+          "text": "“春”读chūn；“山”“明”“清”分别读shān、míng、qīng。"
+        }
+      ],
+      "chapter_key": "chapter-1",
+      "section_key": "section-1",
+      "difficulty": "basic"
+    },
+    {
+      "id": "DEMO-2",
+      "subject": "mathematics",
+      "kind": "single_choice",
+      "score": 4,
+      "stem": [
+        {
+          "type": "text",
+          "text": "已知集合"
+        },
+        {
+          "type": "math",
+          "tex": "A=\\{1,2\\},\\ B=\\{2,3\\}"
+        },
+        {
+          "type": "text",
+          "text": "，则"
+        },
+        {
+          "type": "math",
+          "tex": "A\\cap B"
+        },
+        {
+          "type": "text",
+          "text": "为（　）。"
+        }
+      ],
+      "options": [
+        {
+          "label": "A",
+          "content": [
+            {
+              "type": "text",
+              "text": "1"
+            }
+          ]
+        },
+        {
+          "label": "B",
+          "content": [
+            {
+              "type": "text",
+              "text": "2"
+            }
+          ]
+        },
+        {
+          "label": "C",
+          "content": [
+            {
+              "type": "text",
+              "text": "3"
+            }
+          ]
+        },
+        {
+          "label": "D",
+          "content": [
+            {
+              "type": "text",
+              "text": "1，2，3"
+            }
+          ]
+        }
+      ],
+      "answer": "B",
+      "analysis": [
+        {
+          "type": "text",
+          "text": "交集由两个集合共有的元素组成，唯一的公共元素是2。"
+        }
+      ],
+      "chapter_key": "chapter-1",
+      "section_key": "section-1",
+      "difficulty": "basic"
+    },
+    {
+      "id": "DEMO-3",
+      "subject": "english",
+      "kind": "single_choice",
+      "score": 4,
+      "stem": [
+        {
+          "type": "text",
+          "text": "She usually ____ to school on foot."
+        }
+      ],
+      "options": [
+        {
+          "label": "A",
+          "content": [
+            {
+              "type": "text",
+              "text": "go"
+            }
+          ]
+        },
+        {
+          "label": "B",
+          "content": [
+            {
+              "type": "text",
+              "text": "goes"
+            }
+          ]
+        },
+        {
+          "label": "C",
+          "content": [
+            {
+              "type": "text",
+              "text": "going"
+            }
+          ]
+        },
+        {
+          "label": "D",
+          "content": [
+            {
+              "type": "text",
+              "text": "gone"
+            }
+          ]
+        }
+      ],
+      "answer": "B",
+      "analysis": [
+        {
+          "type": "text",
+          "text": "usually表示经常发生的动作；主语She为第三人称单数，谓语使用goes。"
+        }
+      ],
+      "chapter_key": "chapter-1",
+      "section_key": "section-1",
+      "difficulty": "basic"
+    },
+    {
+      "id": "DEMO-4",
+      "subject": "politics",
+      "kind": "single_choice",
+      "score": 4,
+      "stem": [
+        {
+          "type": "text",
+          "text": "某社区通过居民议事会讨论公共事务。这体现了（　）。"
+        }
+      ],
+      "options": [
+        {
+          "label": "A",
+          "content": [
+            {
+              "type": "text",
+              "text": "居民参与公共事务"
+            }
+          ]
+        },
+        {
+          "label": "B",
+          "content": [
+            {
+              "type": "text",
+              "text": "居民无需遵守规则"
+            }
+          ]
+        },
+        {
+          "label": "C",
+          "content": [
+            {
+              "type": "text",
+              "text": "所有事务个人决定"
+            }
+          ]
+        },
+        {
+          "label": "D",
+          "content": [
+            {
+              "type": "text",
+              "text": "公共事务无人负责"
+            }
+          ]
+        }
+      ],
+      "answer": "A",
+      "analysis": [
+        {
+          "type": "text",
+          "text": "居民通过议事会表达意见、讨论公共事务，体现了居民参与。"
+        }
+      ],
+      "chapter_key": "chapter-1",
+      "section_key": "section-1",
+      "difficulty": "basic"
+    }
+  ],
+  "ledger": {
+    "sources": [
+      {
+        "id": "S1",
+        "status": "verified",
+        "expected_questions": 1
+      },
+      {
+        "id": "S2",
+        "status": "verified",
+        "expected_questions": 1
+      },
+      {
+        "id": "S3",
+        "status": "verified",
+        "expected_questions": 1
+      },
+      {
+        "id": "S4",
+        "status": "verified",
+        "expected_questions": 1
+      }
+    ],
+    "occurrences": [
+      {
+        "id": "O1",
+        "source_id": "S1",
+        "question_id": "DEMO-1",
+        "locator": "fictional fixture paragraph 1",
+        "status": "verified"
+      },
+      {
+        "id": "O2",
+        "source_id": "S2",
+        "question_id": "DEMO-2",
+        "locator": "fictional fixture paragraph 1",
+        "status": "verified"
+      },
+      {
+        "id": "O3",
+        "source_id": "S3",
+        "question_id": "DEMO-3",
+        "locator": "fictional fixture paragraph 1",
+        "status": "verified"
+      },
+      {
+        "id": "O4",
+        "source_id": "S4",
+        "question_id": "DEMO-4",
+        "locator": "fictional fixture paragraph 1",
+        "status": "verified"
+      }
+    ]
+  },
+  "curriculum": {
+    "chinese": [
+      {
+        "key": "chapter-1",
+        "title": "语言文字运用",
+        "sections": [
+          {
+            "key": "section-1",
+            "title": "字音字形"
+          }
+        ]
+      }
+    ],
+    "mathematics": [
+      {
+        "key": "chapter-1",
+        "title": "集合与逻辑",
+        "sections": [
+          {
+            "key": "section-1",
+            "title": "集合运算"
+          }
+        ]
+      }
+    ],
+    "english": [
+      {
+        "key": "chapter-1",
+        "title": "词汇与语法",
+        "sections": [
+          {
+            "key": "section-1",
+            "title": "动词时态"
+          }
+        ]
+      }
+    ],
+    "politics": [
+      {
+        "key": "chapter-1",
+        "title": "经济与社会",
+        "sections": [
+          {
+            "key": "section-1",
+            "title": "生产与消费"
+          }
+        ]
+      }
+    ]
+  }
+}

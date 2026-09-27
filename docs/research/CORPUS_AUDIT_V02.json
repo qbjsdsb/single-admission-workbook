@@ -1,0 +1,54 @@
+{
+  "files": 224,
+  "bytes": 462178401,
+  "by_extension": {
+    ".doc": 31,
+    ".docx": 110,
+    ".pdf": 82,
+    ".png": 1
+  },
+  "by_subject": {
+    "chinese": 66,
+    "english": 75,
+    "mathematics": 32,
+    "politics": 51
+  },
+  "by_source_class": {
+    "mind_map": 1,
+    "mock_exam": 122,
+    "past_exam": 63,
+    "reference": 5,
+    "study_note": 32,
+    "syllabus": 1
+  },
+  "by_role": {
+    "answer": 16,
+    "mixed": 17,
+    "solution": 46,
+    "standalone": 58,
+    "student": 58,
+    "teacher": 29
+  },
+  "by_parser_lane": {
+    "docx": 110,
+    "image_ocr": 1,
+    "legacy_doc": 31,
+    "pdf_probe": 82
+  },
+  "candidate_student_teacher_or_solution_pairs": 48,
+  "unique_payloads": 224,
+  "cache_hits": 0,
+  "extraction_errors": 0,
+  "pdf_pages": 1033,
+  "ocr_pages": 374,
+  "required_work": {
+    "rich_structure_review": 105,
+    "ocr": 52,
+    "layout_segmentation": 31,
+    "legacy_conversion": 31,
+    "question_segmentation": 5
+  },
+  "publication_ready": false,
+  "note": "File inventory and text extraction are NOT question coverage.",
+  "warm_cache_result": "pending"
+}

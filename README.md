@@ -1,3 +1,20 @@
+# 四科八册自动成书工程
+
+目标：从私有原始资料生成语文、数学、英语、政治四本练习册与四本教师解析册。
+
+**当前：全库提取/排队与八册严格编排已接通；真实全库 OCR、保真解析、逐题核验和自动分类尚未完成，不能视为八本正式成品。**
+
+```bash
+pip install -r requirements-pipeline.txt
+python scripts/workbook.py intake /path/to/sources.zip
+python scripts/workbook.py build examples/eight-books/dataset.json --compile
+```
+
+第二条构建命令只生成自编验证样例，需 XeLaTeX 和中文字体。真实资料在 `build/private/` 处理，不进入 Git。
+详见 [八册流水线与剩余工作](docs/architecture/EIGHT_BOOK_PIPELINE.md)。
+
+---
+
 # 体育单招文化课习题册 LaTeX 模板
 
 这是一个面向体育单招文化课语文、政治习题册的公开工程骨架。
