@@ -112,3 +112,16 @@ python scripts/check_pdf_navigation.py build/private/english-xelatex-sample
 ```
 
 该命令只选择通过现有样章 Gate 的题目，生成同源学生版和教师版，并检查 A4 页面、空页、溢出、缺字和学生版教师内容泄漏。输出仍是私有样章，必须完成视觉复核后才能继续扩成整册。
+
+
+### 冻结真实生产进度快照
+
+批量预检后，不必再人工翻整份 CSV 才知道下一步处理什么。可以从私有 Batch Review 结果生成不含题文和源路径的生产摘要：
+
+```bash
+python scripts/build_production_snapshot.py \
+  build/private/review-english \
+  --out build/private/english-snapshot
+```
+
+输出 `production-snapshot.json` 和 `production-snapshot.md`，汇总各优先级、阻断项、可进样章题量和下一批应处理的 source IDs。它只是生产调度视图，不会自动核验答案，也不会授予出版状态。

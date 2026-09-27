@@ -9,7 +9,6 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from engine.pipeline.batch_review import review_intake_directory
 from engine.pipeline.production_snapshot import (
     build_production_snapshot,
     render_production_snapshot_markdown,
@@ -18,20 +17,19 @@ from engine.pipeline.production_snapshot import (
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Batch-review every exact English/Politics pair from an existing private intake cache."
+        description="Build a compact production snapshot from a private batch-review directory."
     )
-    parser.add_argument("intake_dir", type=Path)
-    parser.add_argument("--subject", required=True, choices=["english", "politics"])
+    parser.add_argument("review_dir", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
-    summary = review_intake_directory(
-        args.intake_dir,
-        args.out,
-        subject=args.subject,
-    )
+    try:
+        snapshot = build_production_snapshot(args.review_dir)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
-    snapshot = build_production_snapshot(args.out)
+    args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "production-snapshot.json").write_text(
         json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -40,16 +38,16 @@ def main() -> int:
         render_production_snapshot_markdown(snapshot),
         encoding="utf-8",
     )
-
     print(json.dumps({
-        **summary,
-        "production_snapshot": {
-            "states": snapshot["states"],
-            "priority_counts": snapshot["priority_counts"],
-            "next_source_ids": snapshot["next_source_ids"],
-        },
+        "subject": snapshot["subject"],
+        "source_groups": snapshot["source_groups"],
+        "candidate_units": snapshot["candidate_units"],
+        "states": snapshot["states"],
+        "priority_counts": snapshot["priority_counts"],
+        "next_source_ids": snapshot["next_source_ids"],
+        "status": snapshot["status"],
     }, ensure_ascii=False, indent=2))
-    return 0 if summary["failed_student_groups"] == 0 else 2
+    return 0
 
 
 if __name__ == "__main__":
