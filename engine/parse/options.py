@@ -68,9 +68,16 @@ def _split_inline_options(
         if match.start() >= bare.end()
     ]
     order = "ABCD"
-    allow_bare = expected_label != "A" or any(
-        order.index(match.group(1)) > order.index(expected_label)
-        for match in strict_after
+    strict_labels = [match.group(1) for match in strict_after]
+    allow_bare = (
+        expected_label != "A"
+        or (
+            "A" not in strict_labels
+            and any(
+                order.index(label) > order.index(expected_label)
+                for label in strict_labels
+            )
+        )
     )
     if not allow_bare:
         return prefix, strict, starts_strict
