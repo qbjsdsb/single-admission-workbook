@@ -9,6 +9,7 @@ import jsonschema
 from engine.render.latex import SUBJECT_NAMES, render_book
 from engine.pipeline.intake import write_json
 from engine.quality.evidence import validate_release_evidence
+from engine.quality.dedup import exact_duplicate_clusters
 
 ROOT = Path(__file__).resolve().parents[2]
 SUBJECTS = tuple(SUBJECT_NAMES)
@@ -31,6 +32,10 @@ def validate_inputs(questions, ledger, curriculum):
     if len(ids) != len(set(ids)):
         errors.append('duplicate canonical question IDs')
     bank = {q['id']: q for q in questions}
+    for cluster in exact_duplicate_clusters(questions):
+        errors.append(
+            "unresolved exact duplicate content: " + ", ".join(cluster.question_ids)
+        )
     schema = json.loads((ROOT / 'schema/question.schema.json').read_text())
     for q in questions:
         try:
