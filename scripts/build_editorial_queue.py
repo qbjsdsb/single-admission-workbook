@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("aggregate_review", type=Path)
     parser.add_argument("score_evidence", type=Path)
     parser.add_argument("classification_manifest", type=Path)
+    parser.add_argument("--verified-candidate-bank", type=Path)
     parser.add_argument("--teacher-enrichment", type=Path)
     parser.add_argument("--allow-missing-analysis", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
@@ -37,6 +38,9 @@ def main() -> int:
         load(args.aggregate_review),
         load(args.score_evidence),
         load(args.classification_manifest),
+        verified_candidate_bank=(
+            load(args.verified_candidate_bank) if args.verified_candidate_bank else None
+        ),
         teacher_enrichment=(
             load(args.teacher_enrichment) if args.teacher_enrichment else None
         ),
