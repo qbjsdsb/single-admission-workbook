@@ -6,12 +6,14 @@ on:
     branches:
       - foundation/content-model-v01
       - ingest/probe-v01
+      - ingest/pair-and-split-v01
     paths:
       - "schema/**"
       - "examples/**"
       - "engine/**"
       - "tests/**"
       - "content/quotes.yaml"
+      - "taxonomy/**"
       - "scripts/validate_content.py"
       - "requirements-ci.txt"
       - ".github/workflows/content-contract.yml"
