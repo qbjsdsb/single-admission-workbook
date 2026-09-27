@@ -2,7 +2,7 @@
 
 目标：从私有原始资料生成语文、数学、英语、政治四本练习册与四本教师解析册。
 
-**当前：全库提取、证据配对、逐题核验、分值/分类Gate、Canonical晋升、双版样章与八册严格编排已接通；真实全库保真解析、异常复核和四科内容生产仍未完成，不能视为八本正式成品。**
+**当前：全库提取、证据配对、逐题核验、分值/分类Gate、Canonical晋升、双版样章与八册严格编排已接通；真实英语已进入业务生产循环。真实全库保真解析、异常复核和四科内容生产仍未完成，不能视为八本正式成品。**
 
 ```bash
 pip install -r requirements-pipeline.txt
@@ -71,8 +71,6 @@ Set-Location .\single-admission-workbook-public
 
 本仓库暂未附加开源许可证。许可证确定前，其他人可以查看和讨论代码，但请勿直接复制、再发布或用于商业出版。
 
-
-
 ## 目录与速度优化
 
 八册构建默认生成章/节两级目录、独立页码与PDF书签；目录复用章节清单，无需另填。
@@ -89,7 +87,6 @@ python scripts/review_docx_pair.py build/private/student.docx build/private/teac
 教师解析和编辑队列，输出九份 JSON；不会自动批准答案或生成可出版状态。
 原卷、解析版及包含题文的结果必须保存在私有目录，不能提交到公开仓库。
 
-
 ### 按科目批量预检 intake 配对
 
 已有 `workbook.py intake` 缓存后，可以一次复核全部精确配对而不重新解析源文件：
@@ -100,3 +97,18 @@ python scripts/review_intake_pairs.py build/private/intake \
 ```
 
 批量命令复用 `sources.private.json`、`pairs.private.json` 与 Document AST 缓存，输出每套卷的私有复核结果、总摘要和 UTF-8-BOM 教研队列 CSV；不会自动批准答案或生成可出版状态。
+
+### 把真实 Canonical 样章走正式 XeLaTeX 路径
+
+完成核验、分值、分类和 Canonical 晋升后，可以直接把私有样章交给正式 A4 出版器：
+
+```bash
+python scripts/render_private_sample.py \
+  build/private/english/canonical-draft.json \
+  build/private/english/curriculum.json \
+  --out build/private/english-xelatex-sample \
+  --compile
+python scripts/check_pdf_navigation.py build/private/english-xelatex-sample
+```
+
+该命令只选择通过现有样章 Gate 的题目，生成同源学生版和教师版，并检查 A4 页面、空页、溢出、缺字和学生版教师内容泄漏。输出仍是私有样章，必须完成视觉复核后才能继续扩成整册。
