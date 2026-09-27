@@ -9,8 +9,8 @@ from typing import Iterable
 QUESTION_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$")
 
 SECTION_LEAD = (
-    r"^\\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
-    r"\\s*[.．、:：]?\\s*)?"
+    r"^\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
+    r"\s*[.．、:：]?\s*)?"
 )
 
 SECTION_PATTERNS = {
