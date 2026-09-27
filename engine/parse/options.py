@@ -4,7 +4,9 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-MARKER = re.compile(r"(?:(?<=^)|(?<=\s))([A-D])[.．、)]\s*")
+# Real Word exports frequently glue choices together: "A. oneB. twoC. threeD. four".
+# Parse label markers by A->B->C->D sequence instead of requiring whitespace.
+MARKER = re.compile(r"([A-D])[.．、)]\s*")
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,15 @@ def _split_inline_options(text: str) -> tuple[str, list[tuple[str, str]]]:
     return prefix, out
 
 
+def _sequence_like(labels: list[str]) -> bool:
+    order = "ABCD"
+    try:
+        indices = [order.index(label) for label in labels]
+    except ValueError:
+        return False
+    return indices == sorted(indices) and len(indices) == len(set(indices))
+
+
 def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
     """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
     stem: list[str] = []
@@ -38,8 +49,11 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
         if not text:
             continue
         prefix, pieces = _split_inline_options(text)
+        labels_here = [label for label, _ in pieces]
         starts_with_marker = bool(re.match(r"^\s*[A-D][.．、)]", text))
-        if pieces and (starts_with_marker or len(pieces) >= 2):
+        valid_marker_shape = pieces and _sequence_like(labels_here)
+
+        if valid_marker_shape and (starts_with_marker or len(pieces) >= 2):
             if prefix:
                 if started:
                     return ParsedOptions(tuple(stem), tuple(found), "ambiguous_continuation")
