@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 import jsonschema
 
 from engine.pipeline.canonical_promotion import promote_to_canonical_draft
+from engine.pipeline.teacher_enrichment import apply_reviewed_analysis_supplements
 
 
 def load(path: Path):
@@ -25,6 +26,11 @@ def main() -> int:
     parser.add_argument("scored_verified_bank", type=Path)
     parser.add_argument("classification_manifest", type=Path)
     parser.add_argument("--teacher-enrichment", type=Path)
+    parser.add_argument(
+        "--analysis-supplement",
+        type=Path,
+        help="Reviewed generated/editorial analysis supplement; approved rows only are merged.",
+    )
     parser.add_argument("--candidate-bank", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
@@ -32,6 +38,7 @@ def main() -> int:
     scored = load(args.scored_verified_bank)
     classification = load(args.classification_manifest)
     enrichment = load(args.teacher_enrichment) if args.teacher_enrichment else None
+    supplement = load(args.analysis_supplement) if args.analysis_supplement else None
     candidate_bank = load(args.candidate_bank) if args.candidate_bank else None
 
     manifest_schema = load(ROOT / "schema/classification-manifest.schema.json")
@@ -39,6 +46,19 @@ def main() -> int:
     if enrichment is not None:
         enrichment_schema = load(ROOT / "schema/teacher-enrichment.schema.json")
         jsonschema.Draft202012Validator(enrichment_schema).validate(enrichment)
+    if supplement is not None:
+        supplement_schema = load(ROOT / "schema/teacher-analysis-supplement.schema.json")
+        jsonschema.Draft202012Validator(supplement_schema).validate(supplement)
+        known_candidate_ids = {
+            str(item.get("candidate_id") or "")
+            for item in scored.get("assigned") or []
+            if str(item.get("candidate_id") or "")
+        }
+        enrichment = apply_reviewed_analysis_supplements(
+            enrichment,
+            supplement,
+            known_candidate_ids=known_candidate_ids,
+        )
 
     draft = promote_to_canonical_draft(
         scored,

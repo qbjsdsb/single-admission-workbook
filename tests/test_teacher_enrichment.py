@@ -4,7 +4,10 @@ import unittest
 
 import jsonschema
 
-from engine.pipeline.teacher_enrichment import build_teacher_enrichment
+from engine.pipeline.teacher_enrichment import (
+    apply_reviewed_analysis_supplements,
+    build_teacher_enrichment,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -142,6 +145,88 @@ class TeacherEnrichmentTests(unittest.TestCase):
         self.assertEqual(
             result["unresolved"][0]["reason"], "pairing_or_answer_conflict"
         )
+
+    def test_reviewed_generated_analysis_fills_only_missing_source_analysis(self):
+        merged = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "items": [
+                {"candidate_id": "Q1", "teacher_notes": "Existing source note."},
+                {"candidate_id": "Q2", "analysis": "Existing source analysis."},
+            ],
+        }
+        supplement = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "items": [
+                {
+                    "candidate_id": "Q1",
+                    "analysis": "Reviewed generated explanation.",
+                    "origin": "generated",
+                    "decision": "approve",
+                    "review_note": "Checked against the question and verified answer.",
+                },
+                {
+                    "candidate_id": "Q3",
+                    "analysis": "Draft not yet approved.",
+                    "origin": "generated",
+                    "decision": "defer",
+                },
+            ],
+        }
+        result = apply_reviewed_analysis_supplements(
+            merged,
+            supplement,
+            known_candidate_ids={"Q1", "Q2", "Q3"},
+        )
+        by_id = {item["candidate_id"]: item for item in result["items"]}
+        self.assertEqual(by_id["Q1"]["analysis"], "Reviewed generated explanation.")
+        self.assertEqual(by_id["Q1"]["teacher_notes"], "Existing source note.")
+        self.assertEqual(by_id["Q2"]["analysis"], "Existing source analysis.")
+        self.assertNotIn("Q3", by_id)
+
+    def test_supplement_never_overwrites_different_source_analysis(self):
+        merged = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "items": [{"candidate_id": "Q1", "analysis": "Source analysis."}],
+        }
+        supplement = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "items": [{
+                "candidate_id": "Q1",
+                "analysis": "Generated replacement.",
+                "origin": "generated",
+                "decision": "approve",
+                "review_note": "Reviewed.",
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "cannot overwrite source teacher analysis"):
+            apply_reviewed_analysis_supplements(
+                merged,
+                supplement,
+                known_candidate_ids={"Q1"},
+            )
+
+    def test_approved_supplement_requires_known_candidate(self):
+        supplement = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "items": [{
+                "candidate_id": "UNKNOWN",
+                "analysis": "Reviewed generated explanation.",
+                "origin": "generated",
+                "decision": "approve",
+                "review_note": "Reviewed.",
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "unknown candidate"):
+            apply_reviewed_analysis_supplements(
+                None,
+                supplement,
+                known_candidate_ids={"Q1"},
+            )
 
     def test_source_identity_must_match(self):
         bank = evidence_bank()
