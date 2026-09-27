@@ -286,6 +286,7 @@ def promote_to_canonical_draft(
             "difficulty": _max_difficulty(child_classifications),
             "score": float(sum(float(child["score"]) for child in children)),
             "stem": _text_rich(shared_material),
+            "answer": [child.get("answer") for child in children],
             "children": children,
         })
 
