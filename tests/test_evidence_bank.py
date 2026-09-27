@@ -67,6 +67,61 @@ class EvidenceBankTests(unittest.TestCase):
         )
         self.assertIn("fictional explanation", analysis["value"])
 
+    def test_bracketed_teacher_format_and_grouped_answer_details(self):
+        texts = [
+            "Ⅰ. 单项选择",
+            "1. A fictional prompt.",
+            "A. createB. avoidC. inviteD. cancel",
+            "【答案】A",
+            "【解析】",
+            "【详解】A fictional detailed explanation.",
+            "II. 完形填空",
+            "A fictional shared passage.",
+            "21. A. oneB. twoC. threeD. four",
+            "22. A. redB. blueC. greenD. black",
+            "【答案】21. B    22. D",
+            "【解析】",
+            "【21题详解】",
+            "A fictional explanation for item 21.",
+            "【22题详解】A fictional explanation for item 22."
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-BRACKET"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        self.assertTrue(any(
+            e["source_number"] == 1 and e["field"] == "answer" and e["value"] == "A"
+            for e in bank["evidence"]
+        ))
+        self.assertTrue(any(
+            e["source_number"] == 1 and e["field"] == "analysis"
+            and "detailed explanation" in e["value"]
+            for e in bank["evidence"]
+        ))
+        grouped_answers = {
+            (e["source_number"], e["value"])
+            for e in bank["evidence"]
+            if e["field"] == "answer" and e["source_number"] in {21, 22}
+        }
+        self.assertEqual(grouped_answers, {(21, "B"), (22, "D")})
+        self.assertTrue(any(
+            e["source_number"] == 21 and e["field"] == "analysis"
+            and "item 21" in e["value"]
+            for e in bank["evidence"]
+        ))
+        self.assertTrue(any(
+            e["source_number"] == 22 and e["field"] == "analysis"
+            and "item 22" in e["value"]
+            for e in bank["evidence"]
+        ))
+
     def test_politics_summary_detailed_fill_and_long_answers(self):
         texts = [
             "一、单选题",
