@@ -71,6 +71,45 @@ def _question_slices(paragraphs: list[ParagraphEvidence]) -> list[tuple[int, lis
     return out
 
 
+def _longest_consecutive_question_run(
+    paragraphs: list[ParagraphEvidence],
+    *,
+    minimum_questions: int = 5,
+) -> list[ParagraphEvidence]:
+    """Find a likely unheaded question section without consuming notice items.
+
+    Real papers can omit the first "single choice" heading. We only infer a
+    section when there is a long 1,2,3,... run. Short notice lists such as
+    "1. fill in your name / 2. use a pencil" are therefore ignored.
+    """
+    numbered = []
+    for index, paragraph in enumerate(paragraphs):
+        match = QUESTION_RE.match(paragraph.text)
+        if match:
+            numbered.append((index, int(match.group(1))))
+
+    best: list[tuple[int, int]] = []
+    current: list[tuple[int, int]] = []
+    for item in numbered:
+        index, number = item
+        if number == 1:
+            if len(current) > len(best):
+                best = current
+            current = [item]
+        elif current and number == current[-1][1] + 1:
+            current.append(item)
+        else:
+            if len(current) > len(best):
+                best = current
+            current = []
+    if len(current) > len(best):
+        best = current
+
+    if len(best) < minimum_questions:
+        return []
+    return paragraphs[best[0][0]:]
+
+
 def _simple_candidate(
     *,
     source_id: str,
@@ -107,10 +146,11 @@ def _simple_candidate(
     else:
         stem_text = "\n".join(normalized).strip()
 
+    locator_key = _stable_id(*(p.locator for p in paragraphs))
     candidate_id = (
-        f"{source_id}:q:{number}"
+        f"{source_id}:q:{number}:{locator_key[:8]}"
         if number is not None
-        else f"{source_id}:item:{_stable_id(section_key, stem_text)}"
+        else f"{source_id}:item:{_stable_id(section_key, locator_key, stem_text)}"
     )
     record: dict[str, Any] = {
         "candidate_id": candidate_id,
@@ -241,6 +281,7 @@ def extract_candidate_bank(
     paragraphs, blockers = safe_paragraphs(document)
     sections: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
+    pre_section: list[ParagraphEvidence] = []
 
     for paragraph in paragraphs:
         detected = detect_section(subject, paragraph.text)
@@ -252,10 +293,27 @@ def extract_candidate_bank(
                 "heading": paragraph.text,
                 "heading_locator": paragraph.locator,
                 "paragraphs": [],
+                "inferred": False,
             }
             sections.append(current)
         elif current is not None:
             current["paragraphs"].append(paragraph)
+        else:
+            pre_section.append(paragraph)
+
+    # Some real papers begin questions directly and only label section II onward.
+    # Recover a long 1..N run, but keep it review-gated because the heading was absent.
+    if not any(section["section_key"] == "single_choice" for section in sections):
+        inferred_body = _longest_consecutive_question_run(pre_section)
+        if inferred_body:
+            sections.insert(0, {
+                "section_key": "single_choice",
+                "kind": "single_choice",
+                "heading": "[inferred missing single-choice heading]",
+                "heading_locator": inferred_body[0].locator,
+                "paragraphs": inferred_body,
+                "inferred": True,
+            })
 
     candidates: list[dict[str, Any]] = []
     groups: list[dict[str, Any]] = []
@@ -300,12 +358,22 @@ def extract_candidate_bank(
                     paragraphs=slice_,
                 ))
 
+        if section.get("inferred"):
+            for candidate in candidates[before:]:
+                if candidate["status"] == "parsed":
+                    candidate["status"] = "needs_review"
+                if "section_heading_missing_inferred_single_choice" not in candidate["review_reasons"]:
+                    candidate["review_reasons"].append(
+                        "section_heading_missing_inferred_single_choice"
+                    )
+
         section_summaries.append({
             "section_key": section_key,
             "kind": kind,
             "heading": section["heading"],
             "heading_locator": section["heading_locator"],
             "candidate_count": len(candidates) - before,
+            "inferred": bool(section.get("inferred")),
         })
 
     status_counts: dict[str, int] = {}
