@@ -39,6 +39,8 @@ def build_teacher_enrichment(
         raise ValueError("pairing review and evidence bank subject mismatch")
 
     grouped = _evidence_by_number(evidence_bank)
+    evidence_by_id = {item.get("evidence_id"): item
+                      for item in evidence_bank.get("evidence") or []}
     items: list[dict[str, Any]] = []
     unresolved: list[dict[str, str]] = []
 
@@ -61,18 +63,17 @@ def build_teacher_enrichment(
                 "reason": "weak_evidence_binding",
             })
             continue
-        if number is None:
-            unresolved.append({
-                "candidate_id": candidate_id,
-                "reason": "missing_source_number",
-            })
+        # Reuse the exact answer evidence binding established by reconciliation.
+        # Student question numbers are not safe after teacher-side renumbering.
+        bound = [evidence_by_id[eid] for eid in row.get("evidence_ids") or []
+                 if eid in evidence_by_id and evidence_by_id[eid].get("field") == "answer"]
+        identities = {(item.get("section_key"), item.get("source_number")) for item in bound}
+        if len(identities) != 1 or next(iter(identities))[1] is None:
+            unresolved.append({"candidate_id": candidate_id,
+                               "reason": "missing_or_ambiguous_answer_binding"})
             continue
-
-        evidence = list(grouped.get((section, int(number)), []))
-        if not evidence:
-            for (_e_section, e_number), group in grouped.items():
-                if e_number == int(number):
-                    evidence.extend(group)
+        identity = next(iter(identities))
+        evidence = list(grouped.get(identity, []))
 
         analysis = _join_field(evidence, "analysis")
         notes = _join_field(evidence, "teacher_notes")
