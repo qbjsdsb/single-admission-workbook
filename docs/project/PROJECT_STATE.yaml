@@ -41,8 +41,21 @@ active_gates:
       - 内部溯源信息无法默认进入出版层
       - 发布清单可冻结，构建结果可重复
 
+  - id: GATE-E2E-FIRST-PUBLISH
+    status: passed
+    branch: e2e/first-publish-v01
+    criteria:
+      - 虚构DOCX学生卷与教师卷可自动生成
+      - DOCX解析后可拆成Canonical Question
+      - 学生版与教师版引用同一有序question_ids
+      - 教师版答案/解析可关联，学生版无泄露
+      - XeLaTeX可生成两份A4 PDF
+      - PDF版式、纯净度、字体嵌入、确定性构建检查通过
+      - 政治长题干换行、选项、材料题分值共享同一分值栅格
+      - 学生版材料题自动生成答题横线
+
 next:
-  - 完成 A4 v0.3 云端构建并检查 Artifact
+  - 将首个E2E闭环扩展到真实私有英语/政治候选题（不公开原始来源）
   - 由用户审核 A4 视觉基线
   - 冻结 renderer contract v1
   - 建立第一批英语/政治结构化题目 PoC
