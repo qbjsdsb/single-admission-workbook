@@ -10,6 +10,7 @@ from engine.pipeline.books import plan_books
 from engine.render.latex import render_book
 from engine.render.compile import compile_xelatex
 from engine.quality.evidence import validate_release_evidence
+from scripts.check_pdf_navigation import internal_target_page
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -31,6 +32,18 @@ class NavigationTests(unittest.TestCase):
         template=(ROOT/'templates/latex/workbook.tex').read_text()
         self.assertIn('\\phantomsection', template)
         self.assertGreaterEqual(template.count('\\addcontentsline{toc}'), 2)
+
+    def test_navigation_accepts_resolved_named_destinations(self):
+        import fitz
+        self.assertEqual(
+            internal_target_page({'kind': fitz.LINK_NAMED, 'page': 3}), 3
+        )
+        self.assertEqual(
+            internal_target_page({'kind': fitz.LINK_GOTO, 'page': 4}), 4
+        )
+        self.assertIsNone(
+            internal_target_page({'kind': fitz.LINK_URI, 'page': 3})
+        )
 
     def test_compile_until_directory_stable_not_fixed_two_passes(self):
         with tempfile.TemporaryDirectory() as td:
