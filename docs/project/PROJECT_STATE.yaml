@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 5
+status_version: 6
 updated: 2026-09-28
 
 product:
@@ -97,9 +97,14 @@ gates:
     summary: "混合PDF的raster/vector/annotation/low-text视觉内容进入显式复核路由并支持页面证据缓存"
 
   - id: GATE-GROUP-CANONICAL
+    status: passed
+    pr: 26
+    summary: "完形/阅读共享材料与子题原子晋升已通过118项测试、Golden Benchmark与八册PDF/导航/彩灰渲染回归"
+
+  - id: GATE-BATCH-REVIEW
     status: in_progress
-    branch: production/group-canonical-v01
-    summary: "完形/阅读共享材料与子题原子晋升；Renderer只输出一次材料并逐子题编号"
+    branch: production/batch-review-v01
+    summary: "复用intake Document AST缓存，按学生源聚合多个解析/答案来源并输出全科统一复核账本"
 
   - id: GATE-DOCX-ASSETS
     status: in_progress
@@ -142,8 +147,8 @@ next:
   - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
   - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
   - 建立真实私有Golden Benchmark（四科代表题）
-  - 完成完形/阅读题组Canonical与Renderer Gate，先用于英语真实闭环
-  - 批量跑12份真实英语原卷/解析卷并汇总统一Editorial Queue
+  - 完成cache-backed Batch Review Gate并批量跑12份真实英语原卷/解析卷
+  - 汇总英语全科Editorial Queue，只优先处理P0/P1异常
   - 生成第一批schema-valid真实Canonical Draft与Teacher Enrichment
   - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
   - 核对政治两份31/32题结构异常来源
