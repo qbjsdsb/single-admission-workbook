@@ -46,6 +46,8 @@ jobs:
           test "$(pdfinfo main.pdf | awk '/^Pages:/ {print $2}')" = "4"
           pdftotext main.pdf publication.txt
           python ../../scripts/check_publication_text.py publication.txt
+          pdftotext -bbox-layout main.pdf bbox.xhtml
+          python ../../scripts/check_layout_bbox.py bbox.xhtml
           mkdir -p render
           pdftoppm -png -r 120 main.pdf render/page >/dev/null 2>&1
           test -s render/page-1.png
