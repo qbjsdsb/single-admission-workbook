@@ -10,6 +10,16 @@ def compact(text):
     return ''.join(text.split())
 
 
+def internal_target_page(link):
+    # Hyperref / XeTeX commonly emits named destinations. PyMuPDF resolves
+    # these to a concrete page while keeping kind=LINK_NAMED rather than
+    # LINK_GOTO, so both are valid internal navigation links.
+    if link.get('kind') not in (fitz.LINK_GOTO, fitz.LINK_NAMED):
+        return None
+    page = link.get('page')
+    return page if isinstance(page, int) and page >= 0 else None
+
+
 def check(folder):
     book=json.loads((folder/'book.json').read_text())
     if not book.get('table_of_contents'):
@@ -27,8 +37,12 @@ def check(folder):
         first_body=entries[0][2]-1
         if first_body<1 or '目录' not in compact(doc[0].get_text()):
             raise ValueError(f'{folder.name}: missing printed contents')
-        linked_pages={link.get('page') for page in list(doc)[:first_body] for link in page.get_links()
-                      if link.get('kind')==fitz.LINK_GOTO}
+        linked_pages={
+            target
+            for page in list(doc)[:first_body]
+            for link in page.get_links()
+            if (target := internal_target_page(link)) is not None
+        }
         for _,title,page_number in entries:
             if not 1<=page_number<=len(doc) or compact(title) not in compact(doc[page_number-1].get_text()):
                 raise ValueError(f'{folder.name}: bookmark points to wrong page: {title}')
