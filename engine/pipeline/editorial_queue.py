@@ -28,6 +28,7 @@ def build_editorial_queue(
     score_evidence: Mapping[str, Any],
     classification_manifest: Mapping[str, Any],
     *,
+    verified_candidate_bank: Mapping[str, Any] | None = None,
     teacher_enrichment: Mapping[str, Any] | None = None,
     require_teacher_analysis: bool = True,
 ) -> dict[str, Any]:
@@ -47,6 +48,11 @@ def build_editorial_queue(
         raise ValueError("score evidence subject mismatch")
     if classification_manifest.get("subject") != subject:
         raise ValueError("classification manifest subject mismatch")
+    if verified_candidate_bank is not None:
+        if verified_candidate_bank.get("candidate_source_id") != source_id:
+            raise ValueError("verified candidate bank source mismatch")
+        if verified_candidate_bank.get("subject") != subject:
+            raise ValueError("verified candidate bank subject mismatch")
     if teacher_enrichment is not None:
         enrichment_source = teacher_enrichment.get("candidate_source_id")
         if enrichment_source not in {None, source_id}:
@@ -61,6 +67,11 @@ def build_editorial_queue(
         [] if teacher_enrichment is None else teacher_enrichment.get("items"),
         "candidate_id",
     )
+    verified_ids = {
+        str(item.get("candidate_id") or "")
+        for item in ([] if verified_candidate_bank is None else verified_candidate_bank.get("verified") or [])
+        if str(item.get("candidate_id") or "")
+    }
 
     entries: list[dict[str, Any]] = []
 
@@ -101,10 +112,11 @@ def build_editorial_queue(
                 "answer variants: " + ", ".join(aggregate.get("answer_variants") or []),
                 "resolve_answer_conflict",
             )
-        elif aggregate.get("aggregate_status") in {"review_required", None}:
+        elif candidate_id not in verified_ids:
+            aggregate_status = str(aggregate.get("aggregate_status") or "unknown")
             add_issue(
                 "answer_verification",
-                "answer evidence is missing or weak",
+                "verification manifest not approved; machine aggregate=" + aggregate_status,
                 "verify_answer_evidence",
             )
 
