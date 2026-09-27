@@ -107,13 +107,18 @@ def reconcile_candidate_and_evidence(
         companion_id = pair.companion_id if pair else None
         companion = prompt_by_id.get(str(companion_id)) if companion_id else None
 
+        # A content match binds to the TEACHER question identity, even if renumbered.
+        target_number = companion.get("number") if companion is not None else number
+        target_section = companion.get("section_key") if companion is not None else section
         answer_items: list[Mapping[str, Any]] = []
-        if number is not None:
-            answer_items.extend(answers.get((section, int(number)), []))
+        if target_number is not None:
+            answer_items.extend(answers.get((target_section, int(target_number)), []))
             if not answer_items:
-                for (_e_section, e_number), group in answers.items():
-                    if e_number == int(number):
-                        answer_items.extend(group)
+                # Unsectioned answer sheets are usable only without a competing section.
+                buckets = [(key, group) for key, group in answers.items()
+                           if key[1] == int(target_number)]
+                if len(buckets) == 1 and (buckets[0][0][0] is None or target_section is None):
+                    answer_items.extend(buckets[0][1])
 
         answer = _answer_decision(answer_items)
         review_reasons = list(candidate.get("review_reasons") or [])

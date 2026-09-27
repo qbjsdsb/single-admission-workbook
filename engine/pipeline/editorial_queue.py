@@ -152,10 +152,10 @@ def build_editorial_queue(
                 "classify_taxonomy",
             )
 
-        if require_teacher_analysis and candidate_id not in teacher_items:
+        if require_teacher_analysis and not str(teacher_items.get(candidate_id, {}).get("analysis") or "").strip():
             add_issue(
                 "teacher_analysis",
-                "no trusted teacher analysis/notes enrichment",
+                "no non-empty teacher analysis enrichment",
                 "review_teacher_analysis",
             )
 

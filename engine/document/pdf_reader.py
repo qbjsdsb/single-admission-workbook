@@ -37,14 +37,27 @@ def read_pdf_document_with_pages(path: Path) -> tuple[DocumentAst, list[dict]]:
                     bbox=(x0, y0, x1, y1),
                 ))
 
-            images = len(page.get_images(full=True))
+            # Displayed images include inline images; resource tables can omit them.
+            images = len(page.get_image_info())
+            drawings = len(page.get_drawings())
+            annotations = sum(1 for _ in page.annots())
+            visual_reasons = []
+            if images:
+                visual_reasons.append("raster_content")
+            if drawings:
+                visual_reasons.append("vector_content")
+            if annotations:
+                visual_reasons.append("annotations")
             needs_ocr = text_chars < 80
             pages.append({
                 "page": page_index,
                 "text": "\n".join(page_text),
                 "images": images,
                 "needs_ocr": needs_ocr,
-                "needs_visual_review": images > 0,
+                "needs_visual_review": bool(visual_reasons) or needs_ocr,
+                "visual_reasons": visual_reasons + (["low_text"] if needs_ocr else []),
+                "drawings": drawings,
+                "annotations": annotations,
             })
 
             if needs_ocr:
@@ -54,6 +67,13 @@ def read_pdf_document_with_pages(path: Path) -> tuple[DocumentAst, list[dict]]:
                     page=page_index,
                 ))
                 warnings.append("ocr_required")
+            if visual_reasons:
+                blocks.append(unsupported_block(
+                    f"pdf/page/{page_index}/visual",
+                    "pdf_visual_content_requires_review",
+                    page=page_index,
+                ))
+                warnings.append("pdf_visual_content_requires_review")
             if images:
                 warnings.append("pdf_images_present")
 
