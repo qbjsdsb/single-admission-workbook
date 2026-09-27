@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/score-evidence.schema.json",
+  "title": "Source-derived Score Evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "candidate_source_id",
+    "sections",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "subject": {
+      "enum": [
+        "english",
+        "politics"
+      ]
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "section_key",
+          "heading",
+          "candidate_count",
+          "declared_count",
+          "per_question_score",
+          "full_score",
+          "per_question_source",
+          "full_score_source",
+          "status",
+          "reasons"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "section_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "heading": {
+            "type": "string"
+          },
+          "candidate_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "declared_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "per_question_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "full_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "per_question_source": {
+            "enum": [
+              "explicit",
+              "derived_from_full_score",
+              null
+            ]
+          },
+          "full_score_source": {
+            "enum": [
+              "explicit",
+              "derived_from_count_times_per_question",
+              null
+            ]
+          },
+          "status": {
+            "enum": [
+              "usable",
+              "incomplete",
+              "conflict"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total_sections",
+        "usable",
+        "incomplete",
+        "conflict"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total_sections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "usable": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "incomplete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conflict": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
