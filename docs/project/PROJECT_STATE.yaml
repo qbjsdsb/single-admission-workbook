@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 6
+status_version: 7
 updated: 2026-09-28
 
 product:
@@ -9,7 +9,7 @@ product:
   target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: grouped_canonical_and_real_sample
+current_phase: english_real_business_loop
 
 gates:
   - id: GATE-E2E-FIRST-PUBLISH
@@ -102,9 +102,15 @@ gates:
     summary: "完形/阅读共享材料与子题原子晋升已通过118项测试、Golden Benchmark与八册PDF/导航/彩灰渲染回归"
 
   - id: GATE-BATCH-REVIEW
-    status: in_progress
-    branch: production/batch-review-v01
+    status: passed
+    pr: 27
     summary: "复用intake Document AST缓存，按学生源聚合多个解析/答案来源并输出全科统一复核账本"
+
+  - id: GATE-ENGLISH-REAL-BUSINESS
+    status: in_progress
+    pr: 28
+    branch: production/english-real-evidence-v01
+    summary: "12组真实英语DOCX配对已完成首轮业务校准；672候选单元、660编号题答案证据唯一、首个真实完形双版样章已产出"
 
   - id: GATE-DOCX-ASSETS
     status: in_progress
@@ -147,8 +153,9 @@ next:
   - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
   - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
   - 建立真实私有Golden Benchmark（四科代表题）
-  - 完成cache-backed Batch Review Gate并批量跑12份真实英语原卷/解析卷
-  - 汇总英语全科Editorial Queue，只优先处理P0/P1异常
+  - 完成英语真实Evidence校准PR并把新增格式回归固化
+  - 按英语全科Editorial Queue处理P0/P1结构异常
+  - 把第一批真实英语完形Canonical样章切换到正式XeLaTeX/A4发布器
   - 生成第一批schema-valid真实Canonical Draft与Teacher Enrichment
   - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
   - 核对政治两份31/32题结构异常来源
