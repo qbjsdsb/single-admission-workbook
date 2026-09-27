@@ -4,9 +4,11 @@
 \geometry{a4paper,left=18mm,right=16mm,top=16mm,bottom=20mm,footskip=10mm}
 
 \newfontfamily\wblatin{Tinos}
-\newCJKfontfamily\wbsong{Noto Serif CJK SC}
-\newCJKfontfamily\wbhei{Noto Sans CJK SC}
-\newCJKfontfamily\wbkai{AR PL KaitiM GB}
+% Fandol is shipped with TeX Live and gives a more traditional Chinese
+% teaching-material texture than the Noto screen-oriented fallback.
+\newCJKfontfamily\wbsong{FandolSong-Regular.otf}
+\newCJKfontfamily\wbhei{FandolHei-Regular.otf}
+\newCJKfontfamily\wbkai{FandolKai-Regular.otf}
 \wblatin
 
 \definecolor{accent}{HTML}{56695F}
