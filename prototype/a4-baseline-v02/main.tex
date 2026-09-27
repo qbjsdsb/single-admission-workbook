@@ -1,0 +1,155 @@
+\documentclass[UTF8]{ctexart}
+\usepackage[a4paper,left=18mm,right=16mm,top=40.65mm,bottom=18mm]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{xeCJKfntef}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{calc}
+\usepackage{array}
+\usepackage{tabularx}
+\pagestyle{empty}
+
+% Open-source font stack for reproducible public CI.
+\setCJKmainfont{AR PL SungtiL GB}
+\setCJKsansfont{FandolHei-Regular.otf}
+\newCJKfontfamily\song{AR PL SungtiL GB}
+\newCJKfontfamily\hei{FandolHei-Regular.otf}
+\newCJKfontfamily\kai{AR PL KaitiM GB}
+\setmainfont{Tinos}
+\newfontfamily\enfont{Tinos}
+\newfontfamily\ensans{Noto Sans}
+
+\definecolor{brandline}{RGB}{86,105,95}
+\definecolor{softline}{RGB}{161,161,161}
+
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0pt}
+\fontsize{10.46pt}{15.94pt}\selectfont
+
+\newcommand{\bookicon}{%
+  \begin{tikzpicture}[x=1mm,y=1mm,baseline=(current bounding box.center)]
+    \draw[brandline,line width=.4pt]
+      (0,0) -- (0,3.8)
+      .. controls (1.8,4.6) and (3.5,4.4) .. (5,3.3)
+      .. controls (6.5,4.4) and (8.2,4.6) .. (10,3.8)
+      -- (10,0);
+    \draw[brandline,line width=.4pt]
+      (0,0) .. controls (1.8,.8) and (3.5,.6) .. (5,-.4)
+      .. controls (6.5,.6) and (8.2,.8) .. (10,0);
+    \draw[brandline,line width=.35pt] (5,-.4)--(5,3.3);
+  \end{tikzpicture}%
+}
+
+\newcommand{\PageChrome}[6]{%
+\begin{tikzpicture}[remember picture,overlay,x=1mm,y=1mm]
+  \coordinate (NW) at (current page.north west);
+  \node[anchor=north west,inner sep=0pt] at ([xshift=18mm,yshift=-17.50mm]NW)
+    {{\hei\fontsize{8.97pt}{9.5pt}\selectfont #1}};
+  \node[anchor=north west,inner sep=0pt] at ([xshift=27.48mm,yshift=-17.50mm]NW)
+    {{\hei\fontsize{8.97pt}{9.5pt}\selectfont #2}};
+  \node[anchor=north east,inner sep=0pt] at ([xshift=194mm,yshift=-17.50mm]NW)
+    {{\song\fontsize{8.97pt}{9.5pt}\selectfont #3}};
+  \node[anchor=north east,inner sep=0pt] at ([xshift=194mm,yshift=-22.75mm]NW) {\bookicon};
+  \node[anchor=north west,inner sep=0pt] at ([xshift=18mm,yshift=-23.25mm]NW) {#4};
+  \draw[brandline,line width=.70pt] ([xshift=18mm,yshift=-35.22mm]NW)--([xshift=32mm,yshift=-35.22mm]NW);
+  \draw[softline,line width=.35pt] ([xshift=35mm,yshift=-35.28mm]NW)--([xshift=194mm,yshift=-35.28mm]NW);
+
+  \node[anchor=south west,inner sep=0pt] at ([xshift=18mm,yshift=9.50mm]current page.south west)
+    {{\kai\fontsize{9.96pt}{10pt}\selectfont 青云阁}};
+  \node[anchor=south west,inner sep=0pt] at ([xshift=29.25mm,yshift=9.63mm]current page.south west)
+    {{\hei\fontsize{7.77pt}{8pt}\selectfont 教育}};
+  \draw[softline,line width=.35pt] ([xshift=37.72mm,yshift=10.96mm]current page.south west)--([xshift=45.72mm,yshift=10.96mm]current page.south west);
+  \node[anchor=south west,inner sep=0pt] at ([xshift=48.72mm,yshift=9.50mm]current page.south west)
+    {{\kai\fontsize{8.97pt}{9pt}\selectfont #5}};
+  \node[anchor=south east,inner sep=0pt] at ([xshift=-16mm,yshift=9.50mm]current page.south east)
+    {{\enfont\fontsize{8.97pt}{9pt}\selectfont #6}};
+\end{tikzpicture}%
+}
+
+\newcommand{\TitleKai}[1]{{\kai\fontsize{15.94pt}{16pt}\selectfont #1}}
+\newcommand{\TitleHei}[1]{{\hei\fontsize{15.94pt}{16pt}\selectfont #1}}
+
+% Fixed horizontal grid:
+% number starts at page text edge;
+% score starts 4 mm later;
+% stem starts at 21.05 mm;
+% options and math sub-parts align with score.
+\newcommand{\Q}[3]{%
+  \par\noindent
+  \hangindent=21.05mm\hangafter=1
+  \makebox[4.00mm][l]{{\ensans\bfseries #1.}}%
+  \makebox[17.05mm][l]{{\song （\enfont #2\song\ 分）}}%
+  #3\par
+}
+\newcommand{\TwoOpts}[4]{%
+  \vspace{0.8mm}
+  \noindent\hspace*{4.00mm}%
+  \begin{tabularx}{\dimexpr\linewidth-4.00mm\relax}{@{}X X@{}}
+    {\enfont A.}\ #1 & {\enfont B.}\ #2 \\
+    {\enfont C.}\ #3 & {\enfont D.}\ #4
+  \end{tabularx}\par
+}
+\newcommand{\OneOpts}[4]{%
+  \vspace{0.8mm}
+  \begin{list}{}{\setlength{\leftmargin}{4.00mm}\setlength{\itemsep}{0.1mm}\setlength{\parsep}{0pt}\setlength{\topsep}{0pt}}
+  \item[{\enfont A.}] #1
+  \item[{\enfont B.}] #2
+  \item[{\enfont C.}] #3
+  \item[{\enfont D.}] #4
+  \end{list}
+}
+\newcommand{\SubQ}[1]{\par\noindent\hspace*{4.00mm}#1\par}
+
+\begin{document}
+
+\PageChrome{语文}{古代诗文阅读}{阅读与选择}{\TitleKai{晋文公与里凫须}}{读书百遍，其义自见}{1}
+
+晋文公重耳亡，过曹，里凫须从，因盗重耳资而亡。重耳无粮，馁不能行，子推割股肉以食重耳，然后能行。及重耳反国，国中多不附重耳者。于是里凫须造见，曰：“臣能安晋国。”文公使人应之曰：“子尚何面目来见寡人！欲安晋国也！”里凫须曰：“君沐邪？”使者曰：“否。”凫须曰：“臣闻沐者其心倒，心倒者其言悖。今君不沐，何言之悖也？”使者以闻，文公见之。里凫须仰首曰：“离国久，臣民多过君；君反国，而民皆自危。里凫须又袭竭君之资，避于深山，而君以馁，介子推割股，天下莫不闻。臣之为贼亦大矣，罪至十族，未足塞责；然君诚赦之罪，与骖乘，游于国中，百姓见之，必知不念旧恶，人自安矣。”于是文公大悦，从其计，使骖乘于国中。百姓见之，皆曰：“夫里凫须且不诛而骖乘，吾何惧也？”是以晋国大宁。故书云：“文王卑服，即康功田功。”
+
+\begin{flushright}\song\fontsize{8.97pt}{10pt}\selectfont （选自《韩诗外传》）\end{flushright}
+\vspace{1.2mm}
+
+\Q{1}{3}{对下列加点字的注音，不正确的一项是（\hspace{1.2em}）。}
+\TwoOpts{重耳无粮，\CJKunderdot{馁}不能行（\enfont něi\song）}{子推割股肉以\CJKunderdot{食}重耳（\enfont shí\song）}{使\CJKunderdot{骖}乘于国中（\enfont cān\song）}{然君诚\CJKunderdot{赦}之罪，与骖乘（\enfont shè\song）}
+\vspace{1.4mm}
+
+\Q{2}{3}{对下列加点词的解释，不正确的一项是（\hspace{1.2em}）。}
+\TwoOpts{晋文公重耳\CJKunderdot{亡}：亡，逃亡。}{天下\CJKunderdot{莫}不闻：莫，没有谁。}{于是里凫须\CJKunderdot{造}见：造，到；去。}{臣之为\CJKunderdot{贼}亦大矣：贼，小偷。}
+\vspace{1.4mm}
+
+\Q{3}{3}{下列各组句子中加点词的解说，不正确的一项是（\hspace{1.2em}）。}
+\OneOpts{“子推割股肉\CJKunderdot{以}食重耳”，“以”是连词，表示目的。}{“君沐\CJKunderdot{邪}”，“邪”是语气词，表示疑问。}{“\CJKunderdot{然}君诚赦之罪，与骖乘”，“然”是连词，表示转折。}{“夫里凫须\CJKunderdot{且}不诛而骖乘”，“且”是连词，表示并列。}
+\vspace{1.4mm}
+
+\Q{4}{3}{下列对文中画横线句子的翻译，正确的一项是（\hspace{1.2em}）。}
+\OneOpts{离国太久，臣民大多超过您；您重返国家，百姓都自觉处境危险。}{离国太久，臣民大多怪罪于您；您重返国家，百姓都自觉处境危险。}{离国太久，臣民大多超过您；您反叛国家，百姓都自觉处境危险。}{离国太久，臣民大多怪罪于您；您反叛国家，百姓都自觉处境危险。}
+\vspace{1.4mm}
+
+\Q{5}{3}{下列对文中有关内容的理解，不正确的一项是（\hspace{1.2em}）。}
+\OneOpts{里凫须曾经偷窃流亡中的公子重耳的资财，导致公子重耳断粮。}{公子重耳刚即位为晋国国君，就得到了晋国臣子和百姓的拥戴。}{里凫须求见晋文公，说他可以安定晋国，最初遭到晋文公拒绝。}{晋文公优待里凫须，以此表明自己不念旧恶，安定了晋国民心。}
+
+\newpage
+
+\PageChrome{数学}{基础与综合}{选择·填空·解答}{\TitleHei{函数与解析几何}}{纸上得来终觉浅，绝知此事要躬行}{2}
+
+\Q{1}{8}{函数 $y=\sin 3x\cos 3x$ 是（\hspace{1.2em}）。}
+\TwoOpts{最小正周期为 $\dfrac{\pi}{3}$ 的奇函数}{最小正周期为 $\dfrac{\pi}{3}$ 的偶函数}{最小正周期为 $\dfrac{2\pi}{3}$ 的奇函数}{最小正周期为 $\dfrac{2\pi}{3}$ 的偶函数}
+\vspace{4mm}
+
+\Q{2}{8}{函数 $y=-x^2-5x+6$ 的单调递减区间为 \rule{40mm}{0.4pt}。}
+
+\vspace{12mm}
+\noindent\textcolor{brandline}{\rule{3mm}{0.6pt}}\hspace{2mm}{\hei\fontsize{10.96pt}{11pt}\selectfont 解答题}\par
+\vspace{4mm}
+
+\Q{3}{18}{已知椭圆 $C$ 的中心为原点，焦点 $F_1,F_2$ 在 $x$ 轴上，离心率为 $\dfrac{5}{7}$，点 $(0,2\sqrt6)$ 在 $C$ 上。}
+\vspace{1mm}
+\SubQ{（1）求 $C$ 的方程。}
+\vspace{50mm}
+\SubQ{（2）设点 $M$ 在 $C$ 上，且 $\angle F_1MF_2=90^\circ$，求 $\triangle F_1MF_2$ 的面积。}
+\vspace{48mm}
+
+\end{document}
