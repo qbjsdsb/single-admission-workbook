@@ -15,6 +15,7 @@ on:
       - "scripts/build_e2e_demo.py"
       - "scripts/validate_e2e.py"
       - "scripts/check_publication_text.py"
+      - "scripts/check_e2e_layout.py"
       - ".github/workflows/e2e-first-publish.yml"
 
 permissions:
@@ -73,6 +74,8 @@ jobs:
 
           python scripts/check_publication_text.py build/e2e/student.txt
           python scripts/check_publication_text.py build/e2e/teacher.txt
+          pdftotext -bbox-layout build/e2e/student/main.pdf build/e2e/student-bbox.xhtml
+          python scripts/check_e2e_layout.py build/e2e/student-bbox.xhtml
 
           if grep -Eq "答案|解析|提示" build/e2e/student.txt; then
             echo "Student edition leaked teacher-only content."
