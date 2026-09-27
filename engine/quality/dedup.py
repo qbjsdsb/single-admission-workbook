@@ -42,6 +42,7 @@ def canonical_content_payload(question: Mapping[str, object]) -> dict:
         "stem": question.get("stem"),
         "options": question.get("options"),
         "parts": question.get("parts"),
+        "children": question.get("children"),
     })
 
 
