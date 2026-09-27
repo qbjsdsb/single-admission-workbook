@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 3
+status_version: 4
 updated: 2026-09-27
 
 product:
@@ -9,7 +9,7 @@ product:
   target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: real_candidate_bank_fast_lane
+current_phase: canonical_promotion_and_real_sample
 
 gates:
   - id: GATE-E2E-FIRST-PUBLISH
@@ -56,6 +56,32 @@ gates:
     branch: production/candidate-bank-v01
     summary: "英语/政治Document AST到Candidate Bank已建立；真实私有学生/原卷结构校准完成，歧义保留复核"
 
+  - id: GATE-EVIDENCE-BANK
+    status: passed
+    pr: 17
+    summary: "教师版/解析版Evidence Bank已建立；题干证据与答案/解析证据分层，冲突不覆盖"
+
+  - id: GATE-PAIRING-REVIEW
+    status: passed
+    pr: 18
+    summary: "Candidate与Evidence已进入可审计Review Queue；内容匹配、弱题号绑定、缺失与冲突分级"
+
+  - id: GATE-VERIFICATION
+    status: passed
+    pr: 19
+    summary: "多来源答案聚合、Verification Manifest与显式override规则已建立"
+
+  - id: GATE-SCORE-EVIDENCE
+    status: passed
+    pr: 20
+    summary: "题数/每题分/满分从源卷提取并做一致性检查；分值冲突fail-closed"
+
+  - id: GATE-CANONICAL-PROMOTION
+    status: in_progress
+    pr: 21
+    branch: production/canonical-promotion-v01
+    summary: "Verified+Score+Classification才能晋升Canonical Draft；开始面向真实样章"
+
   - id: GATE-DOCX-ASSETS
     status: in_progress
     pr: 13
@@ -97,10 +123,11 @@ next:
   - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
   - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
   - 建立真实私有Golden Benchmark（四科代表题）
-  - 建立教师版/解析版Evidence Bank并与Candidate Bank用Pairing v2对齐
+  - 完成Canonical Promotion Gate并生成第一批schema-valid真实Canonical Draft
+  - 从Evidence Bank提取reviewed analysis/teacher notes进入Teacher Enrichment
   - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
   - 核对政治两份31/32题结构异常来源
-  - 实现章节候选分类与人工复核队列
+  - 用安全Classification Proposal减少人工分类量，阅读/语法/政治语义分类保持defer
   - 生成首个20-50页真实私有学生版/教师版样章
   - 完成Integration Gate后将稳定基线整理进main
   - 发布GHCR workbook-build镜像并做新旧出版产物等价性比较

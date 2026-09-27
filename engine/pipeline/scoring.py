@@ -146,6 +146,11 @@ def apply_score_evidence(
     contains exactly one parsed candidate. Otherwise an explicit/derived per-question
     score is required.
     """
+    if verified_candidate_bank.get("candidate_source_id") != score_evidence.get("candidate_source_id"):
+        raise ValueError("verified candidate bank and score evidence source mismatch")
+    if verified_candidate_bank.get("subject") != score_evidence.get("subject"):
+        raise ValueError("verified candidate bank and score evidence subject mismatch")
+
     score_by_section = {
         str(item["section_key"]): item
         for item in score_evidence.get("sections") or []
