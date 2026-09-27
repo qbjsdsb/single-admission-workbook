@@ -1,6 +1,6 @@
 project: single-admission-workbook
-status_version: 4
-updated: 2026-09-27
+status_version: 5
+updated: 2026-09-28
 
 product:
   page_size: A4
@@ -9,7 +9,7 @@ product:
   target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: canonical_promotion_and_real_sample
+current_phase: grouped_canonical_and_real_sample
 
 gates:
   - id: GATE-E2E-FIRST-PUBLISH
@@ -77,10 +77,29 @@ gates:
     summary: "题数/每题分/满分从源卷提取并做一致性检查；分值冲突fail-closed"
 
   - id: GATE-CANONICAL-PROMOTION
-    status: in_progress
+    status: passed
     pr: 21
-    branch: production/canonical-promotion-v01
-    summary: "Verified+Score+Classification才能晋升Canonical Draft；开始面向真实样章"
+    summary: "Verified+Score+Classification才能晋升Canonical Draft；稳定公共ID、教师解析与安全分类边界已建立"
+
+  - id: GATE-PRIVATE-SAMPLE
+    status: passed
+    pr: 22
+    summary: "同源学生/教师样章选择Gate已建立；缺答案、缺解析、非法章节与精确重复自动排除"
+
+  - id: GATE-EDITORIAL-QUEUE
+    status: passed
+    prs: [23, 24]
+    summary: "统一教研复核队列与DOCX配对一键预检已建立；教师卷重编号后按匹配教师身份取答案/解析"
+
+  - id: GATE-PDF-VISUAL-REVIEW
+    status: passed
+    pr: 25
+    summary: "混合PDF的raster/vector/annotation/low-text视觉内容进入显式复核路由并支持页面证据缓存"
+
+  - id: GATE-GROUP-CANONICAL
+    status: in_progress
+    branch: production/group-canonical-v01
+    summary: "完形/阅读共享材料与子题原子晋升；Renderer只输出一次材料并逐子题编号"
 
   - id: GATE-DOCX-ASSETS
     status: in_progress
@@ -123,8 +142,9 @@ next:
   - 完成DOCX资产/OLE公式Gate并保留预览与embedding证据
   - 建立WMF/Equation OLE可验证的保真渲染或公式识别路线
   - 建立真实私有Golden Benchmark（四科代表题）
-  - 完成Canonical Promotion Gate并生成第一批schema-valid真实Canonical Draft
-  - 从Evidence Bank提取reviewed analysis/teacher notes进入Teacher Enrichment
+  - 完成完形/阅读题组Canonical与Renderer Gate，先用于英语真实闭环
+  - 批量跑12份真实英语原卷/解析卷并汇总统一Editorial Queue
+  - 生成第一批schema-valid真实Canonical Draft与Teacher Enrichment
   - 处理英语65个、政治25个选择结构歧义/未识别候选的复核队列
   - 核对政治两份31/32题结构异常来源
   - 用安全Classification Proposal减少人工分类量，阅读/语法/政治语义分类保持defer
