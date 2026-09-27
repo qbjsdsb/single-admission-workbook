@@ -132,10 +132,18 @@ def _teacher_value(value: Any) -> str:
 def render_question(question: dict[str, Any], display_number: int, edition: str) -> str:
     score = question["score"]
     score_text = str(int(score)) if float(score).is_integer() else str(score)
-    out = [
+    out = []
+    if question.get("options"):
+        # Real English cloze calibration found that the prompt could fit at the
+        # bottom of a page while the option grid moved alone to the next page.
+        # Reserve enough space for the prompt + a normal option block; the
+        # option renderer keeps its own secondary guard for unusually long text.
+        reserve = 7 if edition == "teacher" else 6
+        out.append(rf"\Needspace{{{reserve}\baselineskip}}")
+    out.extend([
         rf"\q{{{display_number}}}{{{score_text}}}{{{rich_text(question['stem'])}}}",
         render_choices(question),
-    ]
+    ])
 
     for part in question.get("parts") or []:
         out.append(r"\subq{" + escape_text(part["label"]) + "}{" + rich_text(part["stem"]) + "}")
