@@ -9,6 +9,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from engine.pipeline.intake import intake, write_json
+from engine.quality.build_fingerprint import (
+    combined_compile_id,
+    latex_environment_fingerprint,
+)
 
 
 def main():
@@ -34,12 +38,14 @@ def main():
     try:
         books = prepare(data['questions'], data['ledger'], data['curriculum'], args.out)
         if args.compile:
+            environment_id = latex_environment_fingerprint()
             for book in books:
                 folder = (args.out / book['book_id']).resolve()
-                digest = (folder / 'build-id.txt').read_text()
+                source_digest = (folder / 'build-id.txt').read_text()
+                compile_id = combined_compile_id(source_digest, environment_id)
                 stamp = folder / 'compiled-id.txt'
                 pdf = folder / 'main.pdf'
-                if not (stamp.exists() and stamp.read_text() == digest and pdf.exists()):
+                if not (stamp.exists() and stamp.read_text().strip() == compile_id and pdf.exists()):
                     stamp.unlink(missing_ok=True)
                     for _ in range(2):
                         result = subprocess.run(['xelatex', '-no-shell-escape', '-interaction=nonstopmode',
@@ -54,9 +60,14 @@ def main():
                     with fitz.open(pdf) as document:
                         if not len(document) or any(not p.get_text().strip() for p in document):
                             raise ValueError(f"{book['book_id']}: empty PDF/page")
-                    stamp.write_text(digest)
-            write_json(args.out / 'build-complete.json', {'books': 8, 'pdfs': 8,
-                         'status': 'compiled_not_publication_approved', 'visual_review': 'required'})
+                    stamp.write_text(compile_id + '\n')
+            write_json(args.out / 'build-complete.json', {
+                'books': 8,
+                'pdfs': 8,
+                'status': 'compiled_not_publication_approved',
+                'visual_review': 'required',
+                'compile_environment_id': environment_id,
+            })
         print(f'Prepared {len(books)} editions. Publication approval remains separate from compilation.')
     except (ValueError, KeyError) as exc:
         write_json(args.out / 'blocked.json', {'status': 'blocked', 'reason': str(exc)})
