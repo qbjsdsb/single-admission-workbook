@@ -14,7 +14,7 @@ Examples:
 
 - "共20小题，每小题2分，满分40分" is usable.
 - "共20小题，每小题2分，满分30分" is a conflict.
-- "共10小题，满分20分" may derive 2 points per question.
+- "共10小题，满分20分" remains incomplete because equal per-question scoring is not stated.
 - "书面表达（满分10分）" may assign 10 points when that section contains one candidate.
 - a multi-question section with only a total score and no trustworthy equal-per-question rule remains unresolved unless derivation is mathematically and semantically justified by the heading.
 
