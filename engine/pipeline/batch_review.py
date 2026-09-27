@@ -118,7 +118,6 @@ def review_cached_source_group(
         source_id=source_id,
     )
     score = build_score_evidence(candidate)
-    classification = build_safe_classification_proposals(candidate)
 
     companion_outputs: list[dict[str, Any]] = []
     pairing_reviews: list[dict[str, Any]] = []
@@ -153,6 +152,10 @@ def review_cached_source_group(
     merged_enrichment, enrichment_unresolved = _merge_teacher_enrichments(
         source_id,
         enrichment_batches,
+    )
+    classification = build_safe_classification_proposals(
+        candidate,
+        teacher_enrichment=merged_enrichment,
     )
     queue = build_editorial_queue(
         candidate,
