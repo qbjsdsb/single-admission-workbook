@@ -8,18 +8,23 @@ from typing import Iterable
 # Allow either punctuation or at least one whitespace after a 1-3 digit question number.
 QUESTION_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$")
 
+SECTION_LEAD = (
+    r"^\\s*(?:(?:[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
+    r"\\s*[.．、:：]?\\s*)?"
+)
+
 SECTION_PATTERNS = {
     "english": [
-        (re.compile(r"单项选择"), "single_choice", "single_choice"),
-        (re.compile(r"完形填空"), "cloze", "cloze_group"),
-        (re.compile(r"阅读理解"), "reading", "reading_group"),
-        (re.compile(r"单词拼写"), "word_spelling", "fill_blank"),
-        (re.compile(r"书面表达|写作"), "writing", "composition"),
+        (re.compile(SECTION_LEAD + r"单项选择(?:题)?", re.IGNORECASE), "single_choice", "single_choice"),
+        (re.compile(SECTION_LEAD + r"完形填空", re.IGNORECASE), "cloze", "cloze_group"),
+        (re.compile(SECTION_LEAD + r"阅读理解", re.IGNORECASE), "reading", "reading_group"),
+        (re.compile(SECTION_LEAD + r"单词拼写", re.IGNORECASE), "word_spelling", "fill_blank"),
+        (re.compile(SECTION_LEAD + r"(?:书面表达|写作)", re.IGNORECASE), "writing", "composition"),
     ],
     "politics": [
-        (re.compile(r"单选题|单项选择"), "single_choice", "single_choice"),
-        (re.compile(r"填空题"), "fill_blank", "fill_blank"),
-        (re.compile(r"问答题|材料题"), "material_answer", "material_question"),
+        (re.compile(SECTION_LEAD + r"(?:单选题|单项选择(?:题)?)"), "single_choice", "single_choice"),
+        (re.compile(SECTION_LEAD + r"填空题"), "fill_blank", "fill_blank"),
+        (re.compile(SECTION_LEAD + r"(?:问答题|材料题)"), "material_answer", "material_question"),
     ],
 }
 
