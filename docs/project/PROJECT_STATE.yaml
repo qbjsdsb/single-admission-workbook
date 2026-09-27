@@ -1,0 +1,55 @@
+project: single-admission-workbook
+status_version: 1
+updated: 2026-09-27
+
+product:
+  page_size: A4
+  editions:
+    - student
+    - teacher
+  subjects:
+    - chinese
+    - mathematics
+    - english
+    - politics
+  publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
+
+current_phase: design_baseline_and_content_contract
+
+active_gates:
+  - id: GATE-A4-VISUAL
+    status: in_progress
+    branch: design/a4-baseline-v03-source-rebase
+    pr: 3
+    criteria:
+      - 页眉与右上角题型/书本图标稳定
+      - 页脚品牌/古诗词/页码稳定
+      - 题号/分值/题干共享水平栅格
+      - 选项与分值列对齐
+      - 数学小问与分值列对齐
+      - 中文加点与数学公式正确
+      - GitHub Actions 可重复构建
+      - 无明显溢出
+  - id: GATE-CONTENT-MODEL
+    status: in_progress
+    branch: foundation/content-model-v01
+    criteria:
+      - 题目数据与排版模板分离
+      - 学生版/教师版同源
+      - 支持语文加点、下划线、数学公式和图片
+      - 章节结构独立于原始资料来源
+      - 内部溯源信息无法默认进入出版层
+      - 发布清单可冻结，构建结果可重复
+
+next:
+  - 完成 A4 v0.3 云端构建并检查 Artifact
+  - 由用户审核 A4 视觉基线
+  - 冻结 renderer contract v1
+  - 建立第一批英语/政治结构化题目 PoC
+  - 生成同源学生版与教师版
+  - 再进入批量资料解析
+
+non_goals_now:
+  - 不批量导入全部原始资料
+  - 不在公开仓库提交来源不明或无再分发授权的原卷
+  - 不让 AI 输出直接绕过结构校验进入正式成书
