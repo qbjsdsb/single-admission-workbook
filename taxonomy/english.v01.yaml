@@ -16,6 +16,7 @@ chapters:
       - {key: word_conversion, title: 核心单词词性转换}
       - {key: phrase_quick_review, title: 短语速查速记}
       - {key: verb_phrases, title: 高频动词词组}
+      - {key: word_spelling_training, title: 单词拼写专项训练}
   - key: grammar
     title: 语法
     sections:
@@ -30,6 +31,7 @@ chapters:
       - {key: conjunction, title: 连词}
       - {key: word_formation, title: 构词法}
       - {key: syntax, title: 句法}
+      - {key: mixed_choice, title: 单项选择综合训练}
   - key: reading
     title: 阅读理解
     sections:
@@ -39,6 +41,7 @@ chapters:
       - {key: inference, title: 推理判断}
       - {key: main_idea, title: 主旨大意}
       - {key: word_guessing, title: 词义猜测}
+      - {key: reading_training, title: 阅读理解综合训练}
   - key: cloze
     title: 完形填空
     sections:
