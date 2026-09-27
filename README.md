@@ -88,3 +88,15 @@ python scripts/review_docx_pair.py build/private/student.docx build/private/teac
 支持已归一化的英语、政治 DOCX。复用现有提取、答案配对、分值、分类建议、
 教师解析和编辑队列，输出九份 JSON；不会自动批准答案或生成可出版状态。
 原卷、解析版及包含题文的结果必须保存在私有目录，不能提交到公开仓库。
+
+
+### 按科目批量预检 intake 配对
+
+已有 `workbook.py intake` 缓存后，可以一次复核全部精确配对而不重新解析源文件：
+
+```bash
+python scripts/review_intake_pairs.py build/private/intake \
+  --subject english --out build/private/review-english
+```
+
+批量命令复用 `sources.private.json`、`pairs.private.json` 与 Document AST 缓存，输出每套卷的私有复核结果、总摘要和 UTF-8-BOM 教研队列 CSV；不会自动批准答案或生成可出版状态。
