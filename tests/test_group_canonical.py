@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 import unittest
@@ -7,6 +8,7 @@ import jsonschema
 from engine.pipeline.canonical_promotion import promote_to_canonical_draft
 from engine.pipeline.sample_selection import select_sample_questions
 from engine.render.latex import render_body
+from engine.quality.dedup import exact_duplicate_clusters
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -168,6 +170,17 @@ class GroupCanonicalTests(unittest.TestCase):
             draft["unresolved"][0]["reason"],
             "group_classification_mismatch",
         )
+
+    def test_group_duplicate_identity_ignores_answers_and_analysis(self):
+        draft = self._promote()
+        left = draft["questions"][0]
+        right = copy.deepcopy(left)
+        right["id"] = "ENG_FFFFFFFFFFFF"
+        right["children"][0]["answer"] = "D"
+        right["children"][0]["analysis"] = [{"type": "text", "text": "Different reviewed explanation."}]
+        clusters = exact_duplicate_clusters([left, right])
+        self.assertEqual(len(clusters), 1)
+        self.assertEqual(set(clusters[0].question_ids), {left["id"], right["id"]})
 
     def test_group_sample_requires_every_child_analysis(self):
         draft = self._promote()
