@@ -102,3 +102,82 @@ def build_teacher_enrichment(
             "unresolved": len(unresolved),
         },
     }
+
+
+
+def apply_reviewed_analysis_supplements(
+    teacher_enrichment: Mapping[str, Any] | None,
+    supplement_manifest: Mapping[str, Any],
+    *,
+    known_candidate_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Merge only explicitly approved non-source analysis into teacher prose.
+
+    Source-derived teacher analysis always wins. A supplement may fill a missing
+    analysis but can never overwrite a different source-provided analysis.
+    Draft/deferred/rejected supplement rows remain outside the publication input.
+    """
+    source_id = str(supplement_manifest.get("candidate_source_id") or "")
+    if not source_id:
+        raise ValueError("analysis supplement missing candidate_source_id")
+
+    if teacher_enrichment is None:
+        base = {
+            "schema_version": 1,
+            "candidate_source_id": source_id,
+            "items": [],
+        }
+    else:
+        if str(teacher_enrichment.get("candidate_source_id") or "") != source_id:
+            raise ValueError("analysis supplement source mismatch")
+        base = {
+            "schema_version": 1,
+            "candidate_source_id": source_id,
+            "items": [dict(item) for item in teacher_enrichment.get("items") or []],
+        }
+
+    by_id: dict[str, dict[str, Any]] = {}
+    for item in base["items"]:
+        candidate_id = str(item.get("candidate_id") or "")
+        if not candidate_id or candidate_id in by_id:
+            raise ValueError("teacher enrichment contains missing/duplicate candidate_id")
+        by_id[candidate_id] = item
+
+    seen: set[str] = set()
+    for item in supplement_manifest.get("items") or []:
+        candidate_id = str(item.get("candidate_id") or "")
+        if not candidate_id:
+            raise ValueError("analysis supplement item missing candidate_id")
+        if candidate_id in seen:
+            raise ValueError(f"duplicate analysis supplement candidate: {candidate_id}")
+        seen.add(candidate_id)
+
+        if known_candidate_ids is not None and candidate_id not in known_candidate_ids:
+            raise ValueError(f"analysis supplement references unknown candidate {candidate_id}")
+
+        if item.get("decision") != "approve":
+            continue
+
+        analysis = str(item.get("analysis") or "").strip()
+        review_note = str(item.get("review_note") or "").strip()
+        if not analysis or not review_note:
+            raise ValueError(f"{candidate_id}: approved supplement needs analysis and review_note")
+
+        existing = by_id.get(candidate_id)
+        if existing is not None and existing.get("analysis"):
+            existing_analysis = str(existing["analysis"]).strip()
+            if existing_analysis != analysis:
+                raise ValueError(
+                    f"{candidate_id}: supplement cannot overwrite source teacher analysis"
+                )
+            continue
+
+        target = existing if existing is not None else {"candidate_id": candidate_id}
+        target["analysis"] = analysis
+        by_id[candidate_id] = target
+
+    return {
+        "schema_version": 1,
+        "candidate_source_id": source_id,
+        "items": [by_id[candidate_id] for candidate_id in sorted(by_id)],
+    }
