@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/verification-aggregate.schema.json",
+  "title": "Aggregated Pairing Review",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "candidate_source_id",
+    "rows",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "subject": {
+      "enum": [
+        "english",
+        "politics"
+      ]
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "aggregate_status",
+          "normalized_answer",
+          "answer_variants",
+          "evidence_source_ids",
+          "strong_evidence_source_ids",
+          "review_reasons"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aggregate_status": {
+            "enum": [
+              "machine_corroborated",
+              "single_source_consistent",
+              "review_required",
+              "conflict"
+            ]
+          },
+          "normalized_answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "answer_variants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "evidence_source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "strong_evidence_source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "review_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "machine_corroborated",
+        "single_source_consistent",
+        "review_required",
+        "conflicts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "machine_corroborated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "single_source_consistent": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conflicts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
