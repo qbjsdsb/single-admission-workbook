@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - foundation/content-model-v01
+      - ingest/probe-v01
     paths:
       - "schema/**"
       - "examples/**"
