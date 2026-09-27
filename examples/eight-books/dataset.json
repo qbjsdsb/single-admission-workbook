@@ -351,6 +351,33 @@
       "S2",
       "S3",
       "S4"
+    ],
+    "strict_answer_evidence": true,
+    "answer_evidence": [
+      {
+        "question_id": "DEMO-1",
+        "source_id": "S1",
+        "value": "A",
+        "status": "verified"
+      },
+      {
+        "question_id": "DEMO-2",
+        "source_id": "S2",
+        "value": "B",
+        "status": "verified"
+      },
+      {
+        "question_id": "DEMO-3",
+        "source_id": "S3",
+        "value": "B",
+        "status": "verified"
+      },
+      {
+        "question_id": "DEMO-4",
+        "source_id": "S4",
+        "value": "A",
+        "status": "verified"
+      }
     ]
   },
   "curriculum": {
