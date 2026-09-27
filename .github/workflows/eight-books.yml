@@ -1,8 +1,6 @@
 name: Eight-book pipeline
 on:
   workflow_dispatch:
-  push:
-    branches: [optimize/eight-book-pipeline]
   pull_request:
     paths:
       - 'engine/**'
