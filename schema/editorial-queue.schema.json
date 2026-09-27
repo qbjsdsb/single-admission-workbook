@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/editorial-queue.schema.json",
+  "title": "Editorial Review Queue",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "subject",
+    "candidate_source_id",
+    "entries",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "subject": {
+      "enum": [
+        "english",
+        "politics"
+      ]
+    },
+    "candidate_source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "source_number",
+          "section_key",
+          "state",
+          "priority",
+          "next_action",
+          "issues"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "section_key": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "blocked",
+              "needs_review",
+              "ready_for_sample"
+            ]
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          },
+          "next_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "priority",
+                "detail",
+                "suggested_action"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "enum": [
+                    "answer_conflict",
+                    "score_conflict",
+                    "candidate_structure",
+                    "answer_verification",
+                    "score_missing",
+                    "classification",
+                    "teacher_analysis"
+                  ]
+                },
+                "priority": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "suggested_action": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "blocked",
+        "needs_review",
+        "ready_for_sample",
+        "issue_counts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_review": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_sample": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issue_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}
