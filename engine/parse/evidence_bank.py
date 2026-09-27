@@ -68,7 +68,7 @@ DETAIL = re.compile(
     r"^\s*(?:【\s*)?详解(?:\s*】)?\s*[:：]?\s*(.*?)\s*$"
 )
 QUESTION_DETAIL = re.compile(
-    r"^\s*【\s*(\d{1,3})\s*题详解\s*】\s*(.*?)\s*$"
+    r"^\s*(?:【\s*)?(\d{1,3})\s*题详解\s*】\s*(.*?)\s*$"
 )
 CORE = re.compile(r"^\s*题干核心\s*[:：]?\s*(.+?)\s*$")
 

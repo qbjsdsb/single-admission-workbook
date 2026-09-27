@@ -300,6 +300,59 @@ class EvidenceBankTests(unittest.TestCase):
             for e in bank["evidence"]
         ))
 
+    def test_missing_open_bracket_in_numbered_detail_heading_is_recovered(self):
+        texts = [
+            "II. 完形填空",
+            "21. A fictional question.",
+            "A. one B. two C. three D. four",
+            "【答案】A",
+            "【解析】",
+            "21题详解】",
+            "A reviewed fictional detailed explanation.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-MALFORMED-DETAIL"
+        )
+        jsonschema.validate(bank, self.schema)
+        analyses = [
+            e for e in bank["evidence"]
+            if e["source_number"] == 21 and e["field"] == "analysis"
+        ]
+        self.assertEqual(len(analyses), 1)
+        self.assertEqual(
+            analyses[0]["value"],
+            "A reviewed fictional detailed explanation.",
+        )
+
+    def test_bare_numbered_detail_without_closing_bracket_is_not_guessed(self):
+        texts = [
+            "II. 完形填空",
+            "21. A fictional question.",
+            "A. one B. two C. three D. four",
+            "【答案】A",
+            "21题详解",
+            "Untrusted free text.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-UNSAFE-DETAIL"
+        )
+        self.assertFalse(any(
+            e["source_number"] == 21 and e["field"] == "analysis"
+            for e in bank["evidence"]
+        ))
+
     def test_decimal_in_question_text_is_not_compact_answer_summary(self):
         texts = [
             "I. 单项选择",
