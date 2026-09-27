@@ -9,6 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from engine.pipeline.intake import intake, write_json
+from engine.render.compile import compile_xelatex
 from engine.quality.build_fingerprint import (
     combined_compile_id,
     latex_environment_fingerprint,
@@ -47,12 +48,7 @@ def main():
                 pdf = folder / 'main.pdf'
                 if not (stamp.exists() and stamp.read_text().strip() == compile_id and pdf.exists()):
                     stamp.unlink(missing_ok=True)
-                    for _ in range(2):
-                        result = subprocess.run(['xelatex', '-no-shell-escape', '-interaction=nonstopmode',
-                                                 '-halt-on-error', 'main.tex'], cwd=folder,
-                                                capture_output=True, timeout=180)
-                        if result.returncode:
-                            raise ValueError(f"{book['book_id']}: compile failed; inspect main.log")
+                    compile_xelatex(folder)
                     log = (folder / 'main.log').read_text(errors='replace')
                     if any(x in log for x in ('Overfull \\hbox', 'Overfull \\vbox', 'Missing character:')):
                         raise ValueError(f"{book['book_id']}: overflow or missing glyph; inspect main.log")

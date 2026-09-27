@@ -12,6 +12,7 @@
     "subject": {"enum": ["chinese", "mathematics", "english", "politics"]},
     "edition": {"enum": ["student", "teacher"]},
     "paper": {"const": "A4"},
+    "table_of_contents": {"type": "boolean", "default": false},
     "quote_seed": {"type": "integer", "minimum": 0},
     "chapters": {
       "type": "array",

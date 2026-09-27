@@ -54,9 +54,12 @@ def validate_release_evidence(
     *,
     require_verified: bool = True,
 ) -> list[str]:
-    evidence = list(evidence)
+    grouped = defaultdict(list)
+    for item in evidence:
+        grouped[item.get('question_id')].append(item)
     errors: list[str] = []
     for question_id in question_ids:
+        evidence = grouped[question_id]
         decision = evaluate_answer_evidence(question_id, evidence)
         if decision.status == "missing":
             errors.append(f"{question_id}: missing answer evidence")

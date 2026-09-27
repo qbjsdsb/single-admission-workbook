@@ -21,7 +21,7 @@
 \setlength{\emergencystretch}{1.5em}
 \setlength{\tabcolsep}{0pt}
 \AtBeginDocument{\wbsong\fontsize{10.5}{15}\selectfont}
-\hypersetup{pdftitle={%%BOOK_TITLE%%},pdfauthor={青云阁教育}}
+\hypersetup{pdftitle={%%BOOK_TITLE%%},pdfauthor={青云阁教育},hidelinks,bookmarksopen=true}
 
 \newcommand{\marked}[1]{\CJKunderdot[depth=0.15em,sep=0.01em]{#1}}
 \newcommand{\blank}[1]{\rule[-.3ex]{#1}{.4pt}}
@@ -82,10 +82,16 @@
 
 \newcommand{\chapterhead}[2]{%
  \clearpage
+ \refstepcounter{section}%
+ \phantomsection%
+ \addcontentsline{toc}{section}{#1\quad #2}%
  \pagehead{#1\quad #2}
 }
 \newcommand{\sectionhead}[2]{%
  \Needspace{4\baselineskip}\vspace{1mm}
+ \refstepcounter{subsection}%
+ \phantomsection%
+ \addcontentsline{toc}{subsection}{#1\quad #2}%
  {\textcolor{accent}{\rule[3pt]{3mm}{.6pt}}\hspace{2mm}%
  \fontsize{11}{16}\selectfont\wbhei #1\quad #2}\par\vspace{2.2mm}}
 
@@ -149,6 +155,17 @@
  \advance\answerlinecount by1
  \repeat\endgroup\vspace{1mm}}
 
+
+% Native LaTeX TOC: one source of chapter order, clickable links and PDF outline.
+\setcounter{tocdepth}{2}
+\newcommand{\workbookcontents}{%
+ \pagenumbering{Roman}%
+ \pdfbookmark[1]{目录}{workbook-contents}%
+ {\wbhei\fontsize{18}{24}\selectfont %%BOOK_TITLE%%\par}\vspace{6mm}%
+ \tableofcontents
+ \clearpage\pagenumbering{arabic}}
+
 \begin{document}
+%%FRONT_MATTER%%
 %%BODY%%
 \end{document}
