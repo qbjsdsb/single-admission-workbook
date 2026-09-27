@@ -26,7 +26,15 @@ def extract_structure(path: Path):
                 properties = run.find(f'{{{W}}}rPr')
                 styles = {} if properties is None else {
                     p.tag.rsplit('}', 1)[-1]: p.attrib.get(f'{{{W}}}val', 'true') for p in properties}
-                runs.append({'text': ''.join(t.text or '' for t in run.iter(f'{{{W}}}t')),
+                pieces = []
+                for node in run.iter():
+                    if node.tag == f'{{{W}}}t':
+                        pieces.append(node.text or '')
+                    elif node.tag == f'{{{W}}}tab':
+                        pieces.append('\t')
+                    elif node.tag == f'{{{W}}}br':
+                        pieces.append('\n')
+                runs.append({'text': ''.join(pieces),
                              'properties': styles})
             blocks.append({'locator': f'word/document.xml/body/{index}',
                            'kind': block.tag.rsplit('}', 1)[-1], 'runs': runs,
