@@ -128,8 +128,8 @@
           "label": "A",
           "content": [
             {
-              "type": "text",
-              "text": "1"
+              "type": "math",
+              "tex": "\\{1\\}"
             }
           ]
         },
@@ -137,8 +137,8 @@
           "label": "B",
           "content": [
             {
-              "type": "text",
-              "text": "2"
+              "type": "math",
+              "tex": "\\{2\\}"
             }
           ]
         },
@@ -146,8 +146,8 @@
           "label": "C",
           "content": [
             {
-              "type": "text",
-              "text": "3"
+              "type": "math",
+              "tex": "\\{3\\}"
             }
           ]
         },
@@ -155,8 +155,8 @@
           "label": "D",
           "content": [
             {
-              "type": "text",
-              "text": "1，2，3"
+              "type": "math",
+              "tex": "\\{1,2,3\\}"
             }
           ]
         }
@@ -393,11 +393,11 @@
     "politics": [
       {
         "key": "chapter-1",
-        "title": "经济与社会",
+        "title": "政治生活",
         "sections": [
           {
             "key": "section-1",
-            "title": "生产与消费"
+            "title": "基层民主参与"
           }
         ]
       }
