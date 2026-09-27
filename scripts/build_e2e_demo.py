@@ -6,13 +6,16 @@ from html import escape as xml_escape
 import json
 from pathlib import Path
 import re
+import sys
 import zipfile
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from engine.parse.docx_text import extract_docx_paragraphs
 from engine.parse.exam_split import extract_answer_annotations, split_section, split_sections
 from engine.render.latex import render_book, stable_build_id
 
-ROOT = Path(__file__).resolve().parents[1]
 OPTION_RE = re.compile(r"^([A-D])[.．]\s*(.+)$")
 
 def make_minimal_docx(paragraphs: list[str], target: Path) -> None:
