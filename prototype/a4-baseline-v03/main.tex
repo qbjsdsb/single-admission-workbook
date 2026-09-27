@@ -80,7 +80,7 @@
 
 % Shared horizontal grid.
 % Number x=18 mm; score/options/sub-question x=23 mm.
-% Stem stays near x=39.05 mm, preserving the reference stem position.
+% Stem starts near x=39.05 mm on the first line; wrapped continuation returns to the score rail at x=23 mm.
 \newlength{\qnumwidth}
 \newlength{\qscorewidth}
 \newlength{\qstemgap}
@@ -94,7 +94,7 @@
  \par\stepcounter{exercise}\begingroup
  \normalfont\wbsong\fontsize{10.5}{15}\selectfont
  \parindent=0pt
- \hangindent=\dimexpr\qnumwidth+\qscorewidth+\qstemgap\relax
+ \hangindent=\qnumwidth
  \hangafter=1\relax
  \noindent
  \makebox[\qnumwidth][l]{\sffamily\bfseries\arabic{exercise}.}%
