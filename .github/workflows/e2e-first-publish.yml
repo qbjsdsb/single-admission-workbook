@@ -1,0 +1,113 @@
+name: E2E first publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - e2e/first-publish-v01
+    paths:
+      - "examples/e2e/**"
+      - "engine/**"
+      - "schema/**"
+      - "templates/latex/**"
+      - "scripts/build_e2e_demo.py"
+      - "scripts/validate_e2e.py"
+      - "scripts/check_publication_text.py"
+      - ".github/workflows/e2e-first-publish.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install Python validation dependencies
+        run: pip install -r requirements-ci.txt
+
+      - name: Build structured content from fictional DOCX sources
+        run: python scripts/build_e2e_demo.py --out build/e2e
+
+      - name: Validate canonical questions and same-source editions
+        run: python scripts/validate_e2e.py
+
+      - name: Install XeLaTeX and PDF inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex texlive-lang-chinese texlive-latex-extra texlive-plain-generic \
+            texlive-fonts-recommended \
+            fonts-noto-cjk fonts-arphic-gkai00mp fonts-croscore \
+            poppler-utils
+
+      - name: Compile student and teacher PDFs
+        run: |
+          for edition in student teacher; do
+            (
+              cd "build/e2e/$edition"
+              xelatex -interaction=nonstopmode -halt-on-error main.tex
+              xelatex -interaction=nonstopmode -halt-on-error main.tex
+              test -s main.pdf
+              if grep -E "Overfull \\\\hbox|Overfull \\\\vbox" main.log; then
+                echo "Layout overflow detected in $edition edition."
+                exit 1
+              fi
+            )
+          done
+
+      - name: Verify publication separation and PDF integrity
+        run: |
+          pdftotext build/e2e/student/main.pdf build/e2e/student.txt
+          pdftotext build/e2e/teacher/main.pdf build/e2e/teacher.txt
+
+          python scripts/check_publication_text.py build/e2e/student.txt
+          python scripts/check_publication_text.py build/e2e/teacher.txt
+
+          if grep -Eq "答案|解析|提示" build/e2e/student.txt; then
+            echo "Student edition leaked teacher-only content."
+            exit 1
+          fi
+          grep -q "答案" build/e2e/teacher.txt
+          grep -q "解析" build/e2e/teacher.txt
+
+          for edition in student teacher; do
+            pages="$(pdfinfo "build/e2e/$edition/main.pdf" | awk '/^Pages:/ {print $2}')"
+            test "$pages" -ge 1
+            pdffonts "build/e2e/$edition/main.pdf"
+            mkdir -p "build/e2e/$edition/render"
+            pdftoppm -png -r 130 "build/e2e/$edition/main.pdf" "build/e2e/$edition/render/page" >/dev/null 2>&1
+            test -s "build/e2e/$edition/render/page-1.png"
+          done
+
+      - name: Verify deterministic rebuild ID
+        run: |
+          first_student="$(cat build/e2e/student/build-id.txt)"
+          first_teacher="$(cat build/e2e/teacher/build-id.txt)"
+          rm -rf build/e2e/rebuild
+          python scripts/build_e2e_demo.py --out build/e2e/rebuild
+          test "$first_student" = "$(cat build/e2e/rebuild/student/build-id.txt)"
+          test "$first_teacher" = "$(cat build/e2e/rebuild/teacher/build-id.txt)"
+
+      - name: Upload E2E publication bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-first-publish-v01
+          path: |
+            build/e2e/student/main.pdf
+            build/e2e/teacher/main.pdf
+            build/e2e/student/render/*.png
+            build/e2e/teacher/render/*.png
+            build/e2e/summary.json
+            build/e2e/canonical/*.json
+            build/e2e/student.book.json
+            build/e2e/teacher.book.json
+          if-no-files-found: error
