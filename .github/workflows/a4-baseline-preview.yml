@@ -1,0 +1,38 @@
+name: A4 baseline preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - design/a4-baseline-v02
+    paths:
+      - "prototype/a4-baseline-v02/**"
+      - ".github/workflows/a4-baseline-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XeLaTeX and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex texlive-lang-chinese texlive-latex-extra \
+            fonts-arphic-gbsn00lp fonts-arphic-gkai00mp fonts-croscore fonts-noto-core
+      - name: Build A4 sample twice
+        working-directory: prototype/a4-baseline-v02
+        run: |
+          xelatex -interaction=nonstopmode -halt-on-error main.tex
+          xelatex -interaction=nonstopmode -halt-on-error main.tex
+          test -s main.pdf
+      - name: Upload preview PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: a4-baseline-v02
+          path: prototype/a4-baseline-v02/main.pdf
+          if-no-files-found: error
