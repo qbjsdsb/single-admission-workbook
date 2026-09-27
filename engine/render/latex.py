@@ -94,9 +94,17 @@ def render_choices(question: dict[str, Any]) -> str:
     mode = (question.get("layout") or {}).get("choice_mode", "auto")
     lengths = [_plain_length(opt["content"]) for opt in options]
     if mode == "auto":
-        if len(options) == 4 and max(lengths) <= 8 and sum(lengths) <= 25:
+        # Four-column choices are reserved for compact English options.
+        # Chinese, Politics and Mathematics default to a calmer two-column grid.
+        subject = question.get("subject")
+        if (
+            subject == "english"
+            and len(options) == 4
+            and max(lengths) <= 10
+            and sum(lengths) <= 30
+        ):
             mode = "four_columns"
-        elif len(options) == 4 and max(lengths) <= 28:
+        elif len(options) == 4 and max(lengths) <= 30:
             mode = "two_columns"
         else:
             mode = "single_column"
