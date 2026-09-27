@@ -125,3 +125,19 @@ python scripts/build_production_snapshot.py \
 ```
 
 输出 `production-snapshot.json` 和 `production-snapshot.md`，汇总各优先级、阻断项、可进样章题量和下一批应处理的 source IDs。它只是生产调度视图，不会自动核验答案，也不会授予出版状态。
+
+### 来源缺解析时的补全边界
+
+来源本身没有教师解析时，不把 AI 文本伪装成 source evidence。先生成独立的 supplement manifest，明确标记来源为 generated/editorial 和审核决定；只有 `approve` 且带审核说明的条目才能在 Canonical 晋升前补入教师解析：
+
+```bash
+python scripts/build_canonical_draft.py \
+  build/private/verified-scored.json \
+  build/private/classification.json \
+  --teacher-enrichment build/private/teacher-enrichment.json \
+  --analysis-supplement build/private/reviewed-analysis-supplement.json \
+  --candidate-bank build/private/candidate-bank.json \
+  --out build/private/canonical-draft.json
+```
+
+补充解析只能填空，不能覆盖不同的来源原解析；未审核、延期或拒绝的 AI 草稿不会进入成书输入。
