@@ -35,6 +35,17 @@ class OptionCalibrationTests(unittest.TestCase):
             "A person can still write a normal stem here.",
         )
 
+    def test_stem_starting_with_a_before_strict_inline_options_stays_stem(self):
+        result = parse_options([
+            "A fictional stem A. One B. Two C. Three D. Four",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(result.stem_paragraphs, ("A fictional stem",))
+        self.assertEqual(
+            result.options,
+            (("A", "One"), ("B", "Two"), ("C", "Three"), ("D", "Four")),
+        )
+
     def test_volume_marker_after_complete_options_is_ignored(self):
         result = parse_options([
             "A. first choice",
