@@ -7,6 +7,7 @@ on:
       - design/a4-baseline-v03-source-rebase
     paths:
       - "prototype/a4-baseline-v03/**"
+      - "scripts/check_publication_text.py"
       - ".github/workflows/a4-baseline-v03.yml"
 
 permissions:
@@ -18,13 +19,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Install XeLaTeX and open font profile
+      - name: Install XeLaTeX, fonts and PDF inspection tools
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             texlive-xetex texlive-lang-chinese texlive-latex-extra texlive-plain-generic \
             texlive-fonts-recommended \
-            fonts-noto-cjk fonts-arphic-gkai00mp fonts-croscore
+            fonts-noto-cjk fonts-arphic-gkai00mp fonts-croscore \
+            poppler-utils
       - name: Build twice
         working-directory: prototype/a4-baseline-v03
         run: |
@@ -38,11 +40,23 @@ jobs:
             echo "Layout overflow detected."
             exit 1
           fi
-      - name: Upload preview PDF
+      - name: Inspect publication output
+        working-directory: prototype/a4-baseline-v03
+        run: |
+          test "$(pdfinfo main.pdf | awk '/^Pages:/ {print $2}')" = "4"
+          pdftotext main.pdf publication.txt
+          python ../../scripts/check_publication_text.py publication.txt
+          mkdir -p render
+          pdftoppm -png -r 120 main.pdf render/page >/dev/null 2>&1
+          test -s render/page-1.png
+          pdffonts main.pdf
+      - name: Upload preview bundle
         uses: actions/upload-artifact@v4
         with:
           name: a4-baseline-v03-open-fonts
-          path: prototype/a4-baseline-v03/main.pdf
+          path: |
+            prototype/a4-baseline-v03/main.pdf
+            prototype/a4-baseline-v03/render/*.png
           if-no-files-found: error
 
   windows-font-audit:
