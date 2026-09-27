@@ -84,6 +84,43 @@ class BatchReviewTests(unittest.TestCase):
         )
         self.assertEqual(len(result["teacher_enrichment"]["items"]), 1)
 
+    def test_batch_review_uses_trusted_teacher_analysis_for_classification(self):
+        student = source(
+            "student.docx",
+            "SRC-STUDENT",
+            "student-cache",
+            "a" * 64,
+            "student",
+        )
+        teacher = source(
+            "teacher.docx",
+            "SRC-TEACHER",
+            "teacher-cache",
+            "b" * 64,
+            "solution",
+        )
+
+        result = review_cached_source_group(
+            student_source=student,
+            student_document=student_ast(),
+            companions=[
+                (
+                    teacher,
+                    teacher_ast("考查非谓语动词。A reviewed fictional explanation."),
+                    "name_exact",
+                ),
+            ],
+            subject="english",
+        )
+
+        decision = result["classification_manifest"]["decisions"][0]
+        self.assertEqual(decision["decision"], "assign")
+        self.assertEqual(
+            (decision["chapter_key"], decision["section_key"]),
+            ("grammar", "verb"),
+        )
+        self.assertIn("trusted_teacher_analysis", decision["note"])
+
     def test_different_teacher_analysis_variants_are_not_silently_chosen(self):
         student = source("student.docx", "SRC-STUDENT", "student-cache", "a" * 64, "student")
         teacher_a = source("teacher-a.docx", "SRC-TA", "ta-cache", "b" * 64, "solution")
