@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 9
+status_version: 10
 updated: 2026-09-28
 
 product:
@@ -10,6 +10,20 @@ product:
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
 current_phase: english_real_business_loop
+
+engineering_baseline:
+  branch: main
+  commit: c0d84fbfac9ef9f65c2b35f87c15b536061a8461
+  integrated_pr: 14
+  integration_head: 6c536f778bafd679c04d8803e310efc198755a31
+  checks_on_integration_head:
+    quality: passed
+    print_build: passed
+    publication_image: passed
+  main_push_image_run: 36352356877
+  main_push_image_status: passed
+  note: "Stable engineering baseline only; no real eight-book delivery claim"
+
 
 gates:
   - id: GATE-E2E-FIRST-PUBLISH
@@ -117,10 +131,9 @@ gates:
     summary: "正式A4/XeLaTeX真实内容链路已验证；私有9组完形/90子题扩展样章为学生13页、教师22页，无overfull、缺字或学生版答案解析泄漏"
 
   - id: GATE-DOCX-ASSETS
-    status: in_progress
-    pr: 13
-    branch: architecture/docx-assets-v01
-    summary: "真实数学路径：OLE公式、WMF/PNG/JPEG、DrawingML/VML与二进制资产关系完整捕获"
+    status: implementation_in_main_fidelity_open
+    merged_via_pr: 14
+    summary: "DOCX AST 已捕获 OLE 公式、WMF/PNG/JPEG、DrawingML/VML 与二进制资产关系；真实数学题的 source-to-final 视觉保真仍待逐项核验"
 
 real_corpus:
   files: 224
@@ -172,7 +185,7 @@ next:
   - 将所有已满足答案、分值、来源结构和教师解析条件的英语题扩入正式XeLaTeX学生版/教师版
   - 对75个来源确实缺失的编号题解析建立“AI草稿→显式审核→教师版”独立补全路线，绝不混入source evidence
   - 完成英语两册题目级覆盖、去重、目录、导航、视觉QA与最终coverage Gate
-  - 英语双册稳定后整理integration进main并关闭已被吸收的旧stacked Draft PR
+  - 英语全册通过题目级coverage和最终QA后，复用同一流水线推进政治
   - 复用同一生产线推进政治，并核对两份31/32题结构异常来源
   - 再推进语文加点/阅读题组与数学公式、图形、OLE/WMF复杂资产
   - 建立真实私有Golden Benchmark（四科代表题）并完成最终224文件题目级覆盖验收
