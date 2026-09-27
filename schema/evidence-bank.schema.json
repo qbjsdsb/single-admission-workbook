@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/evidence-bank.schema.json",
+  "title": "Teacher / Solution Evidence Bank",
+  "type": "object",
+  "required": ["schema_version", "source_id", "subject", "question_records", "evidence", "blockers", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "source_id": {"type": "string", "minLength": 1},
+    "subject": {"enum": ["english", "politics"]},
+    "question_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "number", "section_key", "stem", "locators", "match_status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "number": {"type": "integer", "minimum": 1},
+          "section_key": {"type": ["string", "null"]},
+          "stem": {"type": "string"},
+          "locators": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "match_status": {"const": "content_available"},
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "text"],
+              "additionalProperties": false,
+              "properties": {
+                "label": {"enum": ["A", "B", "C", "D"]},
+                "text": {"type": "string"}
+              }
+            }
+          },
+          "option_status": {"type": "string"}
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source_id", "subject", "source_number", "section_key", "field", "value", "locator", "extraction_mode", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {"type": "string", "minLength": 1},
+          "source_id": {"type": "string", "minLength": 1},
+          "subject": {"enum": ["english", "politics"]},
+          "source_number": {"type": "integer", "minimum": 1},
+          "section_key": {"type": ["string", "null"]},
+          "field": {"enum": ["answer", "analysis", "teacher_notes"]},
+          "value": {"type": "string", "minLength": 1},
+          "locator": {"type": "string"},
+          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row"]},
+          "status": {"const": "extracted"}
+        }
+      }
+    },
+    "blockers": {"type": "array"},
+    "summary": {"type": "object"}
+  }
+}
