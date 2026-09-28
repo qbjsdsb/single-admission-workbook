@@ -82,6 +82,13 @@
           "stem_text": {
             "type": "string"
           },
+          "stem_rich": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/rich_node"
+            },
+            "minItems": 1
+          },
           "options": {
             "type": "array"
           },
@@ -178,6 +185,52 @@
           "minimum": 0
         }
       }
+    }
+  },
+  "$defs": {
+    "rich_node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "text"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "text" },
+            "text": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "rows"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "table" },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["cells"],
+                "additionalProperties": false,
+                "properties": {
+                  "cells": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["text", "grid_span"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "text": { "type": "string" },
+                        "grid_span": { "type": "integer", "minimum": 1 },
+                        "vertical_merge": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

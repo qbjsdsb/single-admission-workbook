@@ -139,6 +139,32 @@ class VerificationGateTests(unittest.TestCase):
         self.assertEqual(bank["summary"]["verified"], 1)
         self.assertEqual(bank["verified"][0]["verified_answer"], "B")
 
+    def test_verified_candidate_schema_preserves_rich_table_stem(self):
+        aggregate = aggregate_pairing_reviews([
+            review("TEACHER-A", "B"),
+            review("TEACHER-B", "B"),
+        ])
+        bank_input = candidate_bank()
+        bank_input["candidates"][0]["stem_rich"] = [
+            {"type": "text", "text": "A fictional prompt."},
+            {"type": "table", "rows": [{"cells": [
+                {"text": "Item", "grid_span": 1},
+                {"text": "Value", "grid_span": 1},
+            ]}]},
+        ]
+        manifest = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "decisions": [{
+                "candidate_id": "Q1",
+                "decision": "approve",
+                "method": "machine_corroborated_accepted",
+            }],
+        }
+        bank = build_verified_candidate_bank(bank_input, aggregate, manifest)
+        jsonschema.validate(bank, self.bank_schema)
+        self.assertEqual(bank["verified"][0]["stem_rich"][1]["type"], "table")
+
     def test_machine_method_rejected_for_single_source(self):
         aggregate = aggregate_pairing_reviews([review("TEACHER-A", "B")])
         manifest = {
