@@ -169,6 +169,98 @@ class PairingReviewTests(unittest.TestCase):
         self.assertEqual(row["review_status"], "review_required")
         self.assertIn("candidate_structure_needs_review", row["review_reasons"])
 
+    def test_name_exact_writing_pair_can_use_long_prompt_prefix(self):
+        writing = candidate(
+            "Q-WRITE",
+            None,
+            (
+                "Write a fictional letter about the school activity. "
+                "Mention the time, place, participants, and one preparation detail. "
+                "Dear Sam, ______________________________"
+            ),
+            section="writing",
+        )
+        writing["kind"] = "composition"
+        writing["options"] = []
+
+        teacher_prompt = prompt(
+            "T-WRITE",
+            56,
+            (
+                "Write a fictional letter about the school activity. "
+                "Mention the time, place, participants, and one preparation detail. "
+                "Dear Sam, A fictional model response continues here with extra teacher prose."
+            ),
+            section="writing",
+        )
+        teacher_prompt.pop("options")
+
+        cb = {
+            "source_id": "STUDENT",
+            "subject": "english",
+            "candidates": [writing],
+        }
+        eb = {
+            "source_id": "TEACHER",
+            "subject": "english",
+            "question_records": [teacher_prompt],
+            "evidence": [],
+        }
+        review = reconcile_candidate_and_evidence(
+            cb,
+            eb,
+            source_pair_confidence="name_exact",
+        )
+        jsonschema.validate(review, self.schema)
+        row = review["rows"][0]
+        self.assertEqual(row["prompt_pair_confidence"], "high")
+        self.assertEqual(row["prompt_pair_reason"], "name_exact_writing_prompt_prefix")
+        self.assertGreaterEqual(row["prompt_pair_score"], 0.80)
+        self.assertEqual(row["binding_strength"], "content_high")
+        self.assertEqual(row["companion_source_number"], 56)
+        self.assertEqual(row["answer_status"], "missing")
+        self.assertEqual(row["review_status"], "review_required")
+
+    def test_writing_prefix_fallback_requires_exact_source_pair(self):
+        writing = candidate(
+            "Q-WRITE",
+            None,
+            (
+                "Write a fictional letter about the school activity. "
+                "Mention the time, place, participants, and one preparation detail. "
+                "Dear Sam, ______________________________"
+            ),
+            section="writing",
+        )
+        writing["kind"] = "composition"
+        writing["options"] = []
+        teacher_prompt = prompt(
+            "T-WRITE",
+            56,
+            (
+                "Write a fictional letter about the school activity. "
+                "Mention the time, place, participants, and one preparation detail. "
+                "Dear Sam, A fictional model response continues here with extra teacher prose."
+            ),
+            section="writing",
+        )
+        teacher_prompt.pop("options")
+        cb = {"source_id": "STUDENT", "subject": "english", "candidates": [writing]}
+        eb = {
+            "source_id": "TEACHER",
+            "subject": "english",
+            "question_records": [teacher_prompt],
+            "evidence": [],
+        }
+        review = reconcile_candidate_and_evidence(
+            cb,
+            eb,
+            source_pair_confidence="structural_candidate",
+        )
+        row = review["rows"][0]
+        self.assertEqual(row["prompt_pair_confidence"], "unmatched")
+        self.assertEqual(row["binding_strength"], "none")
+
     def test_missing_answer_is_review_required_even_when_prompt_matches(self):
         cb = {
             "source_id": "STUDENT",
