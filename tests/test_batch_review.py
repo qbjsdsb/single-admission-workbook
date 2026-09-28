@@ -285,6 +285,7 @@ class BatchReviewTests(unittest.TestCase):
                 intake,
                 out,
                 subject="english",
+                workers=2,
             )
 
             self.assertEqual(summary["student_source_groups"], 1)
