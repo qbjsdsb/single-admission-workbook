@@ -109,6 +109,16 @@ class ScoreEvidenceTests(unittest.TestCase):
         self.assertIsNone(section["per_question_score"])
         self.assertEqual(section["full_score"], 20.0)
 
+    def test_duration_is_not_parsed_as_a_score(self):
+        bank = candidate_bank({
+            "section_key": "reading",
+            "heading": "III.阅读理解（考试时间共90分钟）",
+            "candidate_count": 15,
+        })
+        section = build_score_evidence(bank)["sections"][0]
+        self.assertEqual(section["status"], "incomplete")
+        self.assertIsNone(section["full_score"])
+
     def test_per_question_plus_count_can_derive_full_score(self):
         bank = candidate_bank({
             "section_key": "single_choice",
@@ -219,7 +229,7 @@ class ScoreEvidenceTests(unittest.TestCase):
             "src/q1": "1. A fictional question.",
             "src/cloze": bank["sections"][1]["heading"],
             "src/reading": bank["sections"][2]["heading"],
-            "src/volume": "第一卷（三大题，共120分）",
+            "src/volume": "考试时间共90分钟。第一卷（三大题，共120分）",
         }
         resolved = apply_exam_total_residual_resolution(
             bank,
@@ -280,6 +290,62 @@ class ScoreEvidenceTests(unittest.TestCase):
                     "src/total": total_text,
                     "src/choice": bank["sections"][0]["heading"],
                     "src/cloze": bank["sections"][1]["heading"],
+                },
+            )
+
+    def test_residual_score_rejects_stale_target_question_count(self):
+        current_bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q1", "candidate_count": 10, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 10, "inferred": False},
+            ],
+        }
+        stale_bank = {
+            **current_bank,
+            "sections": [
+                {**current_bank["sections"][0], "candidate_count": 20},
+                current_bank["sections"][1],
+            ],
+        }
+        stale_score = build_score_evidence(stale_bank)
+        total_text = "第一卷（两大题，共100分）"
+        with self.assertRaisesRegex(ValueError, "target score evidence is stale"):
+            apply_exam_total_residual_resolution(
+                current_bank, stale_score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic stale-count test."},
+                source_text_by_locator={
+                    "src/total": total_text,
+                    "src/q1": "1. example",
+                    "src/cloze": current_bank["sections"][1]["heading"],
+                },
+            )
+
+    def test_residual_score_rejects_stale_other_section_question_count(self):
+        current_bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q1", "candidate_count": 20, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 9, "inferred": False},
+            ],
+        }
+        stale_bank = {
+            **current_bank,
+            "sections": [
+                current_bank["sections"][0],
+                {**current_bank["sections"][1], "candidate_count": 10},
+            ],
+        }
+        stale_score = build_score_evidence(stale_bank)
+        total_text = "第一卷（两大题，共60分）"
+        with self.assertRaisesRegex(ValueError, "other scoped section score evidence is stale"):
+            apply_exam_total_residual_resolution(
+                current_bank, stale_score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic stale companion-count test."},
+                source_text_by_locator={
+                    "src/total": total_text,
+                    "src/q1": "1. example",
+                    "src/cloze": current_bank["sections"][1]["heading"],
                 },
             )
 

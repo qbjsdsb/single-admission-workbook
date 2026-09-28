@@ -8,11 +8,11 @@ from typing import Any, Mapping
 
 
 NUMBER = r"([0-9]+(?:\.[0-9]+)?)"
-FULL_SCORE_IN_TEXT = re.compile(r"(?:满分|总分|共计|满|共)\s*[。．.:：]?\s*" + NUMBER + r"\s*分")
+FULL_SCORE_IN_TEXT = re.compile(r"(?:满分|总分|共计|满|共)\s*[。．.:：]?\s*" + NUMBER + r"\s*分(?!钟)")
 COUNT_RE = re.compile(r"共\s*(\d+)\s*(?:小题|题)")
 PER_RE = re.compile(r"(?:每小题|每题)\s*" + NUMBER + r"\s*分")
-FULL_RE = re.compile(r"(?:满分|总分|共计|满)\s*[。．.:：]?\s*" + NUMBER + r"\s*分")
-FULL_ALT_RE = re.compile(r"共\s*" + NUMBER + r"\s*分")
+FULL_RE = re.compile(r"(?:满分|总分|共计|满)\s*[。．.:：]?\s*" + NUMBER + r"\s*分(?!钟)")
+FULL_ALT_RE = re.compile(r"共\s*" + NUMBER + r"\s*分(?!钟)")
 PAREN_SCORE_RE = re.compile(r"[（(]\s*" + NUMBER + r"\s*分\s*[）)]")
 
 
@@ -235,6 +235,15 @@ def apply_exam_total_residual_resolution(
     target_score_row = evidence_sections[target_key]
     if target_score_row.get("status") != "incomplete":
         raise ValueError("target section score is not an incomplete gap")
+    if (
+        int(target_score_row.get("candidate_count") or 0) != target_candidates
+        or target_score_row.get("heading") != candidate_sections[target_key].get("heading")
+        or target_score_row.get("heading_text_sha256")
+        != hashlib.sha256(
+            str(candidate_sections[target_key].get("heading") or "").encode("utf-8")
+        ).hexdigest()
+    ):
+        raise ValueError("target score evidence is stale for the candidate bank")
 
     other_scores: list[dict[str, Any]] = []
     known_total = 0.0
@@ -250,6 +259,10 @@ def apply_exam_total_residual_resolution(
             or score_section.get("heading_source") != "source"
         ):
             raise ValueError(f"other scoped section lacks explicit usable score: {key}")
+        if int(score_section.get("candidate_count") or 0) != int(
+            source_section.get("candidate_count") or 0
+        ):
+            raise ValueError(f"other scoped section score evidence is stale: {key}")
         locator = str(score_section.get("heading_locator") or "")
         text = source_text_by_locator.get(locator)
         if not locator or not text:
