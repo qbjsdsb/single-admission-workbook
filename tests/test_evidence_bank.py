@@ -224,6 +224,73 @@ class EvidenceBankTests(unittest.TestCase):
         }
         self.assertEqual(answers, {"A", "C"})
 
+    def test_inline_numbered_answer_analysis_extracts_both_fields(self):
+        texts = [
+            "V. 书面表达",
+            "Write a fictional composition.",
+            "1.B【解析】A fictional explanation for item one.",
+            "21.C.考查 fictional cloze knowledge.",
+            "31.D【详解】A fictional reading explanation.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-INLINE-ANSWER-ANALYSIS",
+        )
+        jsonschema.validate(bank, self.schema)
+        evidence = {
+            (e["source_number"], e["field"]): e
+            for e in bank["evidence"]
+        }
+        self.assertEqual(evidence[(1, "answer")]["value"], "B")
+        self.assertEqual(evidence[(21, "answer")]["value"], "C")
+        self.assertEqual(evidence[(31, "answer")]["value"], "D")
+        self.assertEqual(
+            evidence[(1, "answer")]["section_key"],
+            "single_choice",
+        )
+        self.assertEqual(evidence[(21, "answer")]["section_key"], "cloze")
+        self.assertEqual(evidence[(31, "answer")]["section_key"], "reading")
+        self.assertIn(
+            "fictional explanation",
+            evidence[(1, "analysis")]["value"],
+        )
+        self.assertTrue(all(
+            e["extraction_mode"] == "numbered_inline_answer_analysis"
+            for e in evidence.values()
+        ))
+
+    def test_sectioned_training_inline_analysis_keeps_explicit_section_identity(self):
+        texts = [
+            "III. 阅读理解",
+            "1. A fictional practice question.",
+            "A. one B. two C. three D. four",
+            "1.B【解析】A fictional reading explanation.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-READING-PRACTICE",
+        )
+        q1 = [
+            e for e in bank["evidence"]
+            if e["source_number"] == 1
+        ]
+        self.assertTrue(q1)
+        self.assertTrue(all(e["section_key"] == "reading" for e in q1))
+
     def test_real_english_range_summary_and_topic_analysis_format(self):
         texts = [
             "I. 单项选择",
