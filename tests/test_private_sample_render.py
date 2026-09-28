@@ -79,8 +79,8 @@ class RendererHardeningTests(unittest.TestCase):
         }
         student = render_question(question, 1, "student")
         teacher = render_question(question, 1, "teacher")
-        self.assertIn(r"\\answerlines{8}", student)
-        self.assertNotIn(r"\\answerlines{8}", teacher)
+        self.assertIn(r"\answerlines{8}", student)
+        self.assertNotIn(r"\answerlines{8}", teacher)
         self.assertIn(r"\blank{45mm}", student)
 
 
