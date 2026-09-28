@@ -104,6 +104,20 @@ NUMBERED_SOURCE_ANALYSIS = re.compile(
     r"^\s*(\d{1,3})\s*[.．、]\s*([A-DＡ-Ｄ])\s*[;；]\s*(.+?)\s*$"
 )
 LETTER_SEQUENCE = re.compile(r"^[A-DＡ-Ｄ\s]{2,}$")
+LEADING_ANALYSIS_ANSWER = re.compile(
+    r"^\s*(?:选|答案\s*(?:为|是)?)\s*([A-DＡ-Ｄ])"
+    r"(?=\s|[。．.!！,，:：;；])",
+    re.IGNORECASE,
+)
+
+
+def _leading_analysis_answer(text: str) -> str | None:
+    match = LEADING_ANALYSIS_ANSWER.match(text)
+    if not match:
+        return None
+    return unicodedata.normalize("NFKC", match.group(1)).upper()
+
+
 SAMPLE_RESPONSE_LABEL = re.compile(
     r"^\s*(?:例文|范文|参考范文|参考答案范文)\s*[:：]?\s*",
     re.IGNORECASE,
@@ -623,6 +637,15 @@ def extract_evidence_bank(
         if analysis:
             analysis_text = analysis.group(1).strip()
             if analysis_text and current_number is not None:
+                leading_answer = _leading_analysis_answer(analysis_text)
+                if leading_answer is not None:
+                    emit(
+                        number=current_number,
+                        field="answer",
+                        value=leading_answer,
+                        locator=paragraph.locator,
+                        mode="analysis_leading_answer",
+                    )
                 emit(
                     number=current_number,
                     field="analysis",
@@ -636,6 +659,15 @@ def extract_evidence_bank(
         if detail:
             detail_text = detail.group(1).strip()
             if detail_text and current_number is not None:
+                leading_answer = _leading_analysis_answer(detail_text)
+                if leading_answer is not None:
+                    emit(
+                        number=current_number,
+                        field="answer",
+                        value=leading_answer,
+                        locator=paragraph.locator,
+                        mode="analysis_leading_answer",
+                    )
                 emit(
                     number=current_number,
                     field="analysis",
@@ -646,6 +678,15 @@ def extract_evidence_bank(
             continue
 
         if pending_detail_number is not None and text and not text.startswith("【"):
+            leading_answer = _leading_analysis_answer(text)
+            if leading_answer is not None:
+                emit(
+                    number=pending_detail_number,
+                    field="answer",
+                    value=leading_answer,
+                    locator=paragraph.locator,
+                    mode="analysis_leading_answer",
+                )
             emit(
                 number=pending_detail_number,
                 field="analysis",
