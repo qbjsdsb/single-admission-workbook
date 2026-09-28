@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
 from pathlib import Path
@@ -295,6 +296,7 @@ def review_intake_directory(
     out: Path,
     *,
     subject: str,
+    workers: int = 1,
 ) -> dict[str, Any]:
     """Review every exact pair already discovered by private intake.
 
@@ -318,7 +320,13 @@ def review_intake_directory(
     results: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
 
-    for student_path, group_pairs in sorted(groups.items()):
+    if workers < 1:
+        raise ValueError("workers must be >= 1")
+
+    def process_group(
+        item: tuple[str, list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        student_path, group_pairs = item
         student = by_path[student_path]
         try:
             student_document = _load_document_ast(intake_dir, student)
@@ -342,15 +350,41 @@ def review_intake_directory(
                 companions=companions,
                 subject=subject,
             )
-            folder = out / str(student["source_id"])
-            _write_group_result(folder, result)
-            write_json(folder / "student-source.private.json", student)
-            results.append(result)
+            return {
+                "student_path": student_path,
+                "student": student,
+                "result": result,
+            }
         except Exception as exc:
-            failures.append({
+            return {
                 "student_path": student_path,
                 "error": f"{type(exc).__name__}: {exc}",
+            }
+
+    work_items = sorted(groups.items())
+    if workers == 1:
+        completed = [process_group(item) for item in work_items]
+    else:
+        # Source groups are independent and only read the immutable intake cache.
+        # Keep writes below sequential so output ordering remains deterministic.
+        with ThreadPoolExecutor(
+            max_workers=min(workers, max(1, len(work_items)))
+        ) as executor:
+            completed = list(executor.map(process_group, work_items))
+
+    for item in completed:
+        if item.get("error"):
+            failures.append({
+                "student_path": str(item["student_path"]),
+                "error": str(item["error"]),
             })
+            continue
+        student = item["student"]
+        result = item["result"]
+        folder = out / str(student["source_id"])
+        _write_group_result(folder, result)
+        write_json(folder / "student-source.private.json", student)
+        results.append(result)
 
     issue_counts: Counter[str] = Counter()
     states: Counter[str] = Counter()
