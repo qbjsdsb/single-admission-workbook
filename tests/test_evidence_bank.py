@@ -224,6 +224,43 @@ class EvidenceBankTests(unittest.TestCase):
         }
         self.assertEqual(answers, {"A", "C"})
 
+    def test_analysis_leading_choice_letter_emits_answer_and_analysis(self):
+        texts = [
+            "III. 阅读理解",
+            "1. A fictional reading question.",
+            "A. one B. two C. three D. four",
+            "【解析】选B 细节理解题。A fictional explanation.",
+            "2. Another fictional reading question.",
+            "A. one B. two C. three D. four",
+            "【详解】答案为C。A second fictional explanation.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "pdf",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-ANALYSIS-LEADING-ANSWER",
+        )
+        jsonschema.validate(bank, self.schema)
+        answers = {
+            (item["source_number"], item["value"], item["extraction_mode"])
+            for item in bank["evidence"]
+            if item["field"] == "answer"
+        }
+        self.assertIn((1, "B", "analysis_leading_answer"), answers)
+        self.assertIn((2, "C", "analysis_leading_answer"), answers)
+        analyses = [
+            item["value"]
+            for item in bank["evidence"]
+            if item["field"] == "analysis"
+        ]
+        self.assertTrue(any(value.startswith("选B") for value in analyses))
+        self.assertTrue(any(value.startswith("答案为C") for value in analyses))
+
     def test_inline_numbered_answer_analysis_extracts_both_fields(self):
         texts = [
             "V. 书面表达",
