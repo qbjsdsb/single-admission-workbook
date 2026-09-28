@@ -99,6 +99,11 @@ NUMBERED_SOURCE_ANALYSIS = re.compile(
     r"^\s*(\d{1,3})\s*[.．、]\s*([A-DＡ-Ｄ])\s*[;；]\s*(.+?)\s*$"
 )
 LETTER_SEQUENCE = re.compile(r"^[A-DＡ-Ｄ\s]{2,}$")
+SAMPLE_RESPONSE_LABEL = re.compile(
+    r"^\s*(?:例文|范文|参考范文|参考答案范文)\s*[:：]?\s*",
+    re.IGNORECASE,
+)
+EMPTY_SAMPLE_RESPONSE = re.compile(r"^\s*(?:略|无|暂无|无固定答案)[。．.!！]?\s*$")
 
 
 def _answer_range_items(text: str) -> list[tuple[int, str]]:
@@ -240,6 +245,7 @@ def extract_evidence_bank(
     *,
     subject: str,
     source_id: str,
+    source_sha256: str | None = None,
 ) -> dict[str, Any]:
     if subject not in {"english", "politics"}:
         raise ValueError("evidence-bank v0.1 currently supports only english/politics fast lane")
@@ -251,6 +257,7 @@ def extract_evidence_bank(
     current_section: str | None = None
     current_number: int | None = None
     current_question_paragraphs: list[ParagraphEvidence] = []
+    collecting_sample_response = False
     seen_prompt_keys: set[tuple[str | None, int]] = set()
     pending_detail_number: int | None = None
     inferred_single_start = _inferred_single_choice_start(
@@ -268,7 +275,7 @@ def extract_evidence_bank(
         normalized = value.strip()
         if not normalized:
             return
-        evidence.append({
+        evidence_item = {
             "evidence_id": f"{source_id}:{field}:{number}:{_stable_id(locator, normalized)}",
             "source_id": source_id,
             "subject": subject,
@@ -279,7 +286,34 @@ def extract_evidence_bank(
             "locator": locator,
             "extraction_mode": mode,
             "status": "extracted",
-        })
+        }
+        if field == "source_sample_response":
+            evidence_item["value_sha256"] = hashlib.sha256(
+                normalized.encode("utf-8")
+            ).hexdigest()
+        evidence.append(evidence_item)
+
+    def emit_sample_response(number: int, value: str, locator: str) -> None:
+        normalized = value.strip()
+        if normalized and not EMPTY_SAMPLE_RESPONSE.fullmatch(normalized):
+            emit(
+                number=number,
+                field="source_sample_response",
+                value=normalized,
+                locator=locator,
+                mode="explicit_sample_response",
+            )
+
+    def start_sample_response(answer_text: str, locator: str) -> None:
+        nonlocal collecting_sample_response
+        if current_number is None:
+            collecting_sample_response = False
+            return
+        # The answer marker in a composition section introduces a source-provided
+        # response, not a unique answer key. Strip only explicit model-answer labels.
+        response = SAMPLE_RESPONSE_LABEL.sub("", answer_text, count=1).strip()
+        emit_sample_response(current_number, response, locator)
+        collecting_sample_response = True
 
     def flush_prompt() -> None:
         nonlocal current_question_paragraphs
@@ -313,7 +347,25 @@ def extract_evidence_bank(
             current_section = section[0]
             current_number = None
             pending_detail_number = None
+            collecting_sample_response = False
             continue
+
+        if collecting_sample_response:
+            # Stop before the teacher's analysis/rubric or another numbered item;
+            # those paragraphs remain on the ordinary source-analysis path.
+            if (
+                ANALYSIS.match(text)
+                or DETAIL.match(text)
+                or QUESTION_DETAIL.match(text)
+                or EXPLICIT_NUMBERED_ANSWER.match(text)
+                or PLAIN_ANSWER.match(text)
+                or QUESTION_RE.match(text)
+            ):
+                collecting_sample_response = False
+            else:
+                if current_number is not None:
+                    emit_sample_response(current_number, text, paragraph.locator)
+                continue
 
         question_detail = QUESTION_DETAIL.match(text)
         if question_detail:
@@ -337,6 +389,10 @@ def extract_evidence_bank(
         if numbered_answer:
             flush_prompt()
             current_number = int(numbered_answer.group(1))
+            if subject == "english" and current_section == "writing":
+                start_sample_response(numbered_answer.group(2), paragraph.locator)
+                pending_detail_number = None
+                continue
             emit(
                 number=current_number,
                 field="answer",
@@ -350,6 +406,10 @@ def extract_evidence_bank(
         answer = PLAIN_ANSWER.match(text)
         if answer:
             answer_text = answer.group(1).strip()
+            if subject == "english" and current_section == "writing":
+                start_sample_response(answer_text, paragraph.locator)
+                pending_detail_number = None
+                continue
             # Some teacher editions print a compact cloze key after the last
             # child question (e.g. "CADAD CCBDA"). Bind its letters across the
             # contiguous range ending at the current cloze question, rather than
@@ -535,7 +595,7 @@ def extract_evidence_bank(
     for item in evidence:
         counts[item["field"]] = counts.get(item["field"], 0) + 1
 
-    return {
+    result = {
         "schema_version": 1,
         "source_id": source_id,
         "subject": subject,
@@ -549,3 +609,6 @@ def extract_evidence_bank(
             "field_counts": counts,
         },
     }
+    if source_sha256:
+        result["source_sha256"] = source_sha256
+    return result

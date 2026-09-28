@@ -98,7 +98,12 @@ def prepare_private_sample(
         )
         if book["edition"] == "student" and any(
             marker in tex
-            for marker in ("\\teacheranswer{", "\\teacheranalysis{", "\\teachernote{")
+            for marker in (
+                "\\teacheranswer{",
+                "\\teacheranalysis{",
+                "\\teachernote{",
+                "\\teachersampleresponse{",
+            )
         ):
             raise ValueError("teacher-only content leaked into student TeX")
 

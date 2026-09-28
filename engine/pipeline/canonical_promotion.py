@@ -120,6 +120,25 @@ def _build_leaf_question(
             question["analysis"] = _text_rich(enrichment["analysis"])
         if enrichment.get("teacher_notes"):
             question["teacher_notes"] = _text_rich(enrichment["teacher_notes"])
+        if enrichment.get("source_sample_response"):
+            sample_response = str(enrichment["source_sample_response"])
+            question["source_sample_response"] = _text_rich(
+                sample_response
+            )
+            provenance = enrichment.get("source_sample_response_provenance")
+            if not isinstance(provenance, Mapping):
+                raise ValueError("source sample response is missing its provenance")
+            if provenance.get("response_sha256") != hashlib.sha256(
+                sample_response.encode("utf-8")
+            ).hexdigest():
+                raise ValueError("source sample response provenance hash mismatch")
+            if not (
+                len(provenance.get("evidence_ids") or [])
+                == len(provenance.get("locators") or [])
+                == len(provenance.get("paragraph_sha256") or [])
+            ):
+                raise ValueError("source sample response paragraph provenance is incomplete")
+            question["source_sample_response_provenance"] = dict(provenance)
 
     return question
 

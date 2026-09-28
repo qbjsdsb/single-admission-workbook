@@ -8,6 +8,7 @@
   "properties": {
     "schema_version": {"const": 1},
     "source_id": {"type": "string", "minLength": 1},
+    "source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "subject": {"enum": ["english", "politics"]},
     "question_records": {
       "type": "array",
@@ -50,12 +51,19 @@
           "subject": {"enum": ["english", "politics"]},
           "source_number": {"type": "integer", "minimum": 1},
           "section_key": {"type": ["string", "null"]},
-          "field": {"enum": ["answer", "analysis", "teacher_notes"]},
+          "field": {"enum": ["answer", "analysis", "teacher_notes", "source_sample_response"]},
           "value": {"type": "string", "minLength": 1},
           "locator": {"type": "string"},
-          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row", "compact_letter_sequence", "numbered_source_analysis"]},
-          "status": {"const": "extracted"}
-        }
+          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row", "compact_letter_sequence", "numbered_source_analysis", "explicit_sample_response"]},
+          "status": {"const": "extracted"},
+          "value_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"field": {"const": "source_sample_response"}}},
+            "then": {"required": ["value_sha256"]}
+          }
+        ]
       }
     },
     "blockers": {"type": "array"},

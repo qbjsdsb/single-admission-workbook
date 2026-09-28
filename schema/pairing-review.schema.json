@@ -89,6 +89,14 @@
             "needs_review"
           ]
         },
+        "candidate_kind": {
+          "type": ["string", "null"]
+        },
+        "source_sample_response_evidence_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
         "companion_question_id": {
           "type": [
             "string",
@@ -145,6 +153,11 @@
           "items": {
             "type": "string"
           },
+          "uniqueItems": true
+        },
+        "source_sample_response_evidence_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
         "review_status": {

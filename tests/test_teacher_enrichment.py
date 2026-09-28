@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 import unittest
 
@@ -135,6 +136,62 @@ class TeacherEnrichmentTests(unittest.TestCase):
         )
         self.assertEqual(result["summary"]["enriched"], 0)
         self.assertEqual(result["unresolved"][0]["reason"], "weak_evidence_binding")
+
+    def test_open_composition_keeps_source_sample_with_paragraph_provenance(self):
+        p1 = "Dear Mark,"
+        p2 = "A fictional sample paragraph."
+        evidence = []
+        for index, value in enumerate((p1, p2), start=1):
+            digest = hashlib.sha256(value.encode()).hexdigest()
+            evidence.append({
+                "evidence_id": f"E-SAMPLE-{index}",
+                "source_id": "TEACHER",
+                "subject": "english",
+                "source_number": 56,
+                "section_key": "writing",
+                "field": "source_sample_response",
+                "value": value,
+                "locator": f"word/document.xml/body/{index}",
+                "extraction_mode": "explicit_sample_response",
+                "status": "extracted",
+                "value_sha256": digest,
+            })
+        pairing = review()
+        pairing["rows"][0].update({
+            "candidate_id": "Q1",
+            "candidate_kind": "composition",
+            "source_number": 56,
+            "section_key": "writing",
+            "candidate_status": "parsed",
+            "binding_strength": "paired_source_number",
+            "source_pair_confidence": "name_exact",
+            "review_status": "review_required",
+            "evidence_ids": [],
+            "source_sample_response_evidence_ids": ["E-SAMPLE-1", "E-SAMPLE-2"],
+        })
+        bank = {
+            "schema_version": 1,
+            "source_id": "TEACHER",
+            "source_sha256": "b" * 64,
+            "subject": "english",
+            "question_records": [],
+            "evidence": evidence,
+            "blockers": [],
+            "summary": {},
+        }
+
+        result = build_teacher_enrichment(pairing, bank)
+        jsonschema.validate(result, self.schema)
+        item = result["items"][0]
+        self.assertEqual(item["source_sample_response"], f"{p1}\n{p2}")
+        self.assertNotIn("analysis", item)
+        self.assertEqual(
+            item["source_sample_response_provenance"]["evidence_ids"],
+            ["E-SAMPLE-1", "E-SAMPLE-2"],
+        )
+        self.assertEqual(
+            item["source_sample_response_provenance"]["source_sha256"], "b" * 64
+        )
 
     def test_conflict_does_not_auto_enrich(self):
         result = build_teacher_enrichment(

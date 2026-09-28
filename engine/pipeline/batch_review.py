@@ -65,6 +65,7 @@ def _merge_teacher_enrichments(
     for candidate_id, variants in sorted(grouped.items()):
         analyses = []
         notes = []
+        sample_responses = []
         for item in variants:
             analysis = str(item.get("analysis") or "").strip()
             note = str(item.get("teacher_notes") or "").strip()
@@ -72,12 +73,38 @@ def _merge_teacher_enrichments(
                 analyses.append(analysis)
             if note and note not in notes:
                 notes.append(note)
+            sample = str(item.get("source_sample_response") or "").strip()
+            if sample and sample not in sample_responses:
+                sample_responses.append(sample)
 
         if len(analyses) > 1:
             unresolved.append({
                 "candidate_id": candidate_id,
                 "reason": "multiple_teacher_analysis_variants",
                 "variant_count": len(analyses),
+            })
+            continue
+
+        if len(sample_responses) > 1:
+            unresolved.append({
+                "candidate_id": candidate_id,
+                "reason": "multiple_source_sample_response_variants",
+                "variant_count": len(sample_responses),
+            })
+            continue
+
+        sample_items = [
+            item for item in variants
+            if str(item.get("source_sample_response") or "").strip()
+        ]
+        if any(
+            not isinstance(item.get("source_sample_response_provenance"), Mapping)
+            for item in sample_items
+        ):
+            unresolved.append({
+                "candidate_id": candidate_id,
+                "reason": "source_sample_response_provenance_missing",
+                "variant_count": len(sample_items),
             })
             continue
 
@@ -92,6 +119,21 @@ def _merge_teacher_enrichments(
                 "reason": "multiple_teacher_note_variants",
                 "variant_count": len(notes),
             })
+
+        if sample_responses:
+            provenance_item = min(
+                (
+                    item for item in sample_items
+                    if str(item.get("source_sample_response") or "").strip() == sample_responses[0]
+                ),
+                key=lambda item: str(
+                    item["source_sample_response_provenance"].get("evidence_source_id") or ""
+                ),
+            )
+            merged["source_sample_response"] = sample_responses[0]
+            merged["source_sample_response_provenance"] = dict(
+                provenance_item["source_sample_response_provenance"]
+            )
 
         if len(merged) > 1:
             items.append(merged)
@@ -129,6 +171,7 @@ def review_cached_source_group(
             companion_document,
             subject=subject,
             source_id=companion_id,
+            source_sha256=str(companion_source.get("sha256") or "") or None,
         )
         pairing = reconcile_candidate_and_evidence(
             candidate,
