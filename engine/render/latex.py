@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -39,13 +40,50 @@ LATEX_ESCAPES = {
     "^": r"\textasciicircum{}",
 }
 
+SPECIAL_TEXT_LATEX = {
+    "▲": r"$\blacktriangle$",
+    "★": r"$\star$",
+    "\uf06c": r"\textbullet{}",
+    "ʊ": r"{\wblatin ʊ}",
+    "ɪ": r"{\wblatin ɪ}",
+}
+
+
 def escape_text(text: str) -> str:
+    # Legacy Word sources contain non-breaking spaces that create long
+    # unbreakable English lines in print. Their semantic value is ordinary
+    # spacing here, so normalize them before TeX escaping.
+    text = (
+        str(text)
+        .replace("\u00a0", " ")
+        .replace("\u202f", " ")
+        .replace("\u3000", " ")
+    )
+
     out: list[str] = []
-    for ch in text:
+    index = 0
+    while index < len(text):
+        ch = text[index]
+        if ch == "_":
+            end = index
+            while end < len(text) and text[end] == "_":
+                end += 1
+            run = end - index
+            if run >= 4:
+                # Word writing templates often store hundreds of underscores as
+                # answer space. Keep the blank semantics but never emit an
+                # unbreakable multi-page underscore token.
+                width_mm = 45 if run >= 80 else min(28, max(10, run * 1.2))
+                out.append(rf"\blank{{{width_mm:g}mm}}")
+                index = end
+                continue
         if ch == "\n":
             out.append(r"\par ")
+        elif ch in SPECIAL_TEXT_LATEX:
+            out.append(SPECIAL_TEXT_LATEX[ch])
         else:
             out.append(LATEX_ESCAPES.get(ch, ch))
+        index += 1
     return "".join(out)
 
 def _render_table(node: dict[str, Any]) -> str:
@@ -183,7 +221,16 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
             space = part.get("answer_space_mm", 30)
             out.append(rf"\vspace{{{space}mm}}")
 
-    if edition == "student" and question["kind"] in {"short_answer", "material_question", "solution"}:
+    if (
+        edition == "student"
+        and question["kind"] == "composition"
+        and question.get("answer_mode") == "open_response"
+    ):
+        # Open writing needs real writable space in the student book. Source
+        # underscore art is normalized by escape_text; this dedicated block is
+        # stable, readable and cannot overflow horizontally.
+        out.append(r"\Needspace{10\baselineskip}\answerlines{8}")
+    elif edition == "student" and question["kind"] in {"short_answer", "material_question", "solution"}:
         space = (question.get("layout") or {}).get("answer_space_mm", 38)
         if question["kind"] in {"short_answer", "material_question"}:
             lines = max(3, round(float(space) / 8))
