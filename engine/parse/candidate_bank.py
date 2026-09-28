@@ -13,6 +13,7 @@ from engine.parse.exam_split import (
     detect_section,
     has_legacy_l_as_one_question_prefix,
     is_english_cloze_instruction,
+    is_english_self_test_marker,
 )
 from engine.parse.options import parse_options
 
@@ -47,9 +48,14 @@ def _paragraph_text(block: Mapping[str, Any]) -> tuple[str | None, list[str]]:
     return "".join(text_parts).strip(), list(dict.fromkeys(blockers))
 
 
-def safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence], list[dict[str, Any]]]:
+def safe_paragraphs(
+    document: Mapping[str, Any],
+    *,
+    subject: str | None = None,
+) -> tuple[list[ParagraphEvidence], list[dict[str, Any]]]:
     paragraphs: list[ParagraphEvidence] = []
     blockers: list[dict[str, Any]] = []
+    english_pdf_self_test = False
     for block in document.get("blocks") or []:
         locator = str(block.get("locator") or "")
         table = normalize_table_block(block)
@@ -81,6 +87,39 @@ def safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence
             blockers.append({"locator": locator, "reasons": reasons})
             continue
         if text:
+            if subject == "english" and document.get("source_format") == "pdf":
+                raw_lines = [line.strip() for line in text.splitlines() if line.strip()]
+                marker_index = next(
+                    (
+                        index
+                        for index, line in enumerate(raw_lines)
+                        if is_english_self_test_marker(line)
+                    ),
+                    None,
+                )
+                if marker_index is not None:
+                    prefix = raw_lines[:marker_index]
+                    if prefix:
+                        paragraphs.append(
+                            ParagraphEvidence(locator, "\n".join(prefix))
+                        )
+                    english_pdf_self_test = True
+                    raw_lines = raw_lines[marker_index:]
+
+                if english_pdf_self_test and raw_lines:
+                    for line_index, line in enumerate(raw_lines):
+                        paragraphs.append(
+                            ParagraphEvidence(
+                                f"{locator}#line-{line_index + 1}",
+                                line,
+                            )
+                        )
+                        if re.match(
+                            r"^\s*(?:【\s*)?答案(?:\s*】)?\s*[:：]?",
+                            line,
+                        ):
+                            english_pdf_self_test = False
+                    continue
             paragraphs.append(ParagraphEvidence(locator, text))
     return paragraphs, blockers
 
@@ -415,7 +454,7 @@ def extract_candidate_bank(
     if subject not in {"english", "politics"}:
         raise ValueError("candidate-bank v0.1 currently supports only english/politics fast lane")
 
-    paragraphs, blockers = safe_paragraphs(document)
+    paragraphs, blockers = safe_paragraphs(document, subject=subject)
     sections: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
     pre_section: list[ParagraphEvidence] = []
