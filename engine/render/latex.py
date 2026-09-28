@@ -44,6 +44,8 @@ SPECIAL_TEXT_LATEX = {
     "▲": r"$\blacktriangle$",
     "★": r"$\star$",
     "\uf06c": r"\textbullet{}",
+    "ʊ": r"{\wblatin ʊ}",
+    "ɪ": r"{\wblatin ɪ}",
 }
 
 
