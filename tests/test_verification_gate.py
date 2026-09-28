@@ -237,6 +237,70 @@ class VerificationGateTests(unittest.TestCase):
         self.assertEqual(bank["verified"][0]["answer_mode"], "open_response")
         self.assertIsNone(bank["verified"][0]["verified_answer"])
 
+    def test_editorial_source_review_can_approve_open_response_without_claiming_human_review(self):
+        aggregate = aggregate_pairing_reviews([review("TEACHER-A", None)])
+        bank_input = candidate_bank()
+        writing = bank_input["candidates"][0]
+        writing["section_key"] = "writing"
+        writing["kind"] = "composition"
+        writing["options"] = []
+
+        manifest = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "decisions": [{
+                "candidate_id": "Q1",
+                "decision": "approve",
+                "method": "editorial_source_review",
+                "answer_mode": "open_response",
+                "note": "Source prompt identity reviewed; this writing task has no unique fixed answer.",
+            }],
+        }
+        bank = build_verified_candidate_bank(bank_input, aggregate, manifest)
+        jsonschema.validate(bank, self.bank_schema)
+        self.assertEqual(bank["summary"]["verified"], 1)
+        self.assertEqual(
+            bank["verified"][0]["verification_method"],
+            "editorial_source_review",
+        )
+        self.assertIsNone(bank["verified"][0]["verified_answer"])
+
+    def test_editorial_source_review_requires_note(self):
+        aggregate = aggregate_pairing_reviews([review("TEACHER-A", None)])
+        bank_input = candidate_bank()
+        writing = bank_input["candidates"][0]
+        writing["section_key"] = "writing"
+        writing["kind"] = "composition"
+        writing["options"] = []
+        manifest = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "decisions": [{
+                "candidate_id": "Q1",
+                "decision": "approve",
+                "method": "editorial_source_review",
+                "answer_mode": "open_response",
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "requires a review note"):
+            build_verified_candidate_bank(bank_input, aggregate, manifest)
+
+    def test_editorial_source_review_is_not_a_fixed_answer_override_method(self):
+        aggregate = aggregate_pairing_reviews([review("TEACHER-A", "B")])
+        manifest = {
+            "schema_version": 1,
+            "candidate_source_id": "STUDENT",
+            "decisions": [{
+                "candidate_id": "Q1",
+                "decision": "approve",
+                "method": "editorial_source_review",
+                "verified_answer": "B",
+                "note": "Fixture note.",
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "reserved for open_response"):
+            build_verified_candidate_bank(candidate_bank(), aggregate, manifest)
+
     def test_open_response_mode_is_rejected_for_fixed_answer_question(self):
         aggregate = aggregate_pairing_reviews([review("TEACHER-A", None)])
         manifest = {
