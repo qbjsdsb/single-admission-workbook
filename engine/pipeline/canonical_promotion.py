@@ -82,13 +82,16 @@ def _build_leaf_question(
     }:
         raise ValueError(f"unsupported_canonical_kind:{kind}")
 
+    answer_mode = str(item.get("answer_mode") or "fixed")
     question: dict[str, Any] = {
         "id": _canonical_id(subject, candidate_id),
         "kind": kind,
         "score": float(score),
         "stem": item.get("stem_rich") or _text_rich(item.get("stem_text")),
     }
-    if str(item.get("answer_mode") or "fixed") != "open_response":
+    if answer_mode == "open_response":
+        question["answer_mode"] = "open_response"
+    else:
         question["answer"] = item.get("verified_answer")
 
     if include_placement:
