@@ -213,7 +213,17 @@ def reconcile_candidate_and_evidence(
                     candidate,
                     writing_prompt,
                 )
-                if prefix_coverage >= 0.80:
+                if 0 < instruction_similarity < 0.98:
+                    # When both sources expose a comparable instruction block,
+                    # a material difference there outranks generic/prefix
+                    # similarity. Keep it deferred rather than silently treating
+                    # a missing or added requirement as the same prompt.
+                    companion = None
+                    companion_id = None
+                    pair_confidence = "unmatched"
+                    pair_reason = "writing_prompt_source_discrepancy"
+                    pair_score = instruction_similarity
+                elif prefix_coverage >= 0.80:
                     companion = writing_prompt
                     companion_id = str(companion.get("id") or "")
                     pair_confidence = "high"
@@ -224,15 +234,6 @@ def reconcile_candidate_and_evidence(
                     companion_id = str(companion.get("id") or "")
                     pair_confidence = "high"
                     pair_reason = "name_exact_writing_instruction_similarity"
-                    pair_score = instruction_similarity
-                elif instruction_similarity > 0:
-                    # A near-looking writing prompt with materially different
-                    # source instructions must stay deferred even if generic
-                    # fuzzy matching would otherwise call it "high".
-                    companion = None
-                    companion_id = None
-                    pair_confidence = "unmatched"
-                    pair_reason = "writing_prompt_source_discrepancy"
                     pair_score = instruction_similarity
 
         # A content match binds to the TEACHER question identity, even if renumbered.
