@@ -101,6 +101,45 @@ class ClassificationProposalTests(unittest.TestCase):
         decision = manifest["decisions"][0]
         self.assertEqual(decision["section_key"], "detail")
 
+    def test_grouped_reading_children_keep_one_atomic_publication_section(self):
+        bank = {
+            "source_id": "ENG",
+            "subject": "english",
+            "candidates": [
+                {
+                    "candidate_id": "Q1",
+                    "section_key": "reading",
+                    "group_id": "READ-A",
+                },
+                {
+                    "candidate_id": "Q2",
+                    "section_key": "reading",
+                    "group_id": "READ-A",
+                },
+            ],
+        }
+        teacher = enrichment([
+            {"candidate_id": "Q1", "analysis": "细节理解题。根据第二段可知。"},
+            {"candidate_id": "Q2", "analysis": "推理判断题。根据全文可推知。"},
+        ])
+        manifest = build_safe_classification_proposals(
+            bank,
+            teacher_enrichment=teacher,
+        )
+        by_id = {x["candidate_id"]: x for x in manifest["decisions"]}
+        self.assertEqual(
+            (by_id["Q1"]["chapter_key"], by_id["Q1"]["section_key"]),
+            ("reading", "reading_training"),
+        )
+        self.assertEqual(
+            (by_id["Q2"]["chapter_key"], by_id["Q2"]["section_key"]),
+            ("reading", "reading_training"),
+        )
+        self.assertTrue(all(
+            "group_atomic_source_section_mapping" in by_id[qid]["note"]
+            for qid in ("Q1", "Q2")
+        ))
+
     def test_unknown_semantics_use_broad_source_section_fallback(self):
         bank = {
             "source_id": "ENG",
