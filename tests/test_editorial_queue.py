@@ -212,6 +212,33 @@ class EditorialQueueTests(unittest.TestCase):
             for issue in entry["issues"]
         ))
 
+    def test_rich_content_blocker_on_shared_material_reaches_every_child(self):
+        q1 = candidate("Q1", 1)
+        q1["group_id"] = "G1"
+        candidate_bank = {
+            "source_id": "SRC",
+            "subject": "english",
+            "candidates": [q1],
+            "groups": [{"group_id": "G1", "locators": ["src/shared-table"]}],
+            "blockers": [{
+                "locator": "src/shared-table",
+                "reasons": ["unsupported_table_feature:drawing"],
+            }],
+        }
+        queue = build_editorial_queue(
+            candidate_bank,
+            {"candidate_source_id": "SRC", "subject": "english", "rows": [aggregate_row("Q1")]},
+            {"candidate_source_id": "SRC", "subject": "english", "sections": [score()]},
+            {"candidate_source_id": "SRC", "subject": "english", "decisions": [classification("Q1")]},
+            verified_candidate_bank=verified_bank(["Q1"]),
+            teacher_enrichment=enrichment(["Q1"]),
+        )
+        jsonschema.validate(queue, self.schema)
+        entry = queue["entries"][0]
+        self.assertEqual(entry["state"], "needs_review")
+        issue = next(issue for issue in entry["issues"] if issue["code"] == "rich_content")
+        self.assertIn("unsupported_table_feature:drawing", issue["detail"])
+
     def test_score_conflict_is_blocking(self):
         candidate_bank = {
             "source_id": "SRC",
