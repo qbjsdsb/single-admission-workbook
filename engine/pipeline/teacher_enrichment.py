@@ -82,8 +82,8 @@ def build_teacher_enrichment(
             and row.get("section_key") == "writing"
             and row.get("source_pair_confidence") == "name_exact"
             and row.get("candidate_status") == "parsed"
-            and row.get("binding_strength") == "paired_source_number"
-            and row.get("source_number") is not None
+            and row.get("binding_strength")
+            in {"content_exact", "content_high", "paired_source_number"}
             and sample_bound
         ):
             sample_identities = {
@@ -97,7 +97,17 @@ def build_teacher_enrichment(
                 })
                 continue
             identity = next(iter(sample_identities))
-            if identity != (row.get("section_key"), row.get("source_number")):
+            if row.get("companion_source_number") is not None:
+                expected_identity = (
+                    row.get("companion_section_key") or row.get("section_key"),
+                    row.get("companion_source_number"),
+                )
+            else:
+                expected_identity = (
+                    row.get("section_key"),
+                    row.get("source_number"),
+                )
+            if expected_identity[1] is None or identity != expected_identity:
                 unresolved.append({
                     "candidate_id": candidate_id,
                     "reason": "sample_response_source_number_mismatch",

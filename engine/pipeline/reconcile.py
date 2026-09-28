@@ -188,6 +188,7 @@ def reconcile_candidate_and_evidence(
             "review_reasons": sorted(set(review_reasons)),
             "source_pair_confidence": source_pair_confidence,
             "companion_section_key": None if companion is None else companion.get("section_key"),
+            "companion_source_number": None if companion is None else companion.get("number"),
         })
 
     counts: dict[str, int] = defaultdict(int)

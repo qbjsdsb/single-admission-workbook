@@ -18,7 +18,7 @@
         "additionalProperties": false,
         "properties": {
           "id": {"type": "string", "minLength": 1},
-          "number": {"type": "integer", "minimum": 1},
+          "number": {"type": ["integer", "null"], "minimum": 1},
           "section_key": {"type": ["string", "null"]},
           "stem": {"type": "string"},
           "locators": {"type": "array", "items": {"type": "string"}, "minItems": 1},
