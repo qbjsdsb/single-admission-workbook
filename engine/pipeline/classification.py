@@ -152,6 +152,26 @@ def build_safe_classification_proposals(
             })
             continue
 
+        if (
+            subject == "english"
+            and section_key == "reading"
+            and candidate.get("group_id")
+        ):
+            mapping = ENGLISH_SECTION_FALLBACK["reading"]
+            decisions.append({
+                "candidate_id": candidate_id,
+                "decision": "assign",
+                "chapter_key": mapping["chapter_key"],
+                "section_key": mapping["section_key"],
+                "tags": list(mapping["tags"]),
+                "difficulty": "standard",
+                "note": (
+                    "group_atomic_source_section_mapping; shared reading material "
+                    "must remain one publication placement"
+                ),
+            })
+            continue
+
         if subject == "english":
             analysis = analyses.get(candidate_id, "")
             semantic = _source_supported_semantic_mapping(section_key, analysis)
