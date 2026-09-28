@@ -414,6 +414,155 @@ def auto_apply_first_volume_residual_resolution(
     return dict(score_evidence)
 
 
+def apply_corroborated_series_section_score(
+    candidate_bank: Mapping[str, Any],
+    score_evidence: Mapping[str, Any],
+    resolution: Mapping[str, Any],
+    *,
+    reference_score_evidence_by_source: Mapping[str, Mapping[str, Any]],
+    reference_text_by_source_locator: Mapping[str, Mapping[str, str]],
+) -> dict[str, Any]:
+    """Fill one missing section score from repeated same-series source evidence.
+
+    This is not presented as score text printed in the target source. It requires
+    at least three independent source documents from the same corpus with the same
+    section key, candidate count and explicit per-question score. Each reference
+    heading is re-bound to its source locator/hash. Disagreement fails closed.
+    """
+    source_id = str(candidate_bank.get("source_id") or "")
+    if source_id != str(score_evidence.get("candidate_source_id") or ""):
+        raise ValueError("candidate bank and score evidence source mismatch")
+    if source_id != str(resolution.get("candidate_source_id") or ""):
+        raise ValueError("series score resolution source mismatch")
+
+    target_key = str(resolution.get("target_section_key") or "")
+    candidate_sections = {
+        str(section.get("section_key") or ""): section
+        for section in candidate_bank.get("sections") or []
+    }
+    evidence_sections = {
+        str(section.get("section_key") or ""): section
+        for section in score_evidence.get("sections") or []
+    }
+    target_source = candidate_sections.get(target_key)
+    target = evidence_sections.get(target_key)
+    if target_source is None or target is None:
+        raise ValueError("series score resolution target section missing")
+    if target.get("status") != "incomplete":
+        raise ValueError("series score resolution target is not an incomplete gap")
+
+    target_count = int(target_source.get("candidate_count") or 0)
+    if target_count <= 0 or int(target.get("candidate_count") or 0) != target_count:
+        raise ValueError("series score resolution target count is stale")
+
+    reference_ids = [str(value) for value in resolution.get("reference_source_ids") or []]
+    if len(reference_ids) < 3 or len(reference_ids) != len(set(reference_ids)):
+        raise ValueError("series score resolution requires at least three unique references")
+    if source_id in reference_ids:
+        raise ValueError("target source cannot be its own series reference")
+
+    references: list[dict[str, Any]] = []
+    values: set[tuple[float, float]] = set()
+    for reference_id in reference_ids:
+        reference_bank = reference_score_evidence_by_source.get(reference_id)
+        if reference_bank is None:
+            raise ValueError(f"series score reference missing: {reference_id}")
+        if str(reference_bank.get("candidate_source_id") or "") != reference_id:
+            raise ValueError(f"series score reference identity mismatch: {reference_id}")
+        if reference_bank.get("subject") != score_evidence.get("subject"):
+            raise ValueError(f"series score reference subject mismatch: {reference_id}")
+
+        reference_section = next(
+            (
+                section
+                for section in reference_bank.get("sections") or []
+                if str(section.get("section_key") or "") == target_key
+            ),
+            None,
+        )
+        if reference_section is None:
+            raise ValueError(f"series score reference lacks target section: {reference_id}")
+        if (
+            reference_section.get("status") != "usable"
+            or reference_section.get("heading_source") != "source"
+            or reference_section.get("per_question_source") != "explicit"
+            or reference_section.get("full_score_source")
+            not in {"explicit", "derived_from_count_times_per_question"}
+        ):
+            raise ValueError(f"series score reference is not explicit enough: {reference_id}")
+        if int(reference_section.get("candidate_count") or 0) != target_count:
+            raise ValueError(f"series score reference count mismatch: {reference_id}")
+
+        per_question = reference_section.get("per_question_score")
+        full_score = reference_section.get("full_score")
+        if per_question is None or full_score is None:
+            raise ValueError(f"series score reference value missing: {reference_id}")
+
+        locator = str(reference_section.get("heading_locator") or "")
+        source_text = (reference_text_by_source_locator.get(reference_id) or {}).get(locator)
+        if not locator or not source_text:
+            raise ValueError(f"series score reference locator missing: {reference_id}")
+        text_hash = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+        if (
+            source_text != reference_section.get("heading")
+            or text_hash != reference_section.get("heading_text_sha256")
+        ):
+            raise ValueError(f"series score reference source mismatch: {reference_id}")
+
+        value = (float(per_question), float(full_score))
+        values.add(value)
+        references.append({
+            "source_id": reference_id,
+            "section_key": target_key,
+            "candidate_count": target_count,
+            "heading_locator": locator,
+            "heading_text_sha256": text_hash,
+            "per_question_score": value[0],
+            "full_score": value[1],
+        })
+
+    if len(values) != 1:
+        raise ValueError("series score references disagree")
+    per_question, full_score = next(iter(values))
+    if not math.isclose(
+        per_question * target_count,
+        full_score,
+        rel_tol=1e-9,
+        abs_tol=1e-9,
+    ):
+        raise ValueError("series score reference arithmetic does not match target count")
+
+    record = dict(score_evidence)
+    updated_sections: list[dict[str, Any]] = []
+    for section in record.get("sections") or []:
+        if str(section.get("section_key") or "") != target_key:
+            updated_sections.append(section)
+            continue
+        updated = dict(section)
+        updated.update({
+            "per_question_score": per_question,
+            "full_score": full_score,
+            "per_question_source": "corroborated_series_section_score",
+            "full_score_source": "corroborated_series_section_score",
+            "status": "usable",
+            "reasons": [],
+            "series_resolution": {
+                "method": "corroborated_series_section_score",
+                "rule_version": "same_series_explicit_section_v1",
+                "reference_count": len(references),
+                "references": references,
+            },
+        })
+        updated_sections.append(updated)
+
+    counts = {"usable": 0, "incomplete": 0, "conflict": 0}
+    for section in updated_sections:
+        counts[str(section["status"])] += 1
+    record["sections"] = updated_sections
+    record["summary"] = {"total_sections": len(updated_sections), **counts}
+    return record
+
+
 def apply_score_evidence(
     verified_candidate_bank: Mapping[str, Any],
     score_evidence: Mapping[str, Any],
