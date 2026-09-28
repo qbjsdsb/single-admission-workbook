@@ -29,6 +29,34 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'missing answer or analysis'):
             self.plan()
 
+    def test_open_response_composition_passes_without_fake_answer(self):
+        question = next(
+            item for item in self.data["questions"]
+            if item["subject"] == "english"
+        )
+        question["kind"] = "composition"
+        question["answer_mode"] = "open_response"
+        question.pop("answer", None)
+        question.pop("options", None)
+
+        books, bank = self.plan()
+        self.assertIn(question["id"], bank)
+        self.assertEqual(len(books), 8)
+
+    def test_open_response_composition_still_needs_analysis(self):
+        question = next(
+            item for item in self.data["questions"]
+            if item["subject"] == "english"
+        )
+        question["kind"] = "composition"
+        question["answer_mode"] = "open_response"
+        question.pop("answer", None)
+        question.pop("options", None)
+        question.pop("analysis", None)
+
+        with self.assertRaisesRegex(ValueError, "missing open-response analysis"):
+            self.plan()
+
     def test_source_coverage_blocks(self):
         self.data['ledger']['sources'][0]['expected_questions'] = 2
         with self.assertRaisesRegex(ValueError, 'expected 2, accounted 1'):
