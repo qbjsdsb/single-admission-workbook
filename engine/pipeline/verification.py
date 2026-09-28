@@ -228,6 +228,157 @@ def build_strict_source_pair_verification_manifest(
     }
 
 
+def build_embedded_source_verified_candidate_bank(
+    candidate_bank: Mapping[str, Any],
+    evidence_bank: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Promote only questions whose answer is explicit in the same source.
+
+    This lane is for standalone/mixed teaching materials that do not have a
+    separate paired teacher file. It is deliberately narrower than source-pair
+    verification: a choice question needs four parsed A-D options and exactly
+    one same-source answer at the same section/number identity. A missing first
+    section heading is tolerated only when it is the parser's sole review
+    reason. Open writing is allowed only when the same source also carries an
+    explicit source sample response.
+
+    The result records source evidence acceptance, never a human-review claim.
+    """
+    if candidate_bank.get("source_id") != evidence_bank.get("source_id"):
+        raise ValueError("candidate bank and evidence bank source mismatch")
+    if candidate_bank.get("subject") != evidence_bank.get("subject"):
+        raise ValueError("candidate bank and evidence bank subject mismatch")
+
+    source_id = str(candidate_bank.get("source_id") or "")
+    evidence_by_identity: dict[tuple[str | None, int | None, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for item in evidence_bank.get("evidence") or []:
+        if item.get("source_id") != source_id:
+            raise ValueError("embedded evidence source mismatch")
+        key = (
+            item.get("section_key"),
+            item.get("source_number"),
+            str(item.get("field") or ""),
+        )
+        evidence_by_identity[key].append(item)
+
+    verified: list[dict[str, Any]] = []
+    deferred: list[str] = []
+    safe_review_reasons = {"section_heading_missing_inferred_single_choice"}
+
+    for candidate in candidate_bank.get("candidates") or []:
+        candidate_id = str(candidate.get("candidate_id") or "")
+        section_key = candidate.get("section_key")
+        source_number = candidate.get("source_number")
+        status = str(candidate.get("status") or "")
+        review_reasons = set(candidate.get("review_reasons") or [])
+        status_ok = status == "parsed" or (
+            status == "needs_review"
+            and review_reasons
+            and review_reasons <= safe_review_reasons
+        )
+
+        answer_items = evidence_by_identity.get(
+            (section_key, source_number, "answer"),
+            [],
+        )
+        normalized_answers = {
+            _normalize_answer(item.get("value"))
+            for item in answer_items
+            if _normalize_answer(item.get("value"))
+        }
+
+        method = "embedded_source_evidence_accepted"
+        answer_mode = "fixed"
+        verified_answer: str | None = None
+        aggregate_status = "single_source_consistent"
+        note = ""
+
+        if (
+            status_ok
+            and candidate.get("kind") == "single_choice"
+            and len(candidate.get("options") or []) == 4
+            and [item.get("label") for item in candidate.get("options") or []]
+            == ["A", "B", "C", "D"]
+            and len(normalized_answers) == 1
+            and next(iter(normalized_answers)) in {"A", "B", "C", "D"}
+        ):
+            verified_answer = next(iter(normalized_answers))
+            note = (
+                "Same-source explicit answer evidence is uniquely bound to a "
+                "four-option question by section and source number; no "
+                "human-review claim."
+            )
+        elif (
+            status_ok
+            and candidate.get("kind") == "fill_blank"
+            and len(normalized_answers) == 1
+        ):
+            verified_answer = next(iter(normalized_answers))
+            note = (
+                "Same-source explicit fill-blank answer is uniquely bound by "
+                "section and source number; no human-review claim."
+            )
+        elif (
+            status == "parsed"
+            and candidate.get("kind") == "composition"
+            and len(evidence_by_identity.get(
+                (section_key, source_number, "source_sample_response"),
+                [],
+            )) >= 1
+            and not normalized_answers
+        ):
+            method = "editorial_source_review"
+            answer_mode = "open_response"
+            aggregate_status = "review_required"
+            note = (
+                "The same source contains the writing prompt and an explicit "
+                "source sample response; the task has no unique fixed answer. "
+                "Editorial source review, not human review."
+            )
+        else:
+            deferred.append(candidate_id)
+            continue
+
+        verified.append({
+            "candidate_id": candidate_id,
+            "source_id": candidate.get("source_id"),
+            "subject": candidate.get("subject"),
+            "source_number": source_number,
+            "section_key": section_key,
+            "kind": candidate.get("kind"),
+            "stem_text": candidate.get("stem_text"),
+            **(
+                {"stem_rich": candidate["stem_rich"]}
+                if candidate.get("stem_rich")
+                else {}
+            ),
+            "options": candidate.get("options") or [],
+            "group_id": candidate.get("group_id"),
+            "locators": candidate.get("locators") or [],
+            "verified_answer": verified_answer,
+            "answer_mode": answer_mode,
+            "verification_method": method,
+            "verification_note": note,
+            "override_reason": "",
+            "machine_aggregate_status": aggregate_status,
+            "machine_answer": verified_answer,
+        })
+
+    return {
+        "schema_version": 1,
+        "subject": candidate_bank.get("subject"),
+        "candidate_source_id": source_id,
+        "verified": verified,
+        "rejected_candidate_ids": [],
+        "deferred_candidate_ids": sorted(deferred),
+        "summary": {
+            "verified": len(verified),
+            "rejected": 0,
+            "deferred": len(deferred),
+        },
+    }
+
+
 def build_verified_candidate_bank(
     candidate_bank: Mapping[str, Any],
     aggregate_review: Mapping[str, Any],
