@@ -8,6 +8,7 @@ from typing import Iterable
 # "oneB. two". Keep that recovery path, but reject capital-letter acronym tails
 # such as "TTEC." from becoming a fake C option marker.
 STRICT_MARKER = re.compile(r"(?<![A-Z0-9])([A-D])[.．、)]\s*")
+BARE_FOLLOWUP_MARKER = re.compile(r"(?:\t+| {3,})([A-D])\s+(?=\S)")
 # Page/volume separators can remain at the tail of the final question in a section.
 # They are not option text and may be ignored only after a complete A-D set exists.
 VOLUME_TAIL = re.compile(
@@ -59,11 +60,50 @@ def _split_inline_options(
     """
     prefix, strict, starts_strict = _strict_pieces(text)
 
+    def with_bare_followups(
+        markers: list[tuple[str, int, int]],
+    ) -> list[tuple[str, int, int]]:
+        """Recover punctuationless labels only in an already started A-D row."""
+        if not markers:
+            return markers
+        order = "ABCD"
+        result = sorted(markers, key=lambda item: item[1])
+        for match in BARE_FOLLOWUP_MARKER.finditer(text):
+            label = match.group(1)
+            position = match.start(1)
+            if any(start == position for _label, start, _end in result):
+                continue
+            preceding = [item for item in result if item[1] < position]
+            if not preceding:
+                continue
+            preceding_labels = [item[0] for item in preceding]
+            start_index = order.index(expected_label)
+            expected_prefix = list(order[start_index:start_index + len(preceding_labels)])
+            next_index = start_index + len(preceding_labels)
+            if (
+                preceding_labels == expected_prefix
+                and next_index < len(order)
+                and label == order[next_index]
+            ):
+                result.append((label, match.start(1), match.end(1)))
+                result.sort(key=lambda item: item[1])
+        return result
+
     bare = re.match(
         rf"^\s*{re.escape(expected_label)}\s+(?=\S)",
         text,
     )
     if bare is None:
+        if strict and strict[0][0] == expected_label:
+            markers = with_bare_followups([
+                (match.group(1), match.start(), match.end())
+                for match in STRICT_MARKER.finditer(text)
+            ])
+            out: list[tuple[str, str]] = []
+            for index, (label, _start, end_marker) in enumerate(markers):
+                end = markers[index + 1][1] if index + 1 < len(markers) else len(text)
+                out.append((label, text[end_marker:end].strip()))
+            return prefix, out, starts_strict
         return prefix, strict, starts_strict
 
     strict_after = [
@@ -101,6 +141,7 @@ def _split_inline_options(
         for match in strict_after
     )
 
+    markers = with_bare_followups(markers)
     out: list[tuple[str, str]] = []
     for index, (label, _start, end_marker) in enumerate(markers):
         end = markers[index + 1][1] if index + 1 < len(markers) else len(text)

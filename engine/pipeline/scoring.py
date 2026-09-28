@@ -9,7 +9,7 @@ from typing import Any, Mapping
 NUMBER = r"([0-9]+(?:\.[0-9]+)?)"
 COUNT_RE = re.compile(r"共\s*(\d+)\s*(?:小题|题)")
 PER_RE = re.compile(r"(?:每小题|每题)\s*" + NUMBER + r"\s*分")
-FULL_RE = re.compile(r"(?:满分|总分|共计)\s*" + NUMBER + r"\s*分")
+FULL_RE = re.compile(r"(?:满分|总分|共计|满)\s*" + NUMBER + r"\s*分")
 FULL_ALT_RE = re.compile(r"共\s*" + NUMBER + r"\s*分")
 
 

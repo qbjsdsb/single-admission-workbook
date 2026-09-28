@@ -10,13 +10,23 @@ QUESTION_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$")
 
 SECTION_LEAD = (
     r"^\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
-    r"\s*[.．、:：]?\s*)?"
+    r"\s*[.．、:：,，]?\s*)?"
+)
+
+ENGLISH_CLOZE_INSTRUCTION = re.compile(
+    r"(?=.*阅读.{0,20}(?:短文|文章))(?=.*掌握其大意)"
+    r"(?=.*\d{1,3}\s*(?:至|到|[-—–~～])\s*\d{1,3})",
+    re.IGNORECASE,
 )
 
 SECTION_PATTERNS = {
     "english": [
-        (re.compile(SECTION_LEAD + r"(?:单项选择(?:题)?|选择题)", re.IGNORECASE), "single_choice", "single_choice"),
-        (re.compile(SECTION_LEAD + r"完形填空", re.IGNORECASE), "cloze", "cloze_group"),
+        (re.compile(SECTION_LEAD + r"(?:单项选择(?:题)?|项选择(?:题)?|单项填空|选择题)", re.IGNORECASE), "single_choice", "single_choice"),
+        (re.compile(SECTION_LEAD + r"完[形型]填空", re.IGNORECASE), "cloze", "cloze_group"),
+        (ENGLISH_CLOZE_INSTRUCTION, "cloze", "cloze_group"),
+        # A legacy 2015 Word source renders the Roman heading III as "11I" in
+        # extracted text; its original page visibly reads "III、阅读理解".
+        (re.compile(r"^\s*11I\s*[.．、:]?\s*阅读理解", re.IGNORECASE), "reading", "reading_group"),
         (re.compile(SECTION_LEAD + r"阅读理解", re.IGNORECASE), "reading", "reading_group"),
         (re.compile(SECTION_LEAD + r"单词拼写", re.IGNORECASE), "word_spelling", "fill_blank"),
         (re.compile(SECTION_LEAD + r"(?:书面表达|写作)", re.IGNORECASE), "writing", "composition"),
@@ -53,6 +63,11 @@ def detect_section(subject: str, text: str):
         if pattern.search(text):
             return key, kind
     return None
+
+
+def is_english_cloze_instruction(text: str) -> bool:
+    """Identify a numbered cloze instruction line separately from its section heading."""
+    return bool(ENGLISH_CLOZE_INSTRUCTION.search(text))
 
 def split_sections(paragraphs: Iterable[str], subject: str) -> list[SectionBlock]:
     out: list[SectionBlock] = []

@@ -250,6 +250,59 @@ class EvidenceBankTests(unittest.TestCase):
         )
         self.assertIn("topic-based explanation", analysis["value"])
 
+    def test_answer_range_after_answer_label_maps_each_child_question(self):
+        texts = [
+            "I. 单项选择",
+            "20. A fictional final question.",
+            "A. one B. two C. three D. four",
+            "答案：B",
+            "II. 完形填空",
+            "答案：21-25 BACCD 26-30 BDABD",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-RANGE-LABEL"
+        )
+        answers = [e for e in bank["evidence"] if e["field"] == "answer"]
+        q20 = [e["value"] for e in answers if e["source_number"] == 20]
+        self.assertEqual(q20, ["B"])
+        answer_pairs = {(e["source_number"], e["value"]) for e in answers}
+        self.assertIn((21, "B"), answer_pairs)
+        self.assertIn((30, "D"), answer_pairs)
+
+    def test_question_with_price_is_not_treated_as_compact_answer_list(self):
+        texts = [
+            "I. 单项选择",
+            "14. A fictional prompt.",
+            "A. one B. two C. three D. four",
+            "答案：C",
+            "15. The green watch costs $199 and the red watch costs $195.",
+            "A. opinion B. change C. decision D. difference",
+            "答案：D",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-PRICE-PROMPT"
+        )
+        answers = {
+            e["source_number"]: e["value"]
+            for e in bank["evidence"]
+            if e["field"] == "answer"
+        }
+        self.assertEqual(answers[14], "C")
+        self.assertEqual(answers[15], "D")
+        self.assertNotIn(195, answers)
+
     def test_missing_english_first_heading_is_inferred_for_evidence(self):
         texts = [
             "考试说明",

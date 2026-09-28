@@ -10,6 +10,7 @@ from engine.document.docx_reader import structure_to_document_ast
 from engine.document.pdf_reader import read_pdf_document_with_pages
 from engine.pipeline.intake import extract
 from engine.parse.docx_structure import extract_structure
+from engine.parse.docx_text import extract_docx_paragraphs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -61,6 +62,73 @@ class DocumentAstTests(unittest.TestCase):
             self.assertEqual(result["format"], "docx")
             self.assertEqual(result["document_ast"]["version"], 1)
             jsonschema.validate(result["document_ast"], self.schema)
+
+    def test_automatic_decimal_numbering_is_preserved_in_ast_and_text(self):
+        document = """<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:body>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr>
+   <w:r><w:t>What does the text say?</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr>
+   <w:r><w:t>What happened next?</w:t></w:r></w:p>
+ </w:body>
+</w:document>"""
+        numbering = """<?xml version="1.0" encoding="UTF-8"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0">
+  <w:start w:val="44"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/>
+ </w:lvl></w:abstractNum>
+ <w:num w:numId="3"><w:abstractNumId w:val="1"/>
+  <w:lvlOverride w:ilvl="0"><w:startOverride w:val="44"/></w:lvlOverride>
+ </w:num>
+</w:numbering>"""
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "numbered.docx"
+            with zipfile.ZipFile(path, "w") as zf:
+                zf.writestr("word/document.xml", document)
+                zf.writestr("word/numbering.xml", numbering)
+            ast = structure_to_document_ast(extract_structure(path)).to_dict()
+            jsonschema.validate(ast, self.schema)
+            texts = [
+                "".join(inline.get("text", "") for inline in block["inlines"])
+                for block in ast["blocks"]
+            ]
+            self.assertEqual(texts, [
+                "44. What does the text say?",
+                "45. What happened next?",
+            ])
+            self.assertEqual(extract_docx_paragraphs(path), texts)
+
+    def test_numbering_continues_across_list_ids_sharing_abstract_num(self):
+        document = """<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:body>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr></w:pPr><w:r><w:t>A</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>C</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr></w:pPr><w:r><w:t>D</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="3"/></w:numPr></w:pPr><w:r><w:t>E</w:t></w:r></w:p>
+ </w:body>
+</w:document>"""
+        numbering = """<?xml version="1.0" encoding="UTF-8"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+ <w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0">
+  <w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/>
+ </w:lvl></w:abstractNum>
+ <w:num w:numId="4"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="21"/></w:lvlOverride></w:num>
+ <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
+ <w:num w:numId="2"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="31"/></w:lvlOverride></w:num>
+ <w:num w:numId="3"><w:abstractNumId w:val="1"/></w:num>
+</w:numbering>"""
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "numbered.docx"
+            with zipfile.ZipFile(path, "w") as zf:
+                zf.writestr("word/document.xml", document)
+                zf.writestr("word/numbering.xml", numbering)
+            texts = extract_docx_paragraphs(path)
+            self.assertEqual(texts, [
+                "21. A", "22. B", "23. C", "31. D", "32. E",
+            ])
 
     def test_pdf_reader_emits_page_bbox_and_ocr_marker(self):
         import fitz

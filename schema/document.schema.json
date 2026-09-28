@@ -123,6 +123,47 @@
           "type": "object",
           "required": [
             "type",
+            "text",
+            "locator",
+            "status",
+            "mathml_xml"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "mathml_inline_text"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "const": "normalized_from_embedded_mathml"
+            },
+            "mathml_xml": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_asset_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "source_asset_target": {
+              "type": "string"
+            },
+            "source_asset_extension": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
             "text"
           ],
           "additionalProperties": false,
@@ -223,6 +264,17 @@
               "minimum": 0
             },
             "name": {
+              "type": "string"
+            },
+            "mathml_status": {
+              "enum": [
+                "embedded_unparseable_encoding",
+                "embedded_unparseable",
+                "embedded_complex_unverified",
+                "embedded_empty"
+              ]
+            },
+            "mathml_xml": {
               "type": "string"
             }
           }

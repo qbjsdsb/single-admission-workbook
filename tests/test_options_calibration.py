@@ -34,6 +34,18 @@ class OptionCalibrationTests(unittest.TestCase):
         self.assertEqual(result.options[2], ("C", "third choice"))
         self.assertEqual(result.options[3], ("D", "fourth choice"))
 
+    def test_recovers_missing_punctuation_inside_spaced_option_rows(self):
+        result = parse_options([
+            "A. before                   B which",
+            "C. that                     D because",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual([label for label, _ in result.options], list("ABCD"))
+        self.assertEqual(
+            result.options,
+            (("A", "before"), ("B", "which"), ("C", "that"), ("D", "because")),
+        )
+
     def test_plain_stem_starting_with_a_is_not_reinterpreted_as_option(self):
         result = parse_options([
             "A person can still write a normal stem here.",

@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 10
+status_version: 11
 updated: 2026-09-28
 
 product:
@@ -13,9 +13,9 @@ current_phase: english_real_business_loop
 
 engineering_baseline:
   branch: main
-  commit: c0d84fbfac9ef9f65c2b35f87c15b536061a8461
-  integrated_pr: 14
-  integration_head: 6c536f778bafd679c04d8803e310efc198755a31
+  commit: c5b1cd61ca1cbcafe1f92d8722e8a4b6af67f516
+  integrated_pr: 40
+  integration_head: c5b1cd61ca1cbcafe1f92d8722e8a4b6af67f516
   checks_on_integration_head:
     quality: passed
     print_build: passed
@@ -123,7 +123,7 @@ gates:
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
     merged_prs: [28, 29, 30, 31, 32, 33, 34, 35]
-    summary: "本轮 Library snapshot 完整 intake 75 个英语源文件；22 个学生/教师组进入最新 Batch Review，共1193个候选单元、0个失败组。当前363个P0、830个P1、5个答案冲突；仍为复核态，不代表内容核验或成书完成"
+    summary: "本轮私有source snapshot含75个英语源文件；22个学生/教师组进入最新Batch Review，共1232个候选单元、0个失败组、0个答案冲突、0个P0。当前1232个P1仍为复核态，不代表内容核验或成书完成；已修复英语作答说明误计题、旧字体阅读A组漏题、旧版单选标题/选项标点识别与计分标题误覆盖问题"
 
   - id: GATE-ENGLISH-REAL-XELATEX
     status: private_smoke_passed
@@ -137,6 +137,12 @@ gates:
 
 real_corpus:
   files: 224
+  snapshot_inventory_verified: true
+  subject_source_files:
+    english: 75
+    chinese: 66
+    politics: 51
+    mathematics: 32
   pdf_pages: 1033
   low_text_pdf_pages: 374
   legacy_doc_files: 31
@@ -156,17 +162,17 @@ real_corpus:
     source_files_intaken: 75
     exact_student_companion_groups: 22
     companion_sources: 22
-    candidate_units: 1193
+    candidate_units: 1232
     failed_groups: 0
-    P0: 363
-    P1: 830
-    answer_conflicts: 5
-    score_conflict_units: 361
-    score_missing_units: 99
-    source_analysis_gaps: 291
+    P0: 0
+    P1: 1232
+    answer_conflicts: 0
+    candidate_structure_units: 23
+    score_missing_units: 67
+    source_analysis_gaps: 293
     ready_for_canonical: 0
     status: review_only_not_verified_or_publishable
-    note: "This snapshot supersedes older English counts. File extraction is not question occurrence coverage."
+    note: "Latest Batch Review supersedes all older English counts. Source-pair verification, exception review, score completion, teacher supplements, and occurrence accounting remain unfinished. File extraction is not question occurrence coverage."
   politics_fast_lane_source_docs_audited: 17
   politics_fast_lane_candidate_units: 558
   real_books_complete: false
@@ -180,10 +186,9 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 针对本轮1193个英语候选核验题号分段与学生/教师绑定，先复核5个答案冲突、110个结构问题及来源富内容阻断
-  - 按学生/教师源对复核答案与分值；解决361个计分冲突和99个计分缺失，不允许多数投票或AI覆盖来源冲突
-  - 对291个来源缺解析候选执行独立解题与解析审计；approved supplement与source analysis分开保存
-  - 扩展Occurrence Ledger覆盖全部75个英语文件中的真实题目出现位置，并解释每个未入正文的题目去向
+  - 完成本轮22个英语学生/教师源对复核；处理23个结构异常、67个计分缺失、27个答案证据缺口与293个来源解析空缺
+  - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
+  - 完成英语答案核验、Canonical、解析补全、学生/教师同序成书与全页最终QA
   - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册
   - 英语全册通过Coverage与全页终审后，复用同一流水线继续推进政治、语文、数学
   - 复用同一生产线推进政治，并核对两份31/32题结构异常来源

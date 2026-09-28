@@ -16,7 +16,7 @@ import zipfile
 from engine.ingest.inventory import inventory_zip, summarize
 from engine.ingest.pairing import exact_pair_candidates
 from engine.ingest.probe import probe_docx
-from engine.parse.docx_text import extract_docx_paragraphs
+from engine.parse.docx_text import paragraphs_from_document_ast
 from engine.document.docx_reader import structure_to_document_ast
 from engine.document.pdf_reader import read_pdf_document_with_pages
 
@@ -55,7 +55,7 @@ def extract(path):
         structure = extract_structure(path)
         document_ast = structure_to_document_ast(structure).to_dict()
         return {'format': 'docx', 'probe': probe,
-                'paragraphs': extract_docx_paragraphs(path), 'structure': structure,
+                'paragraphs': paragraphs_from_document_ast(document_ast), 'structure': structure,
                 'document_ast': document_ast,
                 'required_work': ['rich_structure_review'] if warnings else ['question_segmentation'],
                 'rich_features': warnings}
