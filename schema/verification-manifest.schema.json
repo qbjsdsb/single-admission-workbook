@@ -42,6 +42,7 @@
           "method": {
             "enum": [
               "human_review",
+              "editorial_source_review",
               "machine_corroborated_accepted",
               "source_pair_manual_approval"
             ]
