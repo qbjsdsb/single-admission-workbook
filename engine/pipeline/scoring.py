@@ -563,6 +563,88 @@ def apply_corroborated_series_section_score(
     return record
 
 
+def auto_apply_corroborated_series_scores(
+    candidate_bank: Mapping[str, Any],
+    score_evidence: Mapping[str, Any],
+    *,
+    all_score_evidence_by_source: Mapping[str, Mapping[str, Any]],
+    source_text_by_source_locator: Mapping[str, Mapping[str, str]],
+) -> dict[str, Any]:
+    """Resolve incomplete sections only when every eligible series reference agrees."""
+    current = dict(score_evidence)
+    source_id = str(candidate_bank.get("source_id") or "")
+    subject = score_evidence.get("subject")
+
+    for target in list(current.get("sections") or []):
+        if target.get("status") != "incomplete":
+            continue
+        target_key = str(target.get("section_key") or "")
+        target_count = int(target.get("candidate_count") or 0)
+        if not target_key or target_count <= 0:
+            continue
+
+        eligible: list[str] = []
+        values: set[tuple[float, float]] = set()
+        for reference_id, reference_bank in sorted(
+            all_score_evidence_by_source.items()
+        ):
+            if reference_id == source_id or reference_bank.get("subject") != subject:
+                continue
+            reference_section = next(
+                (
+                    section
+                    for section in reference_bank.get("sections") or []
+                    if str(section.get("section_key") or "") == target_key
+                ),
+                None,
+            )
+            if reference_section is None:
+                continue
+            if (
+                reference_section.get("status") != "usable"
+                or reference_section.get("heading_source") != "source"
+                or reference_section.get("per_question_source") != "explicit"
+                or reference_section.get("full_score_source")
+                not in {"explicit", "derived_from_count_times_per_question"}
+                or int(reference_section.get("candidate_count") or 0)
+                != target_count
+                or reference_section.get("per_question_score") is None
+                or reference_section.get("full_score") is None
+            ):
+                continue
+            locator = str(reference_section.get("heading_locator") or "")
+            text = (source_text_by_source_locator.get(reference_id) or {}).get(locator)
+            if not locator or not text:
+                continue
+            if (
+                text != reference_section.get("heading")
+                or hashlib.sha256(text.encode("utf-8")).hexdigest()
+                != reference_section.get("heading_text_sha256")
+            ):
+                continue
+            eligible.append(reference_id)
+            values.add((
+                float(reference_section["per_question_score"]),
+                float(reference_section["full_score"]),
+            ))
+
+        if len(eligible) < 3 or len(values) != 1:
+            continue
+        current = apply_corroborated_series_section_score(
+            candidate_bank,
+            current,
+            {
+                "candidate_source_id": source_id,
+                "target_section_key": target_key,
+                "reference_source_ids": eligible,
+            },
+            reference_score_evidence_by_source=all_score_evidence_by_source,
+            reference_text_by_source_locator=source_text_by_source_locator,
+        )
+
+    return current
+
+
 def apply_score_evidence(
     verified_candidate_bank: Mapping[str, Any],
     score_evidence: Mapping[str, Any],
