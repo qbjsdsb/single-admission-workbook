@@ -6,6 +6,7 @@ import unittest
 import jsonschema
 
 from engine.pipeline.scoring import (
+    apply_corroborated_series_section_score,
     apply_exam_total_residual_resolution,
     build_score_evidence,
     apply_score_evidence,
@@ -213,6 +214,103 @@ class ScoreEvidenceTests(unittest.TestCase):
         assigned = apply_score_evidence(verified_bank(), score)
         self.assertEqual(assigned["summary"]["assigned"], 0)
         self.assertEqual(assigned["unresolved"][0]["reason"], "score_incomplete")
+
+    def test_three_explicit_series_sources_can_corroborate_missing_section_score(self):
+        target_bank = candidate_bank({
+            "section_key": "reading",
+            "heading": "III.阅读理解",
+            "heading_locator": "target/reading",
+            "candidate_count": 15,
+            "inferred": False,
+        })
+        target_score = build_score_evidence(target_bank)
+
+        refs = {}
+        texts = {}
+        for index in range(3):
+            source_id = f"REF-{index}"
+            bank = {
+                "source_id": source_id,
+                "subject": "english",
+                "sections": [{
+                    "section_key": "reading",
+                    "heading": "III.阅读理解（共15小题；每小题4分，满分60分）",
+                    "heading_locator": f"{source_id}/reading",
+                    "candidate_count": 15,
+                    "inferred": False,
+                }],
+            }
+            refs[source_id] = build_score_evidence(bank)
+            texts[source_id] = {
+                f"{source_id}/reading": bank["sections"][0]["heading"]
+            }
+
+        resolved = apply_corroborated_series_section_score(
+            target_bank,
+            target_score,
+            {
+                "candidate_source_id": "SRC",
+                "target_section_key": "reading",
+                "reference_source_ids": ["REF-0", "REF-1", "REF-2"],
+            },
+            reference_score_evidence_by_source=refs,
+            reference_text_by_source_locator=texts,
+        )
+        jsonschema.validate(resolved, self.schema)
+        section = resolved["sections"][0]
+        self.assertEqual(section["status"], "usable")
+        self.assertEqual(section["per_question_score"], 4.0)
+        self.assertEqual(section["full_score"], 60.0)
+        self.assertEqual(
+            section["per_question_source"],
+            "corroborated_series_section_score",
+        )
+        self.assertEqual(section["series_resolution"]["reference_count"], 3)
+
+    def test_series_score_corroboration_fails_on_reference_disagreement(self):
+        target_bank = candidate_bank({
+            "section_key": "reading",
+            "heading": "III.阅读理解",
+            "heading_locator": "target/reading",
+            "candidate_count": 15,
+            "inferred": False,
+        })
+        target_score = build_score_evidence(target_bank)
+        refs = {}
+        texts = {}
+        for index, per_question in enumerate((4, 4, 3)):
+            source_id = f"REF-{index}"
+            full_score = 15 * per_question
+            heading = (
+                f"III.阅读理解（共15小题；每小题{per_question}分，"
+                f"满分{full_score}分）"
+            )
+            bank = {
+                "source_id": source_id,
+                "subject": "english",
+                "sections": [{
+                    "section_key": "reading",
+                    "heading": heading,
+                    "heading_locator": f"{source_id}/reading",
+                    "candidate_count": 15,
+                    "inferred": False,
+                }],
+            }
+            refs[source_id] = build_score_evidence(bank)
+            texts[source_id] = {f"{source_id}/reading": heading}
+
+        with self.assertRaisesRegex(ValueError, "references disagree"):
+            apply_corroborated_series_section_score(
+                target_bank,
+                target_score,
+                {
+                    "candidate_source_id": "SRC",
+                    "target_section_key": "reading",
+                    "reference_source_ids": ["REF-0", "REF-1", "REF-2"],
+                },
+                reference_score_evidence_by_source=refs,
+                reference_text_by_source_locator=texts,
+            )
 
     def test_explicit_first_volume_total_derives_only_the_missing_section(self):
         bank = {
