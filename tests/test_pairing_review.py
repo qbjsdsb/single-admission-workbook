@@ -221,6 +221,94 @@ class PairingReviewTests(unittest.TestCase):
         self.assertEqual(row["answer_status"], "missing")
         self.assertEqual(row["review_status"], "review_required")
 
+    def test_writing_instruction_similarity_recovers_one_character_source_typo(self):
+        writing = candidate(
+            "Q-WRITE-TYPO",
+            None,
+            (
+                "Write a fictional letter to Coach Smithx about a three-month training plan.\n"
+                "Ask about the schedule, cost, and accommodation.\n"
+                "Dear Mr. Smith,"
+            ),
+            section="writing",
+        )
+        writing["kind"] = "composition"
+        writing["options"] = []
+        teacher_prompt = prompt(
+            "T-WRITE-TYPO",
+            56,
+            (
+                "Write a fictional letter to Coach Smith about a three-month training plan.\n"
+                "Ask about the schedule, cost, and accommodation.\n"
+                "Dear Mr. Smith, A fictional model response continues here."
+            ),
+            section="writing",
+        )
+        teacher_prompt.pop("options")
+        cb = {"source_id": "STUDENT", "subject": "english", "candidates": [writing]}
+        eb = {
+            "source_id": "TEACHER",
+            "subject": "english",
+            "question_records": [teacher_prompt],
+            "evidence": [],
+        }
+        review = reconcile_candidate_and_evidence(
+            cb,
+            eb,
+            source_pair_confidence="name_exact",
+        )
+        row = review["rows"][0]
+        self.assertEqual(row["prompt_pair_confidence"], "high")
+        self.assertEqual(
+            row["prompt_pair_reason"],
+            "name_exact_writing_instruction_similarity",
+        )
+        self.assertGreaterEqual(row["prompt_pair_score"], 0.98)
+
+    def test_writing_instruction_similarity_does_not_hide_missing_requirement(self):
+        writing = candidate(
+            "Q-WRITE-GAP",
+            None,
+            (
+                "Write a fictional letter about study pressure.\n"
+                "1. Tell your parents you tried hard.\n"
+                "2. Ask your teacher for study methods.\n"
+                "Dear Lynn,"
+            ),
+            section="writing",
+        )
+        writing["kind"] = "composition"
+        writing["options"] = []
+        teacher_prompt = prompt(
+            "T-WRITE-GAP",
+            56,
+            (
+                "Write a fictional letter about study pressure.\n"
+                "1. Tell your parents you tried hard.\n"
+                "2. Ask your teacher for study methods.\n"
+                "3. Follow the advice and keep working.\n"
+                "Dear Lynn,"
+            ),
+            section="writing",
+        )
+        teacher_prompt.pop("options")
+        cb = {"source_id": "STUDENT", "subject": "english", "candidates": [writing]}
+        eb = {
+            "source_id": "TEACHER",
+            "subject": "english",
+            "question_records": [teacher_prompt],
+            "evidence": [],
+        }
+        review = reconcile_candidate_and_evidence(
+            cb,
+            eb,
+            source_pair_confidence="name_exact",
+        )
+        row = review["rows"][0]
+        self.assertEqual(row["prompt_pair_confidence"], "unmatched")
+        self.assertEqual(row["binding_strength"], "none")
+        self.assertIn("weak_or_missing_evidence_binding", row["review_reasons"])
+
     def test_writing_prefix_fallback_requires_exact_source_pair(self):
         writing = candidate(
             "Q-WRITE",

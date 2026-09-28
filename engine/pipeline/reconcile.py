@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from difflib import SequenceMatcher
 import re
 import unicodedata
 from typing import Any, Iterable, Mapping
@@ -47,6 +48,52 @@ def _writing_prefix_coverage(candidate: Mapping[str, Any], companion: Mapping[st
     if shared < 60 or shorter <= 0:
         return 0.0
     return shared / shorter
+
+
+_WRITING_GREETING_RE = re.compile(
+    r"^\s*((?:dear|hi|hello)\b[^,，\n]{0,80}[,，])",
+    re.IGNORECASE,
+)
+
+
+def _writing_instruction_signature(value: object) -> str:
+    """Keep source instructions through the first supplied greeting line.
+
+    This intentionally excludes answer-space/model-response continuation. It is
+    only used after the stricter common-prefix rule fails.
+    """
+    lines = [
+        line.strip()
+        for line in str(value or "").splitlines()
+        if line.strip()
+    ]
+    kept: list[str] = []
+    greeting_seen = False
+    for line in lines:
+        greeting = _WRITING_GREETING_RE.match(line)
+        if greeting:
+            kept.append(greeting.group(1))
+            greeting_seen = True
+            break
+        kept.append(line)
+    if not kept or not greeting_seen:
+        return ""
+    return "\n".join(kept)
+
+
+def _writing_instruction_similarity(
+    candidate: Mapping[str, Any],
+    companion: Mapping[str, Any],
+) -> float:
+    student = normalize_match_text(
+        _writing_instruction_signature(candidate.get("stem_text"))
+    )
+    teacher = normalize_match_text(
+        _writing_instruction_signature(companion.get("stem"))
+    )
+    if min(len(student), len(teacher)) < 60:
+        return 0.0
+    return SequenceMatcher(None, student, teacher).ratio()
 
 
 def _evidence_index(
@@ -146,7 +193,7 @@ def reconcile_candidate_and_evidence(
         companion = prompt_by_id.get(str(companion_id)) if companion_id else None
 
         if (
-            pair_confidence in {"unmatched", "ambiguous"}
+            pair_confidence != "exact"
             and source_pair_confidence == "name_exact"
             and candidate.get("kind") == "composition"
             and candidate.get("section_key") == "writing"
@@ -157,16 +204,37 @@ def reconcile_candidate_and_evidence(
                 if record.get("section_key") == "writing"
             ]
             if len(writing_prompts) == 1:
+                writing_prompt = writing_prompts[0]
                 prefix_coverage = _writing_prefix_coverage(
                     candidate,
-                    writing_prompts[0],
+                    writing_prompt,
                 )
-                if prefix_coverage >= 0.80:
-                    companion = writing_prompts[0]
+                instruction_similarity = _writing_instruction_similarity(
+                    candidate,
+                    writing_prompt,
+                )
+                if 0 < instruction_similarity < 0.98:
+                    # When both sources expose a comparable instruction block,
+                    # a material difference there outranks generic/prefix
+                    # similarity. Keep it deferred rather than silently treating
+                    # a missing or added requirement as the same prompt.
+                    companion = None
+                    companion_id = None
+                    pair_confidence = "unmatched"
+                    pair_reason = "writing_prompt_source_discrepancy"
+                    pair_score = instruction_similarity
+                elif prefix_coverage >= 0.80:
+                    companion = writing_prompt
                     companion_id = str(companion.get("id") or "")
                     pair_confidence = "high"
                     pair_reason = "name_exact_writing_prompt_prefix"
                     pair_score = prefix_coverage
+                elif instruction_similarity >= 0.98:
+                    companion = writing_prompt
+                    companion_id = str(companion.get("id") or "")
+                    pair_confidence = "high"
+                    pair_reason = "name_exact_writing_instruction_similarity"
+                    pair_score = instruction_similarity
 
         # A content match binds to the TEACHER question identity, even if renumbered.
         target_number = companion.get("number") if companion is not None else number
