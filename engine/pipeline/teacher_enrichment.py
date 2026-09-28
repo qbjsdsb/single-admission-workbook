@@ -97,12 +97,16 @@ def build_teacher_enrichment(
                 })
                 continue
             identity = next(iter(sample_identities))
-            expected_identity = (
-                row.get("companion_section_key") or row.get("section_key"),
-                row.get("companion_source_number")
-                if row.get("companion_source_number") is not None
-                else row.get("source_number"),
-            )
+            if row.get("companion_source_number") is not None:
+                expected_identity = (
+                    row.get("companion_section_key") or row.get("section_key"),
+                    row.get("companion_source_number"),
+                )
+            else:
+                expected_identity = (
+                    row.get("section_key"),
+                    row.get("source_number"),
+                )
             if expected_identity[1] is None or identity != expected_identity:
                 unresolved.append({
                     "candidate_id": candidate_id,
