@@ -92,6 +92,7 @@
             "enum": [
               "explicit",
               "derived_from_exam_total_residual",
+              "corroborated_series_section_score",
               null
             ]
           },
@@ -100,6 +101,7 @@
               "explicit",
               "derived_from_count_times_per_question",
               "derived_from_exam_total_residual",
+              "corroborated_series_section_score",
               null
             ]
           },
@@ -116,6 +118,57 @@
               "type": "string"
             },
             "uniqueItems": true
+          },
+          "series_resolution": {
+            "type": "object",
+            "required": [
+              "method",
+              "rule_version",
+              "reference_count",
+              "references"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "method": { "const": "corroborated_series_section_score" },
+              "rule_version": { "const": "same_series_explicit_section_v1" },
+              "reference_count": { "type": "integer", "minimum": 3 },
+              "references": {
+                "type": "array",
+                "minItems": 3,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "source_id",
+                    "section_key",
+                    "candidate_count",
+                    "heading_locator",
+                    "heading_text_sha256",
+                    "per_question_score",
+                    "full_score"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "source_id": { "type": "string", "minLength": 1 },
+                    "section_key": { "type": "string", "minLength": 1 },
+                    "candidate_count": { "type": "integer", "minimum": 1 },
+                    "heading_locator": { "type": "string", "minLength": 1 },
+                    "heading_text_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "per_question_score": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "full_score": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  }
+                }
+              }
+            }
           },
           "residual_resolution": {
             "type": "object",
