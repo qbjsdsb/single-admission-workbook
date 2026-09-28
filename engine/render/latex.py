@@ -71,7 +71,7 @@ def escape_text(text: str) -> str:
                 # Word writing templates often store hundreds of underscores as
                 # answer space. Keep the blank semantics but never emit an
                 # unbreakable multi-page underscore token.
-                width_mm = min(45, max(18, run * 1.6))
+                width_mm = 45 if run >= 80 else min(28, max(10, run * 1.2))
                 out.append(rf"\blank{{{width_mm:g}mm}}")
                 index = end
                 continue
