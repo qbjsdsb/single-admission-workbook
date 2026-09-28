@@ -164,6 +164,10 @@ def build_verified_candidate_bank(
             raise ValueError(f"{candidate_id}: unsupported answer_mode: {answer_mode}")
 
         aggregate_status = aggregate.get("aggregate_status")
+        if method == "editorial_source_review" and answer_mode != "open_response":
+            raise ValueError(
+                f"{candidate_id}: editorial_source_review is reserved for open_response"
+            )
         if method == "machine_corroborated_accepted" and aggregate_status != "machine_corroborated":
             raise ValueError(
                 f"{candidate_id}: machine_corroborated_accepted requires machine_corroborated aggregate"
@@ -186,9 +190,15 @@ def build_verified_candidate_bank(
 
         aggregate_answer = aggregate.get("normalized_answer")
         if answer_mode == "open_response":
-            if method != "human_review":
+            if method not in {"human_review", "editorial_source_review"}:
                 raise ValueError(
-                    f"{candidate_id}: open_response requires human_review approval"
+                    f"{candidate_id}: open_response requires human_review or editorial_source_review"
+                )
+            if method == "editorial_source_review" and not str(
+                decision.get("note") or ""
+            ).strip():
+                raise ValueError(
+                    f"{candidate_id}: editorial_source_review requires a review note"
                 )
             if (
                 candidate.get("kind") != "composition"
