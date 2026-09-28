@@ -430,6 +430,77 @@ class CandidateBankTests(unittest.TestCase):
             [1, 2],
         )
 
+    def test_pdf_self_test_block_splits_numbered_choice_questions(self):
+        document = {
+            "version": 1,
+            "source_format": "pdf",
+            "blocks": [
+                paragraph(
+                    0,
+                    "【自主检测】\n"
+                    "1. A fictional grammar question.\n"
+                    "A. one\nB. two\nC. three\nD. four\n"
+                    "2. Another fictional grammar question.\n"
+                    "A. red\nB. blue\nC. green\nD. gold",
+                ),
+                paragraph(1, "答案:\n1-2 A B"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="english",
+            source_id="ENG-SELF-TEST",
+        )
+        jsonschema.validate(bank, self.schema)
+        self.assertEqual(
+            [item["source_number"] for item in bank["candidates"]],
+            [1, 2],
+        )
+        self.assertTrue(all(
+            item["section_key"] == "single_choice_self_test_base"
+            for item in bank["candidates"]
+        ))
+        self.assertTrue(all(
+            item["status"] == "parsed" and len(item["options"]) == 4
+            for item in bank["candidates"]
+        ))
+        self.assertTrue(all(
+            "#line-" in locator
+            for item in bank["candidates"]
+            for locator in item["locators"]
+        ))
+
+    def test_numbered_self_tests_have_distinct_section_scopes(self):
+        document = {
+            "version": 1,
+            "source_format": "pdf",
+            "blocks": [
+                paragraph(
+                    0,
+                    "【自主检测1】\n"
+                    "1. A fictional question. A. one B. two C. three D. four\n"
+                    "答案: A",
+                ),
+                paragraph(
+                    1,
+                    "【自主检测2】\n"
+                    "1. A second fictional question. A. one B. two C. three D. four\n"
+                    "答案: B",
+                ),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="english",
+            source_id="ENG-SELF-TEST-MULTI",
+        )
+        self.assertEqual(
+            [item["section_key"] for item in bank["candidates"]],
+            ["single_choice_self_test_1", "single_choice_self_test_2"],
+        )
+
     def test_politics_simple_sections_and_locators(self):
         texts = [
             "一、单项选择题",

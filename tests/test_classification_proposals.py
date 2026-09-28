@@ -38,6 +38,26 @@ class ClassificationProposalTests(unittest.TestCase):
             ("vocabulary_patterns", "word_spelling_training"),
         )
 
+    def test_explicit_self_test_sections_map_to_broad_grammar_training(self):
+        bank = {
+            "source_id": "ENG",
+            "subject": "english",
+            "candidates": [
+                {
+                    "candidate_id": "Q1",
+                    "section_key": "single_choice_self_test_2",
+                },
+            ],
+        }
+        manifest = build_safe_classification_proposals(bank)
+        decision = manifest["decisions"][0]
+        self.assertEqual(decision["decision"], "assign")
+        self.assertEqual(
+            (decision["chapter_key"], decision["section_key"]),
+            ("grammar", "mixed_choice"),
+        )
+        self.assertIn("自主检测", decision["tags"])
+
     def test_trusted_teacher_analysis_refines_grammar_and_reading(self):
         bank = {
             "source_id": "ENG",

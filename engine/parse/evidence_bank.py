@@ -11,6 +11,7 @@ from engine.parse.exam_split import (
     QUESTION_RE,
     detect_section,
     english_exam_section_for_number,
+    is_english_self_test_marker,
 )
 from engine.parse.options import parse_options
 from engine.document.docx_table import normalize_table_block, table_plain_text
@@ -35,9 +36,14 @@ def _stable_id(*parts: object) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence], list[dict[str, Any]]]:
+def _safe_paragraphs(
+    document: Mapping[str, Any],
+    *,
+    subject: str | None = None,
+) -> tuple[list[ParagraphEvidence], list[dict[str, Any]]]:
     paragraphs: list[ParagraphEvidence] = []
     blockers: list[dict[str, Any]] = []
+    english_pdf_self_test = False
     for block in document.get("blocks") or []:
         locator = str(block.get("locator") or "")
         table = normalize_table_block(block)
@@ -72,6 +78,39 @@ def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidenc
         if unsupported:
             blockers.append({"locator": locator, "reasons": unsupported})
         if text:
+            if subject == "english" and document.get("source_format") == "pdf":
+                raw_lines = [line.strip() for line in text.splitlines() if line.strip()]
+                marker_index = next(
+                    (
+                        index
+                        for index, line in enumerate(raw_lines)
+                        if is_english_self_test_marker(line)
+                    ),
+                    None,
+                )
+                if marker_index is not None:
+                    prefix = raw_lines[:marker_index]
+                    if prefix:
+                        paragraphs.append(
+                            ParagraphEvidence(locator, "\n".join(prefix))
+                        )
+                    english_pdf_self_test = True
+                    raw_lines = raw_lines[marker_index:]
+
+                if english_pdf_self_test and raw_lines:
+                    for line_index, line in enumerate(raw_lines):
+                        paragraphs.append(
+                            ParagraphEvidence(
+                                f"{locator}#line-{line_index + 1}",
+                                line,
+                            )
+                        )
+                        if re.match(
+                            r"^\s*(?:【\s*)?答案(?:\s*】)?\s*[:：]?",
+                            line,
+                        ):
+                            english_pdf_self_test = False
+                    continue
             paragraphs.append(ParagraphEvidence(locator, text))
     return paragraphs, blockers
 
@@ -99,6 +138,9 @@ COMPACT_ITEM = re.compile(
 )
 ANSWER_RANGE = re.compile(
     r"(\d{1,3})\s*[-—–~～]\s*(\d{1,3})\s*([A-DＡ-Ｄ\s]+)"
+)
+ANSWER_RANGE_LABEL = re.compile(
+    r"^\s*(\d{1,3})\s*[-—–~～]\s*(\d{1,3})\s*$"
 )
 NUMBERED_SOURCE_ANALYSIS = re.compile(
     r"^\s*(\d{1,3})\s*[.．、]\s*([A-DＡ-Ｄ])\s*[;；]\s*(.+?)\s*$"
@@ -339,7 +381,7 @@ def extract_evidence_bank(
     if subject not in {"english", "politics"}:
         raise ValueError("evidence-bank v0.1 currently supports only english/politics fast lane")
 
-    paragraphs, blockers = _safe_paragraphs(document)
+    paragraphs, blockers = _safe_paragraphs(document, subject=subject)
     evidence: list[dict[str, Any]] = []
     question_records: list[dict[str, Any]] = []
 
@@ -349,6 +391,7 @@ def extract_evidence_bank(
     collecting_sample_response = False
     seen_prompt_keys: set[tuple[str | None, int]] = set()
     pending_detail_number: int | None = None
+    pending_answer_range: tuple[int, int, str] | None = None
     inferred_single_start = _inferred_single_choice_start(
         paragraphs, subject=subject
     )
@@ -432,6 +475,29 @@ def extract_evidence_bank(
 
     for paragraph_index, paragraph in enumerate(paragraphs):
         text = paragraph.text.strip()
+        if pending_answer_range is not None:
+            start, end, range_locator = pending_answer_range
+            normalized_letters = "".join(
+                ch
+                for ch in unicodedata.normalize("NFKC", text).upper()
+                if ch in "ABCD"
+            )
+            if (
+                LETTER_SEQUENCE.fullmatch(text)
+                and len(normalized_letters) == end - start + 1
+            ):
+                for offset, value in enumerate(normalized_letters):
+                    emit(
+                        number=start + offset,
+                        field="answer",
+                        value=value,
+                        locator=f"{range_locator}|{paragraph.locator}",
+                        mode="compact_summary",
+                    )
+                pending_answer_range = None
+                continue
+            pending_answer_range = None
+
         if inferred_single_start is not None and paragraph_index == inferred_single_start:
             flush_prompt()
             current_section = "single_choice"
@@ -608,6 +674,14 @@ def extract_evidence_bank(
                     mode="explicit_current",
                 )
             continue
+
+        range_label = ANSWER_RANGE_LABEL.fullmatch(text)
+        if range_label:
+            start = int(range_label.group(1))
+            end = int(range_label.group(2))
+            if end >= start:
+                pending_answer_range = (start, end, paragraph.locator)
+                continue
 
         answer_range = _answer_range_items(text)
         if answer_range:

@@ -261,6 +261,41 @@ class EvidenceBankTests(unittest.TestCase):
         self.assertTrue(any(value.startswith("选B") for value in analyses))
         self.assertTrue(any(value.startswith("答案为C") for value in analyses))
 
+    def test_split_self_test_answer_ranges_keep_section_scope(self):
+        texts = [
+            "【自主检测1】\n"
+            "1. A fictional question.\nA. one\nB. two\nC. three\nD. four\n"
+            "2. A second fictional question.\nA. one\nB. two\nC. three\nD. four",
+            "答案:\n1-2\nA B",
+            "【自主检测2】\n"
+            "1. Another fictional question.\nA. one\nB. two\nC. three\nD. four",
+            "答案:\n1-1 C",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "pdf",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-SELF-TEST-EVIDENCE",
+        )
+        jsonschema.validate(bank, self.schema)
+        answers = [
+            (
+                item["section_key"],
+                item["source_number"],
+                item["value"],
+            )
+            for item in bank["evidence"]
+            if item["field"] == "answer"
+        ]
+        self.assertIn(("single_choice_self_test_1", 1, "A"), answers)
+        self.assertIn(("single_choice_self_test_1", 2, "B"), answers)
+        self.assertIn(("single_choice_self_test_2", 1, "C"), answers)
+
     def test_inline_numbered_answer_analysis_extracts_both_fields(self):
         texts = [
             "V. 书面表达",
