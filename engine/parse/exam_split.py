@@ -47,6 +47,33 @@ class _QuestionPattern:
 
 QUESTION_RE = _QuestionPattern()
 
+# Teacher/answer sections in mixed or standalone English sources sometimes print
+# the key and explanation on one numbered line, for example "1.B【解析】..." or
+# "1.C.考查...". These are evidence rows, not new question stems. Require an
+# explicit analysis cue so ordinary numbered questions that happen to begin with
+# an option letter remain untouched.
+NUMBERED_INLINE_ANSWER_ANALYSIS_RE = re.compile(
+    r"^\s*(\d{1,3})\s*[.．、]\s*([A-DＡ-Ｄ])"
+    r"\s*(?:[.．、]\s*)?"
+    r"(?:【\s*)?(解析|考点|考查|详解)(?:\s*】)?"
+    r"\s*[:：]?\s*(.*?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def english_exam_section_for_number(number: int) -> str | None:
+    if 1 <= number <= 20:
+        return "single_choice"
+    if 21 <= number <= 30:
+        return "cloze"
+    if 31 <= number <= 45:
+        return "reading"
+    if 46 <= number <= 55:
+        return "word_spelling"
+    if number == 56:
+        return "writing"
+    return None
+
 
 def has_legacy_l_as_one_question_prefix(text: str) -> bool:
     return bool(_LEGACY_L_AS_ONE_QUESTION_RE.match(text))
