@@ -41,9 +41,9 @@ LATEX_ESCAPES = {
 }
 
 SPECIAL_TEXT_LATEX = {
-    "▲": r"$\\blacktriangle$",
-    "★": r"$\\star$",
-    "\uf06c": r"\\textbullet{}",
+    "▲": r"$\blacktriangle$",
+    "★": r"$\star$",
+    "\uf06c": r"\textbullet{}",
 }
 
 
@@ -72,7 +72,7 @@ def escape_text(text: str) -> str:
                 # answer space. Keep the blank semantics but never emit an
                 # unbreakable multi-page underscore token.
                 width_mm = min(45, max(18, run * 1.6))
-                out.append(rf"\\blank{{{width_mm:g}mm}}")
+                out.append(rf"\blank{{{width_mm:g}mm}}")
                 index = end
                 continue
         if ch == "\n":
