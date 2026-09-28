@@ -56,12 +56,14 @@ def cloze_group():
 class RendererHardeningTests(unittest.TestCase):
     def test_legacy_spaces_symbols_and_long_underscore_runs_are_print_safe(self):
         rendered = escape_text(
-            "April\u00a05 ▲ ★ \uf06c " + "_" * 240
+            "April\u00a05 ▲ ★ \uf06c ʊ ɪ " + "_" * 240
         )
         self.assertNotIn("\u00a0", rendered)
         self.assertIn(r"$\blacktriangle$", rendered)
         self.assertIn(r"$\star$", rendered)
         self.assertIn(r"\textbullet{}", rendered)
+        self.assertIn(r"{\wblatin ʊ}", rendered)
+        self.assertIn(r"{\wblatin ɪ}", rendered)
         self.assertNotIn(r"\_" * 20, rendered)
         self.assertIn(r"\blank{45mm}", rendered)
 
