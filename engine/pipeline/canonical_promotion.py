@@ -87,8 +87,9 @@ def _build_leaf_question(
         "kind": kind,
         "score": float(score),
         "stem": item.get("stem_rich") or _text_rich(item.get("stem_text")),
-        "answer": item.get("verified_answer"),
     }
+    if str(item.get("answer_mode") or "fixed") != "open_response":
+        question["answer"] = item.get("verified_answer")
 
     if include_placement:
         question.update({

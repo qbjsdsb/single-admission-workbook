@@ -43,6 +43,7 @@
           "group_id",
           "locators",
           "verified_answer",
+          "answer_mode",
           "verification_method",
           "verification_note",
           "override_reason",
@@ -97,8 +98,17 @@
             }
           },
           "verified_answer": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "minLength": 1
+          },
+          "answer_mode": {
+            "enum": [
+              "fixed",
+              "open_response"
+            ]
           },
           "verification_method": {
             "enum": [
