@@ -50,7 +50,10 @@ def _writing_prefix_coverage(candidate: Mapping[str, Any], companion: Mapping[st
     return shared / shorter
 
 
-_WRITING_GREETING_RE = re.compile(r"^\s*(?:dear|hi|hello)\b", re.IGNORECASE)
+_WRITING_GREETING_RE = re.compile(
+    r"^\s*((?:dear|hi|hello)\b[^,，\n]{0,80}[,，])",
+    re.IGNORECASE,
+)
 
 
 def _writing_instruction_signature(value: object) -> str:
@@ -65,11 +68,15 @@ def _writing_instruction_signature(value: object) -> str:
         if line.strip()
     ]
     kept: list[str] = []
+    greeting_seen = False
     for line in lines:
-        kept.append(line)
-        if _WRITING_GREETING_RE.match(line):
+        greeting = _WRITING_GREETING_RE.match(line)
+        if greeting:
+            kept.append(greeting.group(1))
+            greeting_seen = True
             break
-    if not kept or not any(_WRITING_GREETING_RE.match(line) for line in kept):
+        kept.append(line)
+    if not kept or not greeting_seen:
         return ""
     return "\n".join(kept)
 
@@ -186,7 +193,7 @@ def reconcile_candidate_and_evidence(
         companion = prompt_by_id.get(str(companion_id)) if companion_id else None
 
         if (
-            pair_confidence in {"unmatched", "ambiguous"}
+            pair_confidence != "exact"
             and source_pair_confidence == "name_exact"
             and candidate.get("kind") == "composition"
             and candidate.get("section_key") == "writing"
@@ -197,25 +204,35 @@ def reconcile_candidate_and_evidence(
                 if record.get("section_key") == "writing"
             ]
             if len(writing_prompts) == 1:
+                writing_prompt = writing_prompts[0]
                 prefix_coverage = _writing_prefix_coverage(
                     candidate,
-                    writing_prompts[0],
+                    writing_prompt,
                 )
                 instruction_similarity = _writing_instruction_similarity(
                     candidate,
-                    writing_prompts[0],
+                    writing_prompt,
                 )
                 if prefix_coverage >= 0.80:
-                    companion = writing_prompts[0]
+                    companion = writing_prompt
                     companion_id = str(companion.get("id") or "")
                     pair_confidence = "high"
                     pair_reason = "name_exact_writing_prompt_prefix"
                     pair_score = prefix_coverage
                 elif instruction_similarity >= 0.98:
-                    companion = writing_prompts[0]
+                    companion = writing_prompt
                     companion_id = str(companion.get("id") or "")
                     pair_confidence = "high"
                     pair_reason = "name_exact_writing_instruction_similarity"
+                    pair_score = instruction_similarity
+                elif instruction_similarity > 0:
+                    # A near-looking writing prompt with materially different
+                    # source instructions must stay deferred even if generic
+                    # fuzzy matching would otherwise call it "high".
+                    companion = None
+                    companion_id = None
+                    pair_confidence = "unmatched"
+                    pair_reason = "writing_prompt_source_discrepancy"
                     pair_score = instruction_similarity
 
         # A content match binds to the TEACHER question identity, even if renumbered.
