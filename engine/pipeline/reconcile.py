@@ -5,7 +5,7 @@ import re
 import unicodedata
 from typing import Any, Iterable, Mapping
 
-from engine.ingest.pairing import pair_question_records
+from engine.ingest.pairing import normalize_match_text, pair_question_records
 
 
 def _candidate_record(candidate: Mapping[str, Any]) -> dict[str, Any]:
@@ -22,6 +22,31 @@ def _normalize_answer(value: object) -> str:
     text = unicodedata.normalize("NFKC", str(value or "")).strip()
     text = re.sub(r"\s+", "", text)
     return text.rstrip("。．.；;，,")
+
+
+def _writing_prefix_coverage(candidate: Mapping[str, Any], companion: Mapping[str, Any]) -> float:
+    """Return conservative shared-prefix coverage for one English writing prompt.
+
+    Exact student/teacher source pairs often diverge only after the prompt, where
+    the student file contains answer space and the teacher file contains a model
+    response. A long shared prefix can therefore establish prompt identity without
+    treating teacher prose as part of the question.
+    """
+    student = normalize_match_text(candidate.get("stem_text"))
+    teacher = normalize_match_text(companion.get("stem"))
+    if not student or not teacher:
+        return 0.0
+
+    shared = 0
+    for left, right in zip(student, teacher):
+        if left != right:
+            break
+        shared += 1
+
+    shorter = min(len(student), len(teacher))
+    if shared < 60 or shorter <= 0:
+        return 0.0
+    return shared / shorter
 
 
 def _evidence_index(
@@ -116,8 +141,32 @@ def reconcile_candidate_and_evidence(
 
         pair_confidence = pair.confidence if pair else "unmatched"
         pair_reason = pair.reason if pair else "no_prompt_record"
+        pair_score = 0.0 if pair is None else float(pair.score)
         companion_id = pair.companion_id if pair else None
         companion = prompt_by_id.get(str(companion_id)) if companion_id else None
+
+        if (
+            pair_confidence in {"unmatched", "ambiguous"}
+            and source_pair_confidence == "name_exact"
+            and candidate.get("kind") == "composition"
+            and candidate.get("section_key") == "writing"
+        ):
+            writing_prompts = [
+                record
+                for record in prompt_records
+                if record.get("section_key") == "writing"
+            ]
+            if len(writing_prompts) == 1:
+                prefix_coverage = _writing_prefix_coverage(
+                    candidate,
+                    writing_prompts[0],
+                )
+                if prefix_coverage >= 0.80:
+                    companion = writing_prompts[0]
+                    companion_id = str(companion.get("id") or "")
+                    pair_confidence = "high"
+                    pair_reason = "name_exact_writing_prompt_prefix"
+                    pair_score = prefix_coverage
 
         # A content match binds to the TEACHER question identity, even if renumbered.
         target_number = companion.get("number") if companion is not None else number
@@ -174,7 +223,7 @@ def reconcile_candidate_and_evidence(
             "candidate_kind": candidate.get("kind"),
             "companion_question_id": companion_id,
             "prompt_pair_confidence": pair_confidence,
-            "prompt_pair_score": 0.0 if pair is None else round(float(pair.score), 6),
+            "prompt_pair_score": round(pair_score, 6),
             "prompt_pair_reason": pair_reason,
             "binding_strength": binding_strength,
             "answer_status": answer["status"],
