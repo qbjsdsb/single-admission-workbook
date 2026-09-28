@@ -106,6 +106,128 @@ def aggregate_pairing_reviews(
     }
 
 
+def build_strict_source_pair_verification_manifest(
+    candidate_bank: Mapping[str, Any],
+    aggregate_review: Mapping[str, Any],
+    pairing_reviews: Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Build conservative verification decisions from already paired source evidence.
+
+    Fixed-answer candidates are approved only when a name-exact companion source
+    has a strong ready-for-verification answer binding that agrees with the
+    aggregate. Open-response writing is approved only when a name-exact companion
+    confirms the prompt identity and the only missing evidence is a fixed answer,
+    which by definition does not exist for the task.
+
+    This is an editorial/machine evidence decision, not a human review claim.
+    Anything outside these narrow rules is deferred.
+    """
+    if candidate_bank.get("source_id") != aggregate_review.get("candidate_source_id"):
+        raise ValueError("candidate bank and aggregate review source mismatch")
+    if candidate_bank.get("subject") != aggregate_review.get("subject"):
+        raise ValueError("candidate bank and aggregate review subject mismatch")
+
+    reviews = list(pairing_reviews)
+    for review in reviews:
+        if review.get("candidate_source_id") != candidate_bank.get("source_id"):
+            raise ValueError("pairing review source mismatch")
+        if review.get("subject") != candidate_bank.get("subject"):
+            raise ValueError("pairing review subject mismatch")
+
+    aggregates = {
+        str(item["candidate_id"]): item
+        for item in aggregate_review.get("rows") or []
+    }
+    pair_rows: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for review in reviews:
+        for row in review.get("rows") or []:
+            pair_rows[str(row["candidate_id"])].append(row)
+
+    decisions: list[dict[str, Any]] = []
+    allowed_bindings = {"content_exact", "content_high", "paired_source_number"}
+    allowed_open_bindings = {"content_exact", "content_high"}
+
+    for candidate in candidate_bank.get("candidates") or []:
+        candidate_id = str(candidate["candidate_id"])
+        aggregate = aggregates.get(candidate_id)
+        if aggregate is None:
+            raise ValueError(f"aggregate review missing candidate {candidate_id}")
+
+        rows = pair_rows.get(candidate_id, [])
+        aggregate_answer = _normalize_answer(aggregate.get("normalized_answer"))
+        fixed_evidence_rows = [
+            row
+            for row in rows
+            if row.get("source_pair_confidence") == "name_exact"
+            and row.get("binding_strength") in allowed_bindings
+            and row.get("review_status") == "ready_for_verification"
+            and row.get("answer_status") == "unique"
+            and _normalize_answer(row.get("normalized_answer")) == aggregate_answer
+            and aggregate_answer
+        ]
+        if (
+            candidate.get("status") == "parsed"
+            and aggregate.get("aggregate_status")
+            in {"single_source_consistent", "machine_corroborated"}
+            and fixed_evidence_rows
+        ):
+            decisions.append({
+                "candidate_id": candidate_id,
+                "decision": "approve",
+                "method": "source_pair_evidence_accepted",
+                "note": (
+                    "Name-exact source pair with strong answer binding agrees "
+                    "with the aggregate answer; no human-review claim."
+                ),
+            })
+            continue
+
+        open_response_rows = [
+            row
+            for row in rows
+            if row.get("source_pair_confidence") == "name_exact"
+            and row.get("prompt_pair_confidence") in {"exact", "high"}
+            and row.get("binding_strength") in allowed_open_bindings
+            and row.get("review_status") == "review_required"
+            and row.get("answer_status") == "missing"
+            and not _normalize_answer(row.get("normalized_answer"))
+            and set(row.get("review_reasons") or []) <= {"answer_evidence_missing"}
+        ]
+        if (
+            candidate.get("status") == "parsed"
+            and candidate.get("kind") == "composition"
+            and candidate.get("section_key") == "writing"
+            and aggregate.get("aggregate_status") == "review_required"
+            and not aggregate_answer
+            and open_response_rows
+        ):
+            decisions.append({
+                "candidate_id": candidate_id,
+                "decision": "approve",
+                "method": "editorial_source_review",
+                "answer_mode": "open_response",
+                "note": (
+                    "Name-exact source pair confirms the writing prompt identity; "
+                    "the task has no unique fixed answer. Reviewed by the "
+                    "editorial production workflow, not a human reviewer."
+                ),
+            })
+            continue
+
+        decisions.append({
+            "candidate_id": candidate_id,
+            "decision": "defer",
+            "method": "human_review",
+            "note": "Outside strict source-pair auto-verification rules.",
+        })
+
+    return {
+        "schema_version": 1,
+        "candidate_source_id": candidate_bank.get("source_id"),
+        "decisions": decisions,
+    }
+
+
 def build_verified_candidate_bank(
     candidate_bank: Mapping[str, Any],
     aggregate_review: Mapping[str, Any],
@@ -172,11 +294,21 @@ def build_verified_candidate_bank(
             raise ValueError(
                 f"{candidate_id}: machine_corroborated_accepted requires machine_corroborated aggregate"
             )
-        if method == "source_pair_manual_approval" and aggregate_status not in {
+        if method in {
+            "source_pair_manual_approval",
+            "source_pair_evidence_accepted",
+        } and aggregate_status not in {
             "single_source_consistent", "machine_corroborated"
         }:
             raise ValueError(
-                f"{candidate_id}: source_pair_manual_approval requires consistent strong evidence"
+                f"{candidate_id}: source-pair approval requires consistent strong evidence"
+            )
+        if (
+            method == "source_pair_evidence_accepted"
+            and not str(decision.get("note") or "").strip()
+        ):
+            raise ValueError(
+                f"{candidate_id}: source_pair_evidence_accepted requires a provenance note"
             )
 
         if candidate.get("status") != "parsed" and method != "human_review":
