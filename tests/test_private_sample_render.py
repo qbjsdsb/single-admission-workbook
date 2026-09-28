@@ -59,11 +59,11 @@ class RendererHardeningTests(unittest.TestCase):
             "April\u00a05 ▲ ★ \uf06c " + "_" * 240
         )
         self.assertNotIn("\u00a0", rendered)
-        self.assertIn(r"$\\blacktriangle$", rendered)
-        self.assertIn(r"$\\star$", rendered)
-        self.assertIn(r"\\textbullet{}", rendered)
+        self.assertIn(r"$\blacktriangle$", rendered)
+        self.assertIn(r"$\star$", rendered)
+        self.assertIn(r"\textbullet{}", rendered)
         self.assertNotIn(r"\_" * 20, rendered)
-        self.assertIn(r"\\blank{45mm}", rendered)
+        self.assertIn(r"\blank{45mm}", rendered)
 
     def test_student_open_response_gets_stable_writing_space(self):
         question = {
@@ -79,7 +79,7 @@ class RendererHardeningTests(unittest.TestCase):
         teacher = render_question(question, 1, "teacher")
         self.assertIn(r"\\answerlines{8}", student)
         self.assertNotIn(r"\\answerlines{8}", teacher)
-        self.assertIn(r"\\blank{45mm}", student)
+        self.assertIn(r"\blank{45mm}", student)
 
 
 class PrivateSampleRenderTests(unittest.TestCase):
