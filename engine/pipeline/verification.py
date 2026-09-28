@@ -159,6 +159,10 @@ def build_verified_candidate_bank(
             raise ValueError(f"unsupported verification decision for {candidate_id}: {action}")
 
         method = decision.get("method")
+        answer_mode = str(decision.get("answer_mode") or "fixed")
+        if answer_mode not in {"fixed", "open_response"}:
+            raise ValueError(f"{candidate_id}: unsupported answer_mode: {answer_mode}")
+
         aggregate_status = aggregate.get("aggregate_status")
         if method == "machine_corroborated_accepted" and aggregate_status != "machine_corroborated":
             raise ValueError(
@@ -181,18 +185,40 @@ def build_verified_candidate_bank(
             )
 
         aggregate_answer = aggregate.get("normalized_answer")
-        verified_answer = decision.get("verified_answer")
-        if verified_answer is None:
-            verified_answer = aggregate_answer
-        verified_answer = _normalize_answer(verified_answer)
-        if not verified_answer:
-            raise ValueError(f"{candidate_id}: approved candidate needs a verified answer")
-
-        if aggregate_answer and verified_answer != _normalize_answer(aggregate_answer):
-            if not str(decision.get("override_reason") or "").strip():
+        if answer_mode == "open_response":
+            if method != "human_review":
                 raise ValueError(
-                    f"{candidate_id}: answer override requires override_reason"
+                    f"{candidate_id}: open_response requires human_review approval"
                 )
+            if (
+                candidate.get("kind") != "composition"
+                or candidate.get("section_key") != "writing"
+            ):
+                raise ValueError(
+                    f"{candidate_id}: open_response is only valid for writing compositions"
+                )
+            if aggregate_status == "conflict" or aggregate_answer:
+                raise ValueError(
+                    f"{candidate_id}: open_response cannot bypass fixed-answer evidence"
+                )
+            if _normalize_answer(decision.get("verified_answer")):
+                raise ValueError(
+                    f"{candidate_id}: open_response must not carry a fixed verified_answer"
+                )
+            verified_answer = None
+        else:
+            verified_answer = decision.get("verified_answer")
+            if verified_answer is None:
+                verified_answer = aggregate_answer
+            verified_answer = _normalize_answer(verified_answer)
+            if not verified_answer:
+                raise ValueError(f"{candidate_id}: approved candidate needs a verified answer")
+
+            if aggregate_answer and verified_answer != _normalize_answer(aggregate_answer):
+                if not str(decision.get("override_reason") or "").strip():
+                    raise ValueError(
+                        f"{candidate_id}: answer override requires override_reason"
+                    )
 
         verified.append({
             "candidate_id": candidate_id,
@@ -207,6 +233,7 @@ def build_verified_candidate_bank(
             "group_id": candidate.get("group_id"),
             "locators": candidate.get("locators") or [],
             "verified_answer": verified_answer,
+            "answer_mode": answer_mode,
             "verification_method": method,
             "verification_note": str(decision.get("note") or ""),
             "override_reason": str(decision.get("override_reason") or ""),
