@@ -23,12 +23,19 @@ def main() -> int:
     parser.add_argument("intake_dir", type=Path)
     parser.add_argument("--subject", required=True, choices=["english", "politics"])
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Bounded parallel source-group workers; cached ASTs are read-only.",
+    )
     args = parser.parse_args()
 
     summary = review_intake_directory(
         args.intake_dir,
         args.out,
         subject=args.subject,
+        workers=args.workers,
     )
 
     snapshot = build_production_snapshot(args.out)
