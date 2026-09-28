@@ -6,7 +6,50 @@ from typing import Iterable
 
 # Some source files contain missing punctuation after question numbers (e.g. "12 Actually...").
 # Allow either punctuation or at least one whitespace after a 1-3 digit question number.
-QUESTION_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$")
+_STANDARD_QUESTION_RE = re.compile(
+    r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$"
+)
+# A legacy Word conversion can render the leading "1" in a teen question
+# number as a lowercase L, e.g. "l8." for question 18. Accept only l/L +
+# one nonzero digit followed by explicit question punctuation. A standalone
+# Roman-I section heading is therefore never reinterpreted as a question.
+_LEGACY_L_AS_ONE_QUESTION_RE = re.compile(
+    r"^\s*[lL]([1-9])\s*[.．、]\s*(.+?)\s*$"
+)
+
+
+class _QuestionMatch:
+    def __init__(self, raw: str, number: int, rest: str):
+        self._raw = raw
+        self._number = number
+        self._rest = rest
+
+    def group(self, index: int = 0):
+        if index == 0:
+            return self._raw
+        if index == 1:
+            return str(self._number)
+        if index == 2:
+            return self._rest
+        raise IndexError(index)
+
+
+class _QuestionPattern:
+    def match(self, text: str):
+        standard = _STANDARD_QUESTION_RE.match(text)
+        if standard:
+            return standard
+        legacy = _LEGACY_L_AS_ONE_QUESTION_RE.match(text)
+        if legacy:
+            return _QuestionMatch(text, 10 + int(legacy.group(1)), legacy.group(2))
+        return None
+
+
+QUESTION_RE = _QuestionPattern()
+
+
+def has_legacy_l_as_one_question_prefix(text: str) -> bool:
+    return bool(_LEGACY_L_AS_ONE_QUESTION_RE.match(text))
 
 SECTION_LEAD = (
     r"^\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
