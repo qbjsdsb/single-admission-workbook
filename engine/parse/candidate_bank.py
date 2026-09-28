@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from engine.document.docx_table import normalize_table_block, table_plain_text, table_rich_node
 
 from engine.parse.exam_split import (
+    NUMBERED_INLINE_ANSWER_ANALYSIS_RE,
     QUESTION_RE,
     detect_section,
     has_legacy_l_as_one_question_prefix,
@@ -103,9 +104,38 @@ def _strip_question_prefix(text: str) -> tuple[int | None, str]:
     return int(match.group(1)), match.group(2).strip()
 
 
+_SOURCE_ANNOTATION_RE = re.compile(
+    r"^\s*(?:【\s*)?(?:答案|解析|考点与解析|详解|题干核心)(?:\s*】)?\s*[:：]",
+    re.IGNORECASE,
+)
+
+
+def _is_source_annotation(paragraph: ParagraphEvidence) -> bool:
+    text = paragraph.text.strip()
+    return bool(
+        _SOURCE_ANNOTATION_RE.match(text)
+        or NUMBERED_INLINE_ANSWER_ANALYSIS_RE.match(text)
+    )
+
+
+def _trim_source_annotations(
+    paragraphs: list[ParagraphEvidence],
+) -> list[ParagraphEvidence]:
+    if not paragraphs:
+        return []
+    kept = [paragraphs[0]]
+    for paragraph in paragraphs[1:]:
+        if _is_source_annotation(paragraph):
+            break
+        kept.append(paragraph)
+    return kept
+
+
 def _question_slices(paragraphs: list[ParagraphEvidence]) -> list[tuple[int, list[ParagraphEvidence]]]:
     starts: list[tuple[int, int]] = []
     for index, paragraph in enumerate(paragraphs):
+        if NUMBERED_INLINE_ANSWER_ANALYSIS_RE.match(paragraph.text):
+            continue
         match = QUESTION_RE.match(paragraph.text)
         if match:
             starts.append((index, int(match.group(1))))
@@ -113,7 +143,9 @@ def _question_slices(paragraphs: list[ParagraphEvidence]) -> list[tuple[int, lis
     out: list[tuple[int, list[ParagraphEvidence]]] = []
     for pos, (start, number) in enumerate(starts):
         end = starts[pos + 1][0] if pos + 1 < len(starts) else len(paragraphs)
-        out.append((number, paragraphs[start:end]))
+        trimmed = _trim_source_annotations(paragraphs[start:end])
+        if trimmed:
+            out.append((number, trimmed))
     return out
 
 
