@@ -5,6 +5,8 @@ import unittest
 import jsonschema
 
 from engine.parse.candidate_bank import extract_candidate_bank
+from engine.parse.exam_split import detect_section
+from engine.pipeline.scoring import build_score_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -108,6 +110,195 @@ class CandidateBankTests(unittest.TestCase):
         self.assertEqual([o["text"] for o in q1["options"]], ["costs", "pays", "spends", "takes"])
         self.assertEqual(bank["sections"][0]["section_key"], "single_choice")
         self.assertFalse(bank["sections"][0]["inferred"])
+
+    def test_cloze_instruction_without_heading_starts_grouped_section(self):
+        texts = [
+            "I. 单项选择（共1小题）",
+            "1. A fictional single-choice prompt.",
+            "A. one B. two C. three D. four",
+            "II. 阅读下面的短文，掌握其大意，然后从21至22各题所给的A、B、C、D选项中选出最佳答案。",
+            "A shared fictional cloze passage.",
+            "21. A. one B. two C. three D. four",
+            "22. A. east B. west C. north D. south",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document, subject="english", source_id="ENG-CLOZE-INSTRUCTION"
+        )
+        self.assertEqual(
+            [section["section_key"] for section in bank["sections"]],
+            ["single_choice", "cloze"],
+        )
+        group = next(item for item in bank["groups"] if item["kind"] == "cloze_group")
+        self.assertIn("shared fictional cloze passage", group["shared_material_text"])
+        self.assertEqual(len(group["child_candidate_ids"]), 2)
+
+    def test_cloze_instruction_does_not_replace_scored_section_heading(self):
+        texts = [
+            "I. 单项选择（共1小题；每小题2分，满分2分）",
+            "1. A fictional single-choice prompt. A. one B. two C. three D. four",
+            "II. 完形填空（共2小题；每小题2分，满分4分）",
+            "阅读下面的短文，掌握其大意，然后从21至22各题所给选项中选出最佳答案。",
+            "A shared fictional cloze passage.",
+            "21. A. one B. two C. three D. four",
+            "22. A. east B. west C. north D. south",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document, subject="english", source_id="ENG-CLOZE-SCORED-HEADING"
+        )
+        cloze = next(section for section in bank["sections"] if section["section_key"] == "cloze")
+        self.assertIn("共2小题", cloze["heading"])
+        score = build_score_evidence(bank)
+        cloze_score = next(section for section in score["sections"] if section["section_key"] == "cloze")
+        self.assertEqual(cloze_score["status"], "usable")
+        self.assertEqual(cloze_score["per_question_score"], 2.0)
+        group = next(item for item in bank["groups"] if item["kind"] == "cloze_group")
+        self.assertIn("然后从21至22", group["shared_material_text"])
+
+    def test_leading_numbered_choice_instruction_is_ledgered_not_a_question(self):
+        texts = [
+            "I. 单项选择（共2小题）",
+            "2. 从A、B、C、D四个选项中选出可以填入空白处的最佳答案。",
+            "1. Where is the fictional student going? A. Home B. School C. Work D. Park",
+            "2. What does the fictional student need? A. A pen B. A book C. A bag D. A map",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document, subject="english", source_id="ENG-INSTRUCTION-LEDGER"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        self.assertEqual(
+            [q["source_number"] for q in bank["candidates"]], [1, 2]
+        )
+        self.assertEqual(bank["summary"]["candidate_count"], 2)
+        self.assertEqual(bank["summary"]["non_question_occurrence_count"], 1)
+        occurrence = bank["non_question_occurrences"][0]
+        self.assertEqual(occurrence["source_number"], 2)
+        self.assertEqual(occurrence["locator"], "word/document.xml/body/1")
+        self.assertEqual(
+            occurrence["reason_code"], "leading_english_choice_instruction"
+        )
+        self.assertEqual(len(occurrence["text_sha256"]), 64)
+
+    def test_legacy_choice_heading_missing_first_glyph_is_not_inferred(self):
+        texts = [
+            "1.项选择（共2小题；每小题2分，满分4分）",
+            "从A、B、C、D四个选项中选出可以填入空白处的最佳答案。",
+            "1. Where is the fictional student going? A. Home B. School C. Work D. Park",
+            "2. What does the fictional student need? A. A pen B. A book C. A bag D. A map",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document, subject="english", source_id="ENG-LEGACY-HEADING"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        self.assertEqual(bank["sections"][0]["section_key"], "single_choice")
+        self.assertFalse(bank["sections"][0]["inferred"])
+        self.assertEqual([q["status"] for q in bank["candidates"]], ["parsed", "parsed"])
+        self.assertEqual(bank["summary"]["non_question_occurrence_count"], 0)
+        self.assertEqual(
+            detect_section("english", "1.单项填空（共20小题，每题2分，满分40分）"),
+            ("single_choice", "single_choice"),
+        )
+
+    def test_legacy_accented_reading_label_is_normalized_with_provenance(self):
+        texts = [
+            "III. 阅读理解",
+            "Á",
+            "A fictional first passage.",
+            "31. What is the first fictional passage about? A. One B. Two C. Three D. Four",
+            "32. Which detail appears in the first fictional passage? A. Red B. Blue C. Green D. Gold",
+            "33. What can be inferred from the first fictional passage? A. North B. South C. East D. West",
+            "B",
+            "A fictional second passage.",
+            "34. What is the second fictional passage about? A. One B. Two C. Three D. Four",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document, subject="english", source_id="ENG-LEGACY-LABEL"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        groups = [g for g in bank["groups"] if g["kind"] == "reading_group"]
+        self.assertEqual([g["label"] for g in groups], ["A", "B"])
+        self.assertEqual([len(g["child_candidate_ids"]) for g in groups], [3, 1])
+        self.assertEqual(groups[0]["source_label"], "Á")
+        self.assertEqual(groups[0]["label_locator"], "word/document.xml/body/1")
+        self.assertEqual(
+            groups[0]["label_normalization"],
+            "legacy_english_reading_font_mapping",
+        )
+        self.assertEqual(
+            [q["source_number"] for q in bank["candidates"]], [31, 32, 33, 34]
+        )
+
+    def test_legacy_roman_three_reading_heading_starts_new_section(self):
+        texts = [
+            "II. 完形填空",
+            "A shared fictional cloze passage.",
+            "21. A. one B. two C. three D. four",
+            "22. A. east B. west C. north D. south",
+            "11I、阅读理解（共2小题；每小题4分）",
+            "阅读下列短文，然后从各题所给的选项中选出一个答案。",
+            "A",
+            "A fictional reading passage.",
+            "31. What is the passage about? A. One B. Two C. Three D. Four",
+            "32. What is the main point? A. Five B. Six C. Seven D. Eight",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(document, subject="english", source_id="ENG-ROMAN-III")
+        self.assertEqual(
+            [section["section_key"] for section in bank["sections"]],
+            ["cloze", "reading"],
+        )
+        self.assertEqual(
+            [candidate["source_number"] for candidate in bank["candidates"]],
+            [21, 22, 31, 32],
+        )
+        reading_groups = [group for group in bank["groups"] if group["kind"] == "reading_group"]
+        self.assertEqual([group["label"] for group in reading_groups], ["A"])
+        self.assertEqual(len(reading_groups[0]["child_candidate_ids"]), 2)
+        self.assertEqual(
+            detect_section("english", "III,阅读理解（共15小题）"),
+            ("reading", "reading_group"),
+        )
+        self.assertEqual(
+            detect_section("english", "II.完型填空（共10题）"),
+            ("cloze", "cloze_group"),
+        )
 
     def test_missing_first_heading_recovers_long_run_but_marks_review(self):
         texts = [

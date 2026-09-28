@@ -25,8 +25,26 @@ def _paragraphs_from_zip(zf: zipfile.ZipFile) -> list[str]:
     return out
 
 def extract_docx_paragraphs(path: Path) -> list[str]:
-    with zipfile.ZipFile(path) as zf:
-        return _paragraphs_from_zip(zf)
+    from engine.document.docx_reader import structure_to_document_ast
+    from engine.parse.docx_structure import extract_structure
+
+    ast = structure_to_document_ast(extract_structure(path)).to_dict()
+    return paragraphs_from_document_ast(ast)
+
+
+def paragraphs_from_document_ast(document_ast: dict) -> list[str]:
+    out: list[str] = []
+    for block in document_ast.get('blocks') or []:
+        if block.get('type') != 'paragraph':
+            continue
+        text = ''.join(
+            str(inline.get('text') or '')
+            for inline in block.get('inlines') or []
+            if inline.get('type') in {'text', 'mathml_inline_text'}
+        ).strip()
+        if text:
+            out.append(text)
+    return out
 
 def extract_docx_paragraphs_bytes(data: bytes) -> list[str]:
     with zipfile.ZipFile(BytesIO(data)) as zf:

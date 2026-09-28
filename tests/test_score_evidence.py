@@ -141,6 +141,16 @@ class ScoreEvidenceTests(unittest.TestCase):
         self.assertEqual(assigned["summary"]["assigned"], 1)
         self.assertEqual(assigned["assigned"][0]["score"], 10.0)
 
+    def test_legacy_writing_score_without_character_fen_is_explicit(self):
+        bank = candidate_bank({
+            "section_key": "writing",
+            "heading": "V.书面表达（满10分）",
+            "candidate_count": 1,
+        })
+        section = build_score_evidence(bank)["sections"][0]
+        self.assertEqual(section["status"], "usable")
+        self.assertEqual(section["full_score"], 10.0)
+
     def test_conflicting_section_score_is_not_attached(self):
         bank = candidate_bank({
             "section_key": "single_choice",

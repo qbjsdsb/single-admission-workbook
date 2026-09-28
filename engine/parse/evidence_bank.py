@@ -43,7 +43,7 @@ def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidenc
         text_parts: list[str] = []
         unsupported: list[str] = []
         for inline in block.get("inlines") or []:
-            if inline.get("type") == "text":
+            if inline.get("type") in {"text", "mathml_inline_text"}:
                 text_parts.append(str(inline.get("text") or ""))
             else:
                 reason = f"unsupported_inline:{inline.get('type')}"
@@ -109,9 +109,13 @@ def _compact_items(text: str) -> list[tuple[int, str]]:
         for match in matches
         if match.group(2).strip()
     ]
-    # Answer-summary values are short. Long chunks are far more likely to be prose
-    # with incidental numbered phrases and must not become answer evidence.
-    if len(hits) < 2 or any(len(value) > 60 for _, value in hits):
+    # Compact answer tokens are short. Prose containing prices, years, or decimal
+    # values must not become answer evidence just because it has two number-dot
+    # patterns (for example, a question followed by a price ending in "195.").
+    if len(hits) < 2 or any(
+        len(value) > 16 or len(value.split()) > 3
+        for _, value in hits
+    ):
         return []
     numbers = [number for number, _ in hits]
     if any(right <= left for left, right in zip(numbers, numbers[1:])):
@@ -331,6 +335,17 @@ def extract_evidence_bank(
             compact_answer = _compact_items(answer_text)
             if compact_answer:
                 for number, value in compact_answer:
+                    emit(
+                        number=number,
+                        field="answer",
+                        value=_answer_value(value),
+                        locator=paragraph.locator,
+                        mode="compact_summary",
+                    )
+                continue
+            range_answer = _answer_range_items(answer_text)
+            if range_answer:
+                for number, value in range_answer:
                     emit(
                         number=number,
                         field="answer",

@@ -10,6 +10,7 @@
     "sections",
     "candidates",
     "groups",
+    "non_question_occurrences",
     "blockers",
     "summary"
   ],
@@ -44,6 +45,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/group"
+      }
+    },
+    "non_question_occurrences": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/non_question_occurrence"
       }
     },
     "blockers": {
@@ -278,6 +285,59 @@
             "minLength": 1
           },
           "uniqueItems": true
+        },
+        "source_label": {
+          "type": "string"
+        },
+        "label_locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label_normalization": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "non_question_occurrence": {
+      "type": "object",
+      "required": [
+        "occurrence_id",
+        "source_id",
+        "source_number",
+        "section_key",
+        "locator",
+        "reason_code",
+        "text_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "occurrence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "section_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_code": {
+          "const": "leading_english_choice_instruction"
+        },
+        "text_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       }
     },
@@ -308,6 +368,7 @@
       "required": [
         "candidate_count",
         "group_count",
+        "non_question_occurrence_count",
         "blocker_count",
         "status_counts"
       ],
@@ -318,6 +379,10 @@
           "minimum": 0
         },
         "group_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_question_occurrence_count": {
           "type": "integer",
           "minimum": 0
         },
