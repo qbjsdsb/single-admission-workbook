@@ -12,7 +12,10 @@ sys.path.insert(0, str(ROOT))
 
 import jsonschema
 
-from engine.pipeline.scoring import apply_score_evidence
+from engine.pipeline.scoring import (
+    apply_score_evidence,
+    auto_apply_corroborated_series_scores,
+)
 from engine.pipeline.verification import (
     build_strict_source_pair_verification_manifest,
     build_verified_candidate_bank,
@@ -31,7 +34,43 @@ def write_json(path: Path, payload) -> None:
     )
 
 
-def build_verified_batch(review_dir: Path, out_dir: Path) -> dict[str, object]:
+def source_text_maps(intake_dir: Path) -> dict[str, dict[str, str]]:
+    sources = load(intake_dir / "sources.private.json")
+    out: dict[str, dict[str, str]] = {}
+    for source in sources:
+        source_id = str(source.get("source_id") or "")
+        cache_key = str(source.get("cache_key") or "")
+        if not source_id or not cache_key:
+            continue
+        cache_path = intake_dir / "cache" / f"{cache_key}.json"
+        if not cache_path.is_file():
+            continue
+        cached = load(cache_path)
+        if cached.get("source_sha256") != source.get("sha256"):
+            raise ValueError(f"{source_id}: cache/source digest mismatch")
+        document = cached.get("document_ast") or {}
+        texts: dict[str, str] = {}
+        for block in document.get("blocks") or []:
+            if block.get("type") != "paragraph":
+                continue
+            text = "".join(
+                str(inline.get("text") or "")
+                for inline in block.get("inlines") or []
+                if inline.get("type") in {"text", "mathml_inline_text"}
+            ).strip()
+            locator = str(block.get("locator") or "")
+            if locator and text:
+                texts[locator] = text
+        out[source_id] = texts
+    return out
+
+
+def build_verified_batch(
+    review_dir: Path,
+    out_dir: Path,
+    *,
+    intake_dir: Path | None = None,
+) -> dict[str, object]:
     manifest_schema = load(ROOT / "schema/verification-manifest.schema.json")
     verified_schema = load(ROOT / "schema/verified-candidate-bank.schema.json")
 
@@ -40,7 +79,15 @@ def build_verified_batch(review_dir: Path, out_dir: Path) -> dict[str, object]:
     unresolved_score_reasons: Counter[str] = Counter()
     source_groups = 0
 
-    for group_dir in sorted(path for path in review_dir.iterdir() if path.is_dir()):
+    group_dirs = sorted(path for path in review_dir.iterdir() if path.is_dir())
+    all_score_evidence_by_source = {
+        group_dir.name: load(group_dir / "score-evidence.json")
+        for group_dir in group_dirs
+        if (group_dir / "score-evidence.json").is_file()
+    }
+    all_source_text = source_text_maps(intake_dir) if intake_dir is not None else {}
+
+    for group_dir in group_dirs:
         candidate_path = group_dir / "candidate-bank.json"
         aggregate_path = group_dir / "verification-aggregate.json"
         score_path = group_dir / "score-evidence.json"
@@ -50,6 +97,13 @@ def build_verified_batch(review_dir: Path, out_dir: Path) -> dict[str, object]:
         candidate = load(candidate_path)
         aggregate = load(aggregate_path)
         score = load(score_path)
+        if intake_dir is not None:
+            score = auto_apply_corroborated_series_scores(
+                candidate,
+                score,
+                all_score_evidence_by_source=all_score_evidence_by_source,
+                source_text_by_source_locator=all_source_text,
+            )
         pairing_paths = sorted(
             (group_dir / "companions").glob("*/pairing-review.json")
         )
@@ -75,6 +129,7 @@ def build_verified_batch(review_dir: Path, out_dir: Path) -> dict[str, object]:
         target = out_dir / group_dir.name
         write_json(target / "verification-manifest.json", manifest)
         write_json(target / "verified-candidate-bank.json", verified)
+        write_json(target / "resolved-score-evidence.json", score)
         write_json(target / "scored-verified-bank.json", scored)
 
         source_groups += 1
@@ -105,11 +160,16 @@ def build_verified_batch(review_dir: Path, out_dir: Path) -> dict[str, object]:
         "score_unresolved": totals["score_unresolved"],
         "score_unresolved_reasons": dict(sorted(unresolved_score_reasons.items())),
         "status": (
-            "verified_candidates_scoring_incomplete"
+            "verified_and_scored"
             if totals["deferred"] == 0
             and totals["rejected"] == 0
-            and totals["score_unresolved"] > 0
-            else "verification_or_scoring_incomplete"
+            and totals["score_unresolved"] == 0
+            else (
+                "verified_candidates_scoring_incomplete"
+                if totals["deferred"] == 0
+                and totals["rejected"] == 0
+                else "verification_or_scoring_incomplete"
+            )
         ),
     }
     write_json(out_dir / "batch-verification-summary.json", summary)
@@ -124,10 +184,22 @@ def main() -> int:
         )
     )
     parser.add_argument("review_dir", type=Path)
+    parser.add_argument(
+        "--intake",
+        type=Path,
+        help=(
+            "Optional private intake/cache used to validate source locators and "
+            "apply same-series score corroboration."
+        ),
+    )
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
-    summary = build_verified_batch(args.review_dir, args.out)
+    summary = build_verified_batch(
+        args.review_dir,
+        args.out,
+        intake_dir=args.intake,
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0 if summary["deferred"] == 0 and summary["rejected"] == 0 else 2
 
