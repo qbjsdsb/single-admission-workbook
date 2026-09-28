@@ -1,10 +1,15 @@
+import hashlib
 import json
 from pathlib import Path
 import unittest
 
 import jsonschema
 
-from engine.pipeline.scoring import build_score_evidence, apply_score_evidence
+from engine.pipeline.scoring import (
+    apply_exam_total_residual_resolution,
+    build_score_evidence,
+    apply_score_evidence,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -104,6 +109,16 @@ class ScoreEvidenceTests(unittest.TestCase):
         self.assertIsNone(section["per_question_score"])
         self.assertEqual(section["full_score"], 20.0)
 
+    def test_duration_is_not_parsed_as_a_score(self):
+        bank = candidate_bank({
+            "section_key": "reading",
+            "heading": "III.阅读理解（考试时间共90分钟）",
+            "candidate_count": 15,
+        })
+        section = build_score_evidence(bank)["sections"][0]
+        self.assertEqual(section["status"], "incomplete")
+        self.assertIsNone(section["full_score"])
+
     def test_per_question_plus_count_can_derive_full_score(self):
         bank = candidate_bank({
             "section_key": "single_choice",
@@ -151,6 +166,29 @@ class ScoreEvidenceTests(unittest.TestCase):
         self.assertEqual(section["status"], "usable")
         self.assertEqual(section["full_score"], 10.0)
 
+    def test_legacy_writing_score_in_parentheses_is_explicit(self):
+        bank = candidate_bank({
+            "section_key": "writing",
+            "heading": "五．书面表达（10分）",
+            "candidate_count": 1,
+        })
+        evidence = build_score_evidence(bank)
+        jsonschema.validate(evidence, self.schema)
+        section = evidence["sections"][0]
+        self.assertEqual(section["status"], "usable")
+        self.assertEqual(section["full_score"], 10.0)
+        self.assertEqual(section["full_score_source"], "explicit")
+
+    def test_legacy_full_score_allows_source_period_after_marker(self):
+        bank = candidate_bank({
+            "section_key": "writing",
+            "heading": "V.书面表达（满分。10分）",
+            "candidate_count": 1,
+        })
+        section = build_score_evidence(bank)["sections"][0]
+        self.assertEqual(section["status"], "usable")
+        self.assertEqual(section["full_score"], 10.0)
+
     def test_conflicting_section_score_is_not_attached(self):
         bank = candidate_bank({
             "section_key": "single_choice",
@@ -175,6 +213,164 @@ class ScoreEvidenceTests(unittest.TestCase):
         assigned = apply_score_evidence(verified_bank(), score)
         self.assertEqual(assigned["summary"]["assigned"], 0)
         self.assertEqual(assigned["unresolved"][0]["reason"], "score_incomplete")
+
+    def test_explicit_first_volume_total_derives_only_the_missing_section(self):
+        bank = {
+            "source_id": "SRC",
+            "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred missing single-choice heading]", "heading_locator": "src/q1", "candidate_count": 20, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形填空（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 10, "inferred": False},
+                {"section_key": "reading", "heading": "III.阅读理解（共15小题，每小题4分，满分60分）", "heading_locator": "src/reading", "candidate_count": 15, "inferred": False},
+            ],
+        }
+        score = build_score_evidence(bank)
+        texts = {
+            "src/q1": "1. A fictional question.",
+            "src/cloze": bank["sections"][1]["heading"],
+            "src/reading": bank["sections"][2]["heading"],
+            "src/volume": "考试时间共90分钟。第一卷（三大题，共120分）",
+        }
+        resolved = apply_exam_total_residual_resolution(
+            bank,
+            score,
+            {
+                "candidate_source_id": "SRC",
+                "target_section_key": "single_choice",
+                "scope_section_keys": ["single_choice", "cloze", "reading"],
+                "total_evidence": {
+                    "locator": "src/volume",
+                    "text_sha256": hashlib.sha256(texts["src/volume"].encode()).hexdigest(),
+                },
+                "reviewer": "GPT-6 Luna Max",
+                "reviewed_at": "2026-09-28",
+                "review_note": "The source explicitly declares three first-volume sections and 120 points; the other two sections explicitly score 20 and 60.",
+            },
+            source_text_by_locator=texts,
+        )
+        jsonschema.validate(resolved, self.schema)
+        target = next(x for x in resolved["sections"] if x["section_key"] == "single_choice")
+        self.assertEqual(target["per_question_score"], 2.0)
+        self.assertEqual(target["full_score"], 40.0)
+        self.assertEqual(target["per_question_source"], "derived_from_exam_total_residual")
+        self.assertEqual(target["residual_resolution"]["other_section_scores"][0]["score"], 20.0)
+
+    def test_residual_score_fails_when_other_scoped_section_is_not_explicit(self):
+        bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q", "candidate_count": 20, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形填空", "heading_locator": "src/cloze", "candidate_count": 10, "inferred": False},
+            ],
+        }
+        score = build_score_evidence(bank)
+        text = "第一卷（两大题，共80分）"
+        with self.assertRaisesRegex(ValueError, "lacks explicit usable score"):
+            apply_exam_total_residual_resolution(
+                bank, score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic test."},
+                source_text_by_locator={"src/total": text, "src/q": "1. example", "src/cloze": "II.完形填空"},
+            )
+
+    def test_residual_score_does_not_override_target_score_conflict(self):
+        bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "I.选择（共20小题，每小题2分，满分30分）", "heading_locator": "src/choice", "candidate_count": 20, "inferred": False},
+                {"section_key": "cloze", "heading": "II.完形（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 10, "inferred": False},
+            ],
+        }
+        score = build_score_evidence(bank)
+        total_text = "第一卷（两大题，共70分）"
+        with self.assertRaisesRegex(ValueError, "not an incomplete gap"):
+            apply_exam_total_residual_resolution(
+                bank, score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic conflict test."},
+                source_text_by_locator={
+                    "src/total": total_text,
+                    "src/choice": bank["sections"][0]["heading"],
+                    "src/cloze": bank["sections"][1]["heading"],
+                },
+            )
+
+    def test_residual_score_rejects_stale_target_question_count(self):
+        current_bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q1", "candidate_count": 10, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 10, "inferred": False},
+            ],
+        }
+        stale_bank = {
+            **current_bank,
+            "sections": [
+                {**current_bank["sections"][0], "candidate_count": 20},
+                current_bank["sections"][1],
+            ],
+        }
+        stale_score = build_score_evidence(stale_bank)
+        total_text = "第一卷（两大题，共100分）"
+        with self.assertRaisesRegex(ValueError, "target score evidence is stale"):
+            apply_exam_total_residual_resolution(
+                current_bank, stale_score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic stale-count test."},
+                source_text_by_locator={
+                    "src/total": total_text,
+                    "src/q1": "1. example",
+                    "src/cloze": current_bank["sections"][1]["heading"],
+                },
+            )
+
+    def test_residual_score_rejects_stale_other_section_question_count(self):
+        current_bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q1", "candidate_count": 20, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形（共10小题，每小题2分，满分20分）", "heading_locator": "src/cloze", "candidate_count": 9, "inferred": False},
+            ],
+        }
+        stale_bank = {
+            **current_bank,
+            "sections": [
+                current_bank["sections"][0],
+                {**current_bank["sections"][1], "candidate_count": 10},
+            ],
+        }
+        stale_score = build_score_evidence(stale_bank)
+        total_text = "第一卷（两大题，共60分）"
+        with self.assertRaisesRegex(ValueError, "other scoped section score evidence is stale"):
+            apply_exam_total_residual_resolution(
+                current_bank, stale_score,
+                {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic stale companion-count test."},
+                source_text_by_locator={
+                    "src/total": total_text,
+                    "src/q1": "1. example",
+                    "src/cloze": current_bank["sections"][1]["heading"],
+                },
+            )
+
+    def test_residual_score_can_preserve_exact_fractional_arithmetic(self):
+        bank = {
+            "source_id": "SRC", "subject": "english",
+            "sections": [
+                {"section_key": "single_choice", "heading": "[inferred]", "heading_locator": "src/q1", "candidate_count": 5, "inferred": True},
+                {"section_key": "cloze", "heading": "II.完形（共2小题，每小题2.5分，满分5分）", "heading_locator": "src/cloze", "candidate_count": 2, "inferred": False},
+            ],
+        }
+        score = build_score_evidence(bank)
+        total_text = "第一卷（两大题，共10.75分）"
+        resolved = apply_exam_total_residual_resolution(
+            bank, score,
+            {"candidate_source_id": "SRC", "target_section_key": "single_choice", "scope_section_keys": ["single_choice", "cloze"], "total_evidence": {"locator": "src/total", "text_sha256": hashlib.sha256(total_text.encode()).hexdigest()}, "reviewer": "GPT-6 Luna Max", "reviewed_at": "2026-09-28", "review_note": "Synthetic exact fractional arithmetic test."},
+            source_text_by_locator={
+                "src/total": total_text,
+                "src/q1": "1. example",
+                "src/cloze": bank["sections"][1]["heading"],
+            },
+        )
+        jsonschema.validate(resolved, self.schema)
+        target = next(x for x in resolved["sections"] if x["section_key"] == "single_choice")
+        self.assertEqual(target["per_question_score"], 1.15)
 
 
 if __name__ == "__main__":
