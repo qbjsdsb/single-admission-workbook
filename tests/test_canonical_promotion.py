@@ -173,6 +173,46 @@ class CanonicalPromotionTests(unittest.TestCase):
         self.assertNotIn(r"\teachersampleresponse{", student_tex)
         self.assertNotIn(r"Dear Mark", student_tex)
 
+    def test_open_response_composition_omits_fake_answer_but_keeps_source_sample(self):
+        bank = scored_bank()
+        item = bank["assigned"][0]
+        item["kind"] = "composition"
+        item["section_key"] = "writing"
+        item["options"] = []
+        item["answer_mode"] = "open_response"
+        item["verified_answer"] = None
+
+        sample_response = "Dear Mark,\nA fictional source teacher sample."
+        provenance = {
+            "evidence_source_id": "ENG-TEACHER",
+            "source_sha256": "a" * 64,
+            "evidence_ids": ["E-SAMPLE-OPEN-1"],
+            "locators": ["word/document.xml/body/9"],
+            "paragraph_sha256": ["b" * 64],
+            "response_sha256": hashlib.sha256(sample_response.encode()).hexdigest(),
+        }
+        draft = promote_to_canonical_draft(
+            bank,
+            classification(),
+            teacher_enrichment={
+                "schema_version": 1,
+                "candidate_source_id": "ENG-SOURCE",
+                "items": [{
+                    "candidate_id": item["candidate_id"],
+                    "source_sample_response": sample_response,
+                    "source_sample_response_provenance": provenance,
+                }],
+            },
+        )
+        question = draft["questions"][0]
+        jsonschema.validate(question, self.question_schema)
+        self.assertNotIn("answer", question)
+        teacher_tex = render_question(question, 1, "teacher")
+        student_tex = render_question(question, 1, "student")
+        self.assertIn(r"\teachersampleresponse{", teacher_tex)
+        self.assertNotIn(r"\teacheranswer{", teacher_tex)
+        self.assertNotIn("source teacher sample", student_tex)
+
     def test_structured_table_stem_survives_canonical_promotion(self):
         bank = scored_bank()
         bank["assigned"][0]["stem_rich"] = [
