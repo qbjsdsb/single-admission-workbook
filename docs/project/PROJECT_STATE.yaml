@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 17
+status_version: 18
 updated: 2026-09-28
 
 product:
@@ -13,15 +13,15 @@ current_phase: english_real_business_loop
 
 engineering_baseline:
   branch: main
-  commit: 83f74da9376b9c83e4155ad80b131de7f076ec37
-  integrated_pr: 50
-  integration_head: 83f74da9376b9c83e4155ad80b131de7f076ec37
+  commit: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
+  integrated_pr: 54
+  integration_head: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
   checks_on_integration_head:
     quality: passed
     print_build: passed_or_not_required_by_diff
-    checked_pr_head: 9b7bd86ba907a0af8d2a01ccdcf216fe1b3a2907
+    checked_pr_head: dc80d387137b3cdb55df2a6a8856da53db7fb7ea
   main_merge_commit_status: no_statuses_reported
-  note: "PR #46-#50 are merged on main. They add fail-closed open-response writing verification, preserve writing prompt structure, separate editorial source review from human review, and improve exact-source writing pairing. Latest real-corpus counts below have not yet been rerun on this code."
+  note: "PR #46-#54 are merged on main. Open-response writing now remains explicit through verification, Canonical, sample selection and strict book gates; cached private checkpoints can be rerun without reparsing raw sources; CI publishes a short-lived tested runtime bundle. The old Drive English checkpoint was rerun successfully but is older than v16 production work, so its refreshed counts must not supersede the latest real-corpus checkpoint below."
 
 
 gates:
@@ -195,7 +195,8 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 立即用 main=83f74da9 对同一私有英语 intake/cache 重新跑 Batch Review，生成新的版本化 Drive checkpoint；先用真实新统计替换 v16，禁止从代码改进推测完成数
+  - 已验证旧 Drive English checkpoint 可由当前代码快速重跑，但该 checkpoint 早于 v16 的后续私有生产成果，重跑得到的1196候选/269个P0/927个P1仅用于证明缓存刷新链路有效，不得覆盖 v16 的1232候选/1163 source-pair approvals/69 deferred
+  - 下一步必须基于同一224文件source snapshot获取或重建最新英语75文件 intake/cache，再用 main 当前代码重跑 Batch Review；新 checkpoint 必须版本化并与 source snapshot/hash、main SHA 绑定
   - 在新 Batch Review 上处理剩余结构例外、计分缺失、开放写作 source discrepancy 和3个来源解析冲突；保留来源范文独立身份；随后复核真实剩余的来源解析空缺
   - 对185个来源解析空缺执行双重审查式补解析，并审查已提取来源解析的题号绑定与内容冲突
   - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
