@@ -18,15 +18,11 @@ latest_code_progress:
 
 engineering_baseline:
   branch: main
-  commit: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
-  integrated_pr: 54
-  integration_head: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
-  checks_on_integration_head:
-    quality: passed
-    print_build: passed_or_not_required_by_diff
-    checked_pr_head: dc80d387137b3cdb55df2a6a8856da53db7fb7ea
-  main_merge_commit_status: no_statuses_reported
-  note: "PR #46-#54 are merged on main. Open-response writing now remains explicit through verification, Canonical, sample selection and strict book gates; cached private checkpoints can be rerun without reparsing raw sources; CI publishes a short-lived tested runtime bundle. The old Drive English checkpoint was rerun successfully but is older than v16 production work, so its refreshed counts must not supersede the latest real-corpus checkpoint below."
+  commit: cd83cd65854db3af9f1cf0dd4277e9ff587f79a9
+  integrated_pr: 66
+  integration_head: cd83cd65854db3af9f1cf0dd4277e9ff587f79a9
+  checks_on_fast_track_branch: pending_pr_ci
+  note: "当前代码基线已推进到 PR #66；旧 #54 检查记录不再作为当前 head 的 CI 证明。fast-track 分支必须通过自己的质量检查后才能合并。"
 
 
 gates:
