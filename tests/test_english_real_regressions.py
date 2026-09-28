@@ -83,9 +83,13 @@ class EnglishRealRegressionTests(unittest.TestCase):
         ))
 
     def test_duplicate_b_in_abbd_is_recovered_but_audited(self):
-        result = parse_options([
-            "A. first choice B. second choice B. third choice D. fourth choice"
-        ])
+        result = parse_options(
+            [
+                "A. first choice    B. second choice",
+                "B. third choice    D. fourth choice",
+            ],
+            allow_abbd_recovery=True,
+        )
         self.assertEqual(result.status, "ok")
         self.assertEqual(
             result.options,
