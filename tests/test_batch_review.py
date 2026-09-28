@@ -47,6 +47,41 @@ def teacher_ast(analysis="A reviewed fictional explanation."):
     }
 
 
+def student_writing_ast():
+    texts = [
+        "V. 书面表达（满分10分）",
+        "56. Write a letter to a fictional friend.",
+        "1. Mention the fictional event.",
+        "2. Explain your fictional plan.",
+        "3. Close the letter politely.",
+    ]
+    return {
+        "version": 1,
+        "source_format": "docx",
+        "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+        "warnings": [],
+    }
+
+
+def teacher_writing_ast():
+    texts = [
+        "V. 书面表达（满分10分）",
+        "56. Write a letter to a fictional friend.",
+        "1. Mention the fictional event.",
+        "2. Explain your fictional plan.",
+        "3. Close the letter politely.",
+        "【答案】例文：",
+        "Dear Mark,",
+        "A fictional source teacher sample.",
+    ]
+    return {
+        "version": 1,
+        "source_format": "docx",
+        "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+        "warnings": [],
+    }
+
+
 def source(path, source_id, cache_key, sha, role):
     return {
         "path": path,
@@ -140,6 +175,44 @@ class BatchReviewTests(unittest.TestCase):
         unresolved = result["teacher_enrichment_unresolved"]
         self.assertEqual(unresolved[0]["reason"], "multiple_teacher_analysis_variants")
         self.assertEqual(unresolved[0]["variant_count"], 2)
+
+    def test_writing_pair_keeps_requirement_bullets_in_one_prompt(self):
+        student = source(
+            "writing-student.docx",
+            "SRC-WRITING-STUDENT",
+            "writing-student-cache",
+            "d" * 64,
+            "student",
+        )
+        teacher = source(
+            "writing-teacher.docx",
+            "SRC-WRITING-TEACHER",
+            "writing-teacher-cache",
+            "e" * 64,
+            "solution",
+        )
+        result = review_cached_source_group(
+            student_source=student,
+            student_document=student_writing_ast(),
+            companions=[(teacher, teacher_writing_ast(), "name_exact")],
+            subject="english",
+        )
+
+        candidate = result["candidate_bank"]["candidates"][0]
+        pair = result["companions"][0]["pairing_review"]["rows"][0]
+        self.assertEqual(candidate["kind"], "composition")
+        self.assertEqual(pair["prompt_pair_confidence"], "exact")
+        self.assertEqual(pair["binding_strength"], "content_exact")
+        self.assertEqual(pair["companion_source_number"], 56)
+        self.assertEqual(pair["answer_status"], "missing")
+
+        enrichment = result["teacher_enrichment"]["items"][0]
+        self.assertIn("source_sample_response", enrichment)
+        self.assertIn("source_sample_response_provenance", enrichment)
+        self.assertEqual(
+            enrichment["source_sample_response_provenance"]["evidence_source_id"],
+            "SRC-WRITING-TEACHER",
+        )
 
     def test_intake_batch_uses_cached_document_asts_and_writes_subject_summary(self):
         with tempfile.TemporaryDirectory() as td:
