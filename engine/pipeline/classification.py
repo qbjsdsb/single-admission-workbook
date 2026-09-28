@@ -139,6 +139,23 @@ def build_safe_classification_proposals(
         candidate_id = str(candidate.get("candidate_id") or "")
         section_key = str(candidate.get("section_key") or "")
 
+        if (
+            subject == "english"
+            and section_key.startswith("single_choice_self_test_")
+        ):
+            decisions.append({
+                "candidate_id": candidate_id,
+                "decision": "assign",
+                "chapter_key": "grammar",
+                "section_key": "mixed_choice",
+                "tags": ["自主检测", "综合训练"],
+                "difficulty": "standard",
+                "note": (
+                    "explicit_source_self_test_mapping; no semantic subtype guessed"
+                ),
+            })
+            continue
+
         if subject == "english" and section_key in ENGLISH_DIRECT:
             mapping = ENGLISH_DIRECT[section_key]
             decisions.append({
