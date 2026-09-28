@@ -78,6 +78,18 @@ class PairAndSplitTests(unittest.TestCase):
             self.assertIsNotNone(match, text)
             self.assertEqual(int(match.group(1)), expected)
 
+    def test_reference_writing_heading_is_not_a_question_section(self):
+        self.assertIsNone(
+            detect_section("english", "写作(参考范文)")
+        )
+        self.assertIsNone(
+            detect_section("english", "书面表达参考答案范文")
+        )
+        self.assertEqual(
+            detect_section("english", "V.书面表达(满分10分)"),
+            ("writing", "composition"),
+        )
+
     def test_section_heading_after_pdf_title_line_is_detected(self):
         block = (
             "Fictional exam title\n"
