@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from engine.pipeline.sample_render import prepare_private_sample
+from engine.render.latex import escape_text, render_question
 
 
 def cloze_group():
@@ -50,6 +51,35 @@ def cloze_group():
         "section_key": "training",
         "difficulty": "standard",
     }
+
+
+class RendererHardeningTests(unittest.TestCase):
+    def test_legacy_spaces_symbols_and_long_underscore_runs_are_print_safe(self):
+        rendered = escape_text(
+            "April\u00a05 ▲ ★ \uf06c " + "_" * 240
+        )
+        self.assertNotIn("\u00a0", rendered)
+        self.assertIn(r"$\\blacktriangle$", rendered)
+        self.assertIn(r"$\\star$", rendered)
+        self.assertIn(r"\\textbullet{}", rendered)
+        self.assertNotIn(r"\_" * 20, rendered)
+        self.assertIn(r"\\blank{45mm}", rendered)
+
+    def test_student_open_response_gets_stable_writing_space(self):
+        question = {
+            "id": "ENG-WRITE",
+            "subject": "english",
+            "kind": "composition",
+            "answer_mode": "open_response",
+            "score": 10,
+            "stem": [{"type": "text", "text": "Write a fictional letter. " + "_" * 300}],
+            "analysis": [{"type": "text", "text": "A reviewed fictional writing guide."}],
+        }
+        student = render_question(question, 1, "student")
+        teacher = render_question(question, 1, "teacher")
+        self.assertIn(r"\\answerlines{8}", student)
+        self.assertNotIn(r"\\answerlines{8}", teacher)
+        self.assertIn(r"\\blank{45mm}", student)
 
 
 class PrivateSampleRenderTests(unittest.TestCase):
