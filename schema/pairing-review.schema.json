@@ -182,6 +182,13 @@
             "string",
             "null"
           ]
+        },
+        "companion_source_number": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
         }
       }
     },
