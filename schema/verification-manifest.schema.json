@@ -46,6 +46,12 @@
               "source_pair_manual_approval"
             ]
           },
+          "answer_mode": {
+            "enum": [
+              "fixed",
+              "open_response"
+            ]
+          },
           "verified_answer": {
             "type": "string"
           },
