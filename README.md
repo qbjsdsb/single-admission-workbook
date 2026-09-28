@@ -87,6 +87,21 @@ python scripts/review_docx_pair.py build/private/student.docx build/private/teac
 教师解析和编辑队列，输出九份 JSON；不会自动批准答案或生成可出版状态。
 原卷、解析版及包含题文的结果必须保存在私有目录，不能提交到公开仓库。
 
+### 一条命令把可自动化生产步骤跑到底
+
+对已经完成 intake 的私有缓存，英语/政治可以同时跑“配对来源”和“未配对同源证据”两条线；配对组再自动进入严格验证与计分。互不依赖的来源组使用有界并行，不降低任何答案/分值 Gate：
+
+```bash
+python scripts/run_fast_production.py build/private/intake \
+  --subject english \
+  --out build/private/production/english \
+  --workers 4
+```
+
+输出 `fast-production-summary.json`。如果只是存在内容歧义、缺分值或待复核题，命令仍保存完整 checkpoint 并标记 `complete_with_content_blockers`；只有缓存损坏、Schema/进程失败等基础设施问题才标记 `hard_failure`。真实题文仍只存在私有输出中。
+
+整体并行成书路线见 [八册高速生产路线](docs/architecture/EIGHT_BOOK_FAST_TRACK.md)。
+
 ### 按科目批量预检 intake 配对
 
 已有 `workbook.py intake` 缓存后，可以一次复核全部精确配对而不重新解析源文件：
