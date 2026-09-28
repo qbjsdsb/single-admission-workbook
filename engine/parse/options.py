@@ -22,6 +22,7 @@ class ParsedOptions:
     stem_paragraphs: tuple[str, ...]
     options: tuple[tuple[str, str], ...]
     status: str
+    recoveries: tuple[str, ...] = ()
 
 
 def _strict_pieces(text: str) -> tuple[str, list[tuple[str, str]], bool]:
@@ -169,7 +170,11 @@ def _complete_option_set(labels: list[str]) -> bool:
     return len(labels) == 4 and set(labels) == set("ABCD")
 
 
-def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
+def parse_options(
+    paragraphs: Iterable[str],
+    *,
+    allow_abbd_recovery: bool = False,
+) -> ParsedOptions:
     """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
     texts = [raw.strip() for raw in paragraphs if raw.strip()]
     stem: list[str] = []
@@ -246,6 +251,23 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
         if any(not value for _, value in found):
             return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
         return ParsedOptions(tuple(stem), tuple(found), "ok")
+    if (
+        allow_abbd_recovery
+        and labels == ["A", "B", "B", "D"]
+        and all(value for _, value in found)
+    ):
+        # One paired legacy English source prints the third option label as B in
+        # both student and teacher editions. A/B/B/D is structurally impossible
+        # for a four-choice item; preserve source order and recover only the
+        # missing C label. The candidate records this recovery explicitly.
+        repaired = list(found)
+        repaired[2] = ("C", repaired[2][1])
+        return ParsedOptions(
+            tuple(stem),
+            tuple(repaired),
+            "ok",
+            ("duplicate_b_in_abbd_relabelled_c",),
+        )
     if labels != ["A", "B", "C", "D"] or any(not value for _, value in found):
         return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
     return ParsedOptions(tuple(stem), tuple(found), "ok")

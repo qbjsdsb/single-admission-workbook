@@ -128,18 +128,25 @@
               "other_section_scores",
               "target_question_count",
               "residual_score",
-              "per_question_score",
-              "reviewer",
-              "reviewed_at",
-              "review_note"
+              "per_question_score"
             ],
             "additionalProperties": false,
             "properties": {
-              "method": { "const": "explicit_volume_total_residual" },
+              "method": {
+                "enum": [
+                  "explicit_volume_total_residual",
+                  "automatic_explicit_volume_total_residual"
+                ]
+              },
               "total_score": { "type": "number", "exclusiveMinimum": 0 },
               "total_locator": { "type": "string", "minLength": 1 },
               "total_text_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-              "scope_section_keys": { "type": "array", "items": { "type": "string" }, "minItems": 2, "uniqueItems": true },
+              "scope_section_keys": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 2,
+                "uniqueItems": true
+              },
               "other_section_scores": {
                 "type": "array",
                 "items": {
@@ -159,8 +166,33 @@
               "per_question_score": { "type": "number", "exclusiveMinimum": 0 },
               "reviewer": { "type": "string", "minLength": 1 },
               "reviewed_at": { "type": "string", "format": "date" },
-              "review_note": { "type": "string", "minLength": 1 }
-            }
+              "review_note": { "type": "string", "minLength": 1 },
+              "rule_version": { "type": "string", "minLength": 1 }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "method": { "const": "explicit_volume_total_residual" }
+                  },
+                  "required": ["method"]
+                },
+                "then": {
+                  "required": ["reviewer", "reviewed_at", "review_note"]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "method": { "const": "automatic_explicit_volume_total_residual" }
+                  },
+                  "required": ["method"]
+                },
+                "then": {
+                  "required": ["rule_version"]
+                }
+              }
+            ]
           }
         }
       }

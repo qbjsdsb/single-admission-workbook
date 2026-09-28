@@ -10,6 +10,7 @@ from engine.document.docx_table import normalize_table_block, table_plain_text, 
 from engine.parse.exam_split import (
     QUESTION_RE,
     detect_section,
+    has_legacy_l_as_one_question_prefix,
     is_english_cloze_instruction,
 )
 from engine.parse.options import parse_options
@@ -184,9 +185,20 @@ def _simple_candidate(
         number = first_number
     normalized = [first_rest] + texts[1:] if texts else []
 
-    options_result = parse_options(normalized) if kind == "single_choice" else None
+    options_result = (
+        parse_options(
+            normalized,
+            allow_abbd_recovery=(
+                subject == "english" and section_key == "reading"
+            ),
+        )
+        if kind == "single_choice"
+        else None
+    )
     status = "parsed"
     review_reasons: list[str] = []
+    if texts and has_legacy_l_as_one_question_prefix(texts[0]):
+        review_reasons.append("source_number_glyph_recovered_l_as_1")
     options: list[dict[str, str]] = []
 
     if kind == "single_choice":
@@ -202,6 +214,10 @@ def _simple_candidate(
                 {"label": label, "text": value}
                 for label, value in options_result.options
             ]
+            review_reasons.extend(
+                "option_recovery:" + recovery
+                for recovery in options_result.recoveries
+            )
     else:
         stem_text = "\n".join(normalized).strip()
 
@@ -419,7 +435,7 @@ def extract_candidate_bank(
     section_summaries: list[dict[str, Any]] = []
     non_question_occurrences: list[dict[str, Any]] = []
 
-    for section in sections:
+    for section_index, section in enumerate(sections):
         body: list[ParagraphEvidence] = section["paragraphs"]
         kind = section["kind"]
         section_key = section["section_key"]
@@ -484,13 +500,36 @@ def extract_candidate_bank(
                 ))
 
         if section.get("inferred"):
-            for candidate in candidates[before:]:
-                if candidate["status"] == "parsed":
-                    candidate["status"] = "needs_review"
-                if "section_heading_missing_inferred_single_choice" not in candidate["review_reasons"]:
+            inferred_candidates = candidates[before:]
+            next_section_key = (
+                sections[section_index + 1]["section_key"]
+                if section_index + 1 < len(sections)
+                else None
+            )
+            strong_english_first_section = (
+                subject == "english"
+                and section_key == "single_choice"
+                and next_section_key == "cloze"
+                and [item.get("source_number") for item in inferred_candidates]
+                == list(range(1, 21))
+                and all(
+                    item.get("status") == "parsed"
+                    and len(item.get("options") or []) == 4
+                    for item in inferred_candidates
+                )
+            )
+            for candidate in inferred_candidates:
+                if strong_english_first_section:
                     candidate["review_reasons"].append(
-                        "section_heading_missing_inferred_single_choice"
+                        "section_heading_missing_sequence_bound_1_to_20_before_cloze"
                     )
+                else:
+                    if candidate["status"] == "parsed":
+                        candidate["status"] = "needs_review"
+                    if "section_heading_missing_inferred_single_choice" not in candidate["review_reasons"]:
+                        candidate["review_reasons"].append(
+                            "section_heading_missing_inferred_single_choice"
+                        )
 
         section_summaries.append({
             "section_key": section_key,

@@ -294,6 +294,42 @@ def apply_exam_total_residual_resolution(
             updated_sections.append(section)
             continue
         updated = dict(section)
+        resolution_method = str(
+            resolution.get("method") or "explicit_volume_total_residual"
+        )
+        if resolution_method not in {
+            "explicit_volume_total_residual",
+            "automatic_explicit_volume_total_residual",
+        }:
+            raise ValueError("unsupported score residual resolution method")
+        residual_resolution = {
+            "method": resolution_method,
+            "total_score": total_score,
+            "total_locator": total_locator,
+            "total_text_sha256": total_hash,
+            "scope_section_keys": scope_keys,
+            "other_section_scores": other_scores,
+            "target_question_count": target_candidates,
+            "residual_score": residual,
+            "per_question_score": per_question,
+        }
+        if resolution_method == "explicit_volume_total_residual":
+            residual_resolution.update({
+                "reviewer": str(resolution.get("reviewer") or ""),
+                "reviewed_at": str(resolution.get("reviewed_at") or ""),
+                "review_note": str(resolution.get("review_note") or ""),
+            })
+            if (
+                not residual_resolution["reviewer"]
+                or not residual_resolution["reviewed_at"]
+            ):
+                raise ValueError("score resolution requires a reviewer and review date")
+        else:
+            rule_version = str(resolution.get("rule_version") or "")
+            if not rule_version:
+                raise ValueError("automatic score resolution requires rule_version")
+            residual_resolution["rule_version"] = rule_version
+
         updated.update({
             "per_question_score": per_question,
             "full_score": residual,
@@ -301,23 +337,8 @@ def apply_exam_total_residual_resolution(
             "full_score_source": "derived_from_exam_total_residual",
             "status": "usable",
             "reasons": [],
-            "residual_resolution": {
-                "method": "explicit_volume_total_residual",
-                "total_score": total_score,
-                "total_locator": total_locator,
-                "total_text_sha256": total_hash,
-                "scope_section_keys": scope_keys,
-                "other_section_scores": other_scores,
-                "target_question_count": target_candidates,
-                "residual_score": residual,
-                "per_question_score": per_question,
-                "reviewer": str(resolution.get("reviewer") or ""),
-                "reviewed_at": str(resolution.get("reviewed_at") or ""),
-                "review_note": str(resolution.get("review_note") or ""),
-            },
+            "residual_resolution": residual_resolution,
         })
-        if not updated["residual_resolution"]["reviewer"] or not updated["residual_resolution"]["reviewed_at"]:
-            raise ValueError("score resolution requires a reviewer and review date")
         updated_sections.append(updated)
 
     counts = {"usable": 0, "incomplete": 0, "conflict": 0}
@@ -326,6 +347,71 @@ def apply_exam_total_residual_resolution(
     record["sections"] = updated_sections
     record["summary"] = {"total_sections": len(updated_sections), **counts}
     return record
+
+
+def auto_apply_first_volume_residual_resolution(
+    candidate_bank: Mapping[str, Any],
+    score_evidence: Mapping[str, Any],
+    *,
+    source_text_by_locator: Mapping[str, str],
+) -> dict[str, Any]:
+    """Resolve one inferred first-volume score gap from explicit source totals.
+
+    The fast path is deliberately narrow: the source must explicitly print a
+    first-volume total and major-section count, the first N parsed sections must
+    match that scope, exactly one scoped score row may be incomplete, and that
+    row must come from an inferred heading. Every sibling score is still checked
+    against its source locator/hash by apply_exam_total_residual_resolution.
+    """
+    sections = list(candidate_bank.get("sections") or [])
+    score_rows = list(score_evidence.get("sections") or [])
+    score_by_key = {
+        str(row.get("section_key") or ""): row
+        for row in score_rows
+    }
+    for locator, text in sorted(source_text_by_locator.items()):
+        if "第一卷" not in text:
+            continue
+        declared_sections = _section_count_from_total_text(text)
+        if declared_sections is None or FULL_SCORE_IN_TEXT.search(text) is None:
+            continue
+        if declared_sections <= 0 or declared_sections > len(sections):
+            continue
+        scope_keys = [
+            str(section.get("section_key") or "")
+            for section in sections[:declared_sections]
+        ]
+        scoped_rows = [score_by_key.get(key) for key in scope_keys]
+        if any(row is None for row in scoped_rows):
+            continue
+        incomplete = [
+            row
+            for row in scoped_rows
+            if row is not None and row.get("status") == "incomplete"
+        ]
+        if len(incomplete) != 1:
+            continue
+        target = incomplete[0]
+        if target.get("heading_source") != "inferred":
+            continue
+        total_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        return apply_exam_total_residual_resolution(
+            candidate_bank,
+            score_evidence,
+            {
+                "method": "automatic_explicit_volume_total_residual",
+                "rule_version": "first_volume_residual_v1",
+                "candidate_source_id": candidate_bank.get("source_id"),
+                "target_section_key": target.get("section_key"),
+                "scope_section_keys": scope_keys,
+                "total_evidence": {
+                    "locator": locator,
+                    "text_sha256": total_hash,
+                },
+            },
+            source_text_by_locator=source_text_by_locator,
+        )
+    return dict(score_evidence)
 
 
 def apply_score_evidence(
