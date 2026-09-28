@@ -550,6 +550,44 @@ class EvidenceBankTests(unittest.TestCase):
             for e in bank["evidence"]
         ))
 
+    def test_english_composition_model_answer_is_source_sample_not_key_or_analysis(self):
+        texts = [
+            "V. 书面表达（满分10分）",
+            "56. Write a letter to a fictional friend.",
+            "【答案】例文：",
+            "Dear Mark,",
+            "A fictional first paragraph.",
+            "Best wishes!",
+            "【解析】",
+            "【导语】A separate fictional teacher note.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-WRITING-TEACHER",
+            source_sha256="a" * 64,
+        )
+        jsonschema.validate(bank, self.schema)
+
+        sample = [e for e in bank["evidence"] if e["field"] == "source_sample_response"]
+        self.assertEqual([e["value"] for e in sample], [
+            "Dear Mark,", "A fictional first paragraph.", "Best wishes!"
+        ])
+        self.assertTrue(all(e["source_number"] == 56 for e in sample))
+        self.assertTrue(all(e["section_key"] == "writing" for e in sample))
+        self.assertTrue(all(e["value_sha256"] for e in sample))
+        self.assertFalse(any(e["field"] == "answer" and e["section_key"] == "writing"
+                             for e in bank["evidence"]))
+        self.assertFalse(any(e["field"] == "analysis" and e["section_key"] == "writing"
+                             for e in bank["evidence"]))
+        self.assertEqual(bank["source_sha256"], "a" * 64)
+
 
 if __name__ == "__main__":
     unittest.main()

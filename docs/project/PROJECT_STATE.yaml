@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 14
+status_version: 15
 updated: 2026-09-28
 
 product:
@@ -13,15 +13,15 @@ current_phase: english_real_business_loop
 
 engineering_baseline:
   branch: main
-  commit: cbc19c6cd60541f64a736e7948e7a44fa51b81e6
-  integrated_pr: 42
-  integration_head: cbc19c6cd60541f64a736e7948e7a44fa51b81e6
+  commit: e2f905bf546e1482103e605d165679a940bc231d
+  integrated_pr: 43
+  integration_head: e2f905bf546e1482103e605d165679a940bc231d
   checks_on_integration_head:
     quality: passed
     print_build: passed
-    checked_pr_head: c6909a4a9985e3cc449dc4533c6a29b8fdbc8816
+    checked_pr_head: 4bec051db81b0ac045def392f3708a90f75dc67e
   main_merge_commit_status: no_statuses_reported
-  note: "PR #42 is merged. Its quality and print-build checks passed on the reviewed PR head; no real eight-book delivery claim"
+  note: "PR #43 is merged on top of #42. Quality and print-build passed on reviewed PR head 4bec051; merge commit has no direct check-runs; no real eight-book delivery claim"
 
 
 gates:
@@ -121,8 +121,8 @@ gates:
 
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
-    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35, 41, 42]
-    summary: "英语本轮最新 Batch Review 仍覆盖75个源文件、22组学生/教师源及1232个候选，0个失败组、0个机器答案键冲突、0个P0；当前1232个P1尚未核验或成书。两处表格 DrawingML 标点经源图与教师版交叉核验后已从阻断队列解除；分值缺口从67降为45，结构异常21、答案复核18、来源解析缺口185。另检出3处答案键/源解析不一致，须隔离并逐项复核；Source-pair 批准、Coverage和成书仍未完成"
+    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35, 41, 42, 43]
+    summary: "新 Batch Review 仍绑定同一224文件源快照，覆盖英语75个源文件、22组学生/教师源及1232个候选，0个失败组、0个机器答案键冲突、0个P0、1232个P1。 Source-pair 复核已为1143题生成来源对人工式批准，89题明确延期；其中结构异常21、未决分值45、开放写作22、来源解析冲突3。分值与两处DrawingML标点均有明确来源证据；185题仍缺来源解析。四份源教师范文现作为独立参考范文证据保留完整来源hash和段落定位，不作为标准答案或解析。题目级Occurrence Coverage、异常处理、教师补解析和成书仍未完成"
 
   - id: GATE-ENGLISH-REAL-XELATEX
     status: private_smoke_passed
@@ -158,7 +158,7 @@ real_corpus:
     png: 166
     jpeg: 56
   english_batch_review_2026_09_28:
-    production_run: batch-review-english-score-v02-20260928
+    production_run: batch-review-english-sample-response-v01-20260928
     source_snapshot_id: source-20260928-dbc15ebeb41d9a8d
     source_snapshot_hash: dbc15ebeb41d9a8d318eedee86e67e8063a74e384457df7467962ce2255cdb82
     source_files_intaken: 75
@@ -173,12 +173,15 @@ real_corpus:
     rich_content_blocked_units: 0
     visually_resolved_table_drawings: 2
     score_missing_units: 45
-    answer_review_required_units: 18
+    answer_review_required_units: 22
+    source_pair_manual_approvals: 1143
+    deferred_candidates: 89
+    source_sample_responses: 4
     source_analysis_conflict_flags: 3
     teacher_analysis_gaps: 185
     ready_for_canonical: 0
     status: review_only_not_verified_or_publishable
-    note: "Latest Batch Review supersedes all older English counts. Source-pair verification, exception review, score completion, teacher supplements, and occurrence accounting remain unfinished. File extraction is not question occurrence coverage."
+    note: "Latest Batch Review supersedes all older English counts. Source-pair review approved 1143 candidates and deferred 89. Four source teacher samples are extracted and hash-bound as source_sample_response; all 22 writing prompts remain separate open-response review items. Exception review, missing scores, teacher supplements, and occurrence accounting remain unfinished. File extraction is not question occurrence coverage."
   politics_fast_lane_source_docs_audited: 17
   politics_fast_lane_candidate_units: 558
   real_books_complete: false
@@ -192,7 +195,8 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 完成本轮22个英语学生/教师源对复核；处理21个结构异常、45个计分缺失、18个答案复核项、3个答案/源解析冲突与185个来源解析空缺
+  - 处理21个英语结构异常、45个计分缺失、22个开放写作答案模式和3个来源解析冲突；保留四份来源范文的独立来源身份
+  - 对185个来源解析空缺执行双重审查式补解析，并审查已提取来源解析的题号绑定与内容冲突
   - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
   - 完成英语答案核验、Canonical、解析补全、学生/教师同序成书与全页最终QA
   - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册

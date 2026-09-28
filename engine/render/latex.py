@@ -192,6 +192,12 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
             out.append(rf"\vspace{{{space}mm}}")
 
     if edition == "teacher":
+        if question.get("source_sample_response"):
+            out.append(
+                r"\teachersampleresponse{"
+                + _teacher_value(question.get("source_sample_response"))
+                + "}"
+            )
         if question.get("answer") not in (None, ""):
             out.append(r"\teacheranswer{" + _teacher_value(question.get("answer")) + "}")
         if question.get("analysis"):

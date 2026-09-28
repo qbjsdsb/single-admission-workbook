@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 import unittest
 
@@ -8,6 +9,7 @@ from engine.pipeline.canonical_promotion import (
     build_book_ready_dataset,
     promote_to_canonical_draft,
 )
+from engine.render.latex import render_question
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -138,6 +140,38 @@ class CanonicalPromotionTests(unittest.TestCase):
         self.assertEqual(question["answer"], "B")
         self.assertIn("reviewed explanation", question["analysis"][0]["text"])
         self.assertIn("teaching note", question["teacher_notes"][0]["text"])
+
+    def test_source_sample_response_is_provenanced_and_teacher_only(self):
+        sample_response = "Dear Mark,\nA fictional sample paragraph."
+        provenance = {
+            "evidence_source_id": "ENG-TEACHER",
+            "source_sha256": "a" * 64,
+            "evidence_ids": ["E-SAMPLE-1"],
+            "locators": ["word/document.xml/body/2"],
+            "paragraph_sha256": ["b" * 64],
+            "response_sha256": hashlib.sha256(sample_response.encode()).hexdigest(),
+        }
+        draft = promote_to_canonical_draft(
+            scored_bank(),
+            classification(),
+            teacher_enrichment={
+                "schema_version": 1,
+                "candidate_source_id": "ENG-SOURCE",
+                "items": [{
+                    "candidate_id": "ENG-SOURCE:q:1:abcd1234",
+                    "source_sample_response": sample_response,
+                    "source_sample_response_provenance": provenance,
+                }],
+            },
+        )
+        question = draft["questions"][0]
+        jsonschema.validate(question, self.question_schema)
+        self.assertEqual(question["source_sample_response_provenance"], provenance)
+        teacher_tex = render_question(question, 1, "teacher")
+        student_tex = render_question(question, 1, "student")
+        self.assertIn(r"\teachersampleresponse{", teacher_tex)
+        self.assertNotIn(r"\teachersampleresponse{", student_tex)
+        self.assertNotIn(r"Dear Mark", student_tex)
 
     def test_structured_table_stem_survives_canonical_promotion(self):
         bank = scored_bank()

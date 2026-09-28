@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import hashlib
 from typing import Any, Iterable, Mapping
 
 
@@ -68,16 +69,86 @@ def build_teacher_enrichment(
         bound = [evidence_by_id[eid] for eid in row.get("evidence_ids") or []
                  if eid in evidence_by_id and evidence_by_id[eid].get("field") == "answer"]
         identities = {(item.get("section_key"), item.get("source_number")) for item in bound}
-        if len(identities) != 1 or next(iter(identities))[1] is None:
+        sample_bound = [
+            evidence_by_id[eid]
+            for eid in row.get("source_sample_response_evidence_ids") or []
+            if eid in evidence_by_id
+            and evidence_by_id[eid].get("field") == "source_sample_response"
+        ]
+        if len(identities) == 1 and next(iter(identities))[1] is not None:
+            identity = next(iter(identities))
+        elif (
+            row.get("candidate_kind") == "composition"
+            and row.get("section_key") == "writing"
+            and row.get("source_pair_confidence") == "name_exact"
+            and row.get("candidate_status") == "parsed"
+            and row.get("binding_strength") == "paired_source_number"
+            and row.get("source_number") is not None
+            and sample_bound
+        ):
+            sample_identities = {
+                (item.get("section_key"), item.get("source_number"))
+                for item in sample_bound
+            }
+            if len(sample_identities) != 1:
+                unresolved.append({
+                    "candidate_id": candidate_id,
+                    "reason": "missing_or_ambiguous_sample_response_binding",
+                })
+                continue
+            identity = next(iter(sample_identities))
+            if identity != (row.get("section_key"), row.get("source_number")):
+                unresolved.append({
+                    "candidate_id": candidate_id,
+                    "reason": "sample_response_source_number_mismatch",
+                })
+                continue
+        else:
             unresolved.append({"candidate_id": candidate_id,
                                "reason": "missing_or_ambiguous_answer_binding"})
             continue
-        identity = next(iter(identities))
         evidence = list(grouped.get(identity, []))
 
         analysis = _join_field(evidence, "analysis")
         notes = _join_field(evidence, "teacher_notes")
-        if not analysis and not notes:
+        sample_items = [
+            item for item in evidence
+            if item.get("field") == "source_sample_response"
+        ]
+        sample_response = "\n".join(
+            str(item.get("value") or "").strip()
+            for item in sample_items
+            if str(item.get("value") or "").strip()
+        )
+        if sample_response:
+            source_sha256 = str(evidence_bank.get("source_sha256") or "")
+            if not source_sha256:
+                unresolved.append({
+                    "candidate_id": candidate_id,
+                    "reason": "sample_response_source_hash_missing",
+                })
+                continue
+            paragraph_hashes = []
+            for sample_item in sample_items:
+                value = str(sample_item.get("value") or "").strip()
+                digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+                if sample_item.get("value_sha256") != digest:
+                    raise ValueError(
+                        f"{candidate_id}: sample response evidence hash mismatch"
+                    )
+                paragraph_hashes.append(digest)
+            sample_provenance = {
+                "evidence_source_id": str(evidence_bank["source_id"]),
+                "source_sha256": source_sha256,
+                "evidence_ids": [str(item["evidence_id"]) for item in sample_items],
+                "locators": [str(item["locator"]) for item in sample_items],
+                "paragraph_sha256": paragraph_hashes,
+                "response_sha256": hashlib.sha256(
+                    sample_response.encode("utf-8")
+                ).hexdigest(),
+            }
+
+        if not analysis and not notes and not sample_response:
             unresolved.append({
                 "candidate_id": candidate_id,
                 "reason": "no_teacher_prose_evidence",
@@ -89,6 +160,9 @@ def build_teacher_enrichment(
             item["analysis"] = analysis
         if notes:
             item["teacher_notes"] = notes
+        if sample_response:
+            item["source_sample_response"] = sample_response
+            item["source_sample_response_provenance"] = sample_provenance
         items.append(item)
 
     return {

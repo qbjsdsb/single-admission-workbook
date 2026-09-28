@@ -35,6 +35,17 @@ def _evidence_index(
     return grouped
 
 
+def _sample_response_index(
+    evidence: Iterable[Mapping[str, Any]],
+) -> dict[tuple[str | None, int], list[Mapping[str, Any]]]:
+    grouped: dict[tuple[str | None, int], list[Mapping[str, Any]]] = defaultdict(list)
+    for item in evidence:
+        if item.get("field") != "source_sample_response" or item.get("source_number") is None:
+            continue
+        grouped[(item.get("section_key"), int(item["source_number"]))].append(item)
+    return grouped
+
+
 def _answer_decision(items: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     items = list(items)
     variants: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
@@ -94,6 +105,7 @@ def reconcile_candidate_and_evidence(
     pair_by_student = {item.student_id: item for item in pairing}
     prompt_by_id = {str(item.get("id")): item for item in prompt_records}
     answers = _evidence_index(evidence_bank.get("evidence") or [])
+    sample_responses = _sample_response_index(evidence_bank.get("evidence") or [])
 
     rows: list[dict[str, Any]] = []
     for candidate in candidates:
@@ -111,8 +123,10 @@ def reconcile_candidate_and_evidence(
         target_number = companion.get("number") if companion is not None else number
         target_section = companion.get("section_key") if companion is not None else section
         answer_items: list[Mapping[str, Any]] = []
+        sample_items: list[Mapping[str, Any]] = []
         if target_number is not None:
             answer_items.extend(answers.get((target_section, int(target_number)), []))
+            sample_items.extend(sample_responses.get((target_section, int(target_number)), []))
             if not answer_items:
                 # Unsectioned answer sheets are usable only without a competing section.
                 buckets = [(key, group) for key, group in answers.items()
@@ -128,9 +142,9 @@ def reconcile_candidate_and_evidence(
             binding_strength = "content_exact"
         elif pair_confidence == "high":
             binding_strength = "content_high"
-        elif answer_items and source_pair_confidence == "name_exact":
+        elif (answer_items or sample_items) and source_pair_confidence == "name_exact":
             binding_strength = "paired_source_number"
-        elif answer_items:
+        elif answer_items or sample_items:
             binding_strength = "number_only"
 
         status = "ready_for_verification"
@@ -157,6 +171,7 @@ def reconcile_candidate_and_evidence(
             "source_number": number,
             "section_key": section,
             "candidate_status": candidate.get("status"),
+            "candidate_kind": candidate.get("kind"),
             "companion_question_id": companion_id,
             "prompt_pair_confidence": pair_confidence,
             "prompt_pair_score": 0.0 if pair is None else round(float(pair.score), 6),
@@ -166,6 +181,9 @@ def reconcile_candidate_and_evidence(
             "normalized_answer": answer["normalized_answer"],
             "answer_variants": answer["variants"],
             "evidence_ids": answer["evidence_ids"],
+            "source_sample_response_evidence_ids": sorted(
+                str(item.get("evidence_id") or "") for item in sample_items
+            ),
             "review_status": status,
             "review_reasons": sorted(set(review_reasons)),
             "source_pair_confidence": source_pair_confidence,
