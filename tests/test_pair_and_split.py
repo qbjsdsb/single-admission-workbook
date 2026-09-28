@@ -2,6 +2,8 @@ import unittest
 
 from engine.ingest.pairing import exact_pair_candidates
 from engine.parse.exam_split import (
+    QUESTION_RE,
+    detect_section,
     extract_answer_annotations,
     split_section,
     split_sections,
@@ -63,6 +65,28 @@ class PairAndSplitTests(unittest.TestCase):
         self.assertEqual(len(writing), 1)
         self.assertIsNone(writing[0].number)
         self.assertEqual(writing[0].kind, "composition")
+
+    def test_pdf_number_glyphs_and_comma_punctuation_are_recovered(self):
+        cases = {
+            "l. A fictional first question.": 1,
+            "l8. A fictional eighteenth question.": 18,
+            "5l. A fictional fifty-first question.": 51,
+            "43, A fictional comma-numbered question.": 43,
+        }
+        for text, expected in cases.items():
+            match = QUESTION_RE.match(text)
+            self.assertIsNotNone(match, text)
+            self.assertEqual(int(match.group(1)), expected)
+
+    def test_section_heading_after_pdf_title_line_is_detected(self):
+        block = (
+            "Fictional exam title\n"
+            "1.单项选择(共20小题;每小题2分,满分40分)阅读下列句子"
+        )
+        self.assertEqual(
+            detect_section("english", block),
+            ("single_choice", "single_choice"),
+        )
 
     def test_companion_answer_annotations(self):
         paras = [

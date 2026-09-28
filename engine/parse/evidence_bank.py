@@ -6,7 +6,12 @@ import re
 import unicodedata
 from typing import Any, Mapping
 
-from engine.parse.exam_split import QUESTION_RE, detect_section
+from engine.parse.exam_split import (
+    NUMBERED_INLINE_ANSWER_ANALYSIS_RE,
+    QUESTION_RE,
+    detect_section,
+    english_exam_section_for_number,
+)
 from engine.parse.options import parse_options
 from engine.document.docx_table import normalize_table_block, table_plain_text
 
@@ -348,6 +353,7 @@ def extract_evidence_bank(
         value: str,
         locator: str,
         mode: str,
+        section_key: str | None = None,
     ) -> None:
         normalized = value.strip()
         if not normalized:
@@ -357,7 +363,7 @@ def extract_evidence_bank(
             "source_id": source_id,
             "subject": subject,
             "source_number": number,
-            "section_key": current_section,
+            "section_key": current_section if section_key is None else section_key,
             "field": field,
             "value": normalized,
             "locator": locator,
@@ -443,6 +449,53 @@ def extract_evidence_bank(
                 if current_number is not None:
                     emit_sample_response(current_number, text, paragraph.locator)
                 continue
+
+        inline_answer_analysis = NUMBERED_INLINE_ANSWER_ANALYSIS_RE.match(text)
+        if inline_answer_analysis:
+            flush_prompt()
+            current_number = int(inline_answer_analysis.group(1))
+            answer_value = unicodedata.normalize(
+                "NFKC", inline_answer_analysis.group(2)
+            ).upper()
+            analysis_text = inline_answer_analysis.group(4).strip()
+            evidence_section = current_section
+            # Mixed exam+answer files often leave current_section at writing
+            # when a final answer-analysis appendix restarts from question 1.
+            # In that narrow case, bind evidence back to the standard exam
+            # section ranges. Sectioned training notes keep their explicit
+            # reading/cloze identity instead.
+            if (
+                subject == "english"
+                and (
+                    current_section is None
+                    or (
+                        current_section == "writing"
+                        and current_number != 56
+                    )
+                )
+            ):
+                evidence_section = english_exam_section_for_number(current_number)
+
+            emit(
+                number=current_number,
+                field="answer",
+                value=answer_value,
+                locator=paragraph.locator,
+                mode="numbered_inline_answer_analysis",
+                section_key=evidence_section,
+            )
+            if analysis_text:
+                emit(
+                    number=current_number,
+                    field="analysis",
+                    value=analysis_text,
+                    locator=paragraph.locator,
+                    mode="numbered_inline_answer_analysis",
+                    section_key=evidence_section,
+                )
+            pending_detail_number = None
+            collecting_sample_response = False
+            continue
 
         question_detail = QUESTION_DETAIL.match(text)
         if question_detail:

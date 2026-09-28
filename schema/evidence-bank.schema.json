@@ -54,7 +54,7 @@
           "field": {"enum": ["answer", "analysis", "teacher_notes", "source_sample_response"]},
           "value": {"type": "string", "minLength": 1},
           "locator": {"type": "string"},
-          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row", "compact_letter_sequence", "numbered_source_analysis", "explicit_sample_response"]},
+          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row", "compact_letter_sequence", "numbered_source_analysis", "numbered_inline_answer_analysis", "explicit_sample_response"]},
           "status": {"const": "extracted"},
           "value_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
         },
