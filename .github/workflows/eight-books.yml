@@ -43,6 +43,20 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Run parser golden benchmark
         run: python scripts/check_golden_benchmark.py
+      - name: Upload tested pipeline runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-runtime-code
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            engine/
+            scripts/
+            schema/
+            taxonomy/
+            templates/
+            requirements-ci.txt
+            requirements-pipeline.txt
       - name: Detect whether publication build is required
         id: changes
         shell: bash
