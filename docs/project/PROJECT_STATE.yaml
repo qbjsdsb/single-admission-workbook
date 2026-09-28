@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 13
+status_version: 14
 updated: 2026-09-28
 
 product:
@@ -13,16 +13,15 @@ current_phase: english_real_business_loop
 
 engineering_baseline:
   branch: main
-  commit: c5b1cd61ca1cbcafe1f92d8722e8a4b6af67f516
-  integrated_pr: 40
-  integration_head: c5b1cd61ca1cbcafe1f92d8722e8a4b6af67f516
+  commit: cbc19c6cd60541f64a736e7948e7a44fa51b81e6
+  integrated_pr: 42
+  integration_head: cbc19c6cd60541f64a736e7948e7a44fa51b81e6
   checks_on_integration_head:
     quality: passed
     print_build: passed
-    publication_image: passed
-  main_push_image_run: 36352356877
-  main_push_image_status: passed
-  note: "Stable engineering baseline only; no real eight-book delivery claim"
+    checked_pr_head: c6909a4a9985e3cc449dc4533c6a29b8fdbc8816
+  main_merge_commit_status: no_statuses_reported
+  note: "PR #42 is merged. Its quality and print-build checks passed on the reviewed PR head; no real eight-book delivery claim"
 
 
 gates:
@@ -122,8 +121,8 @@ gates:
 
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
-    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35, 41]
-    summary: "最新私有英语Batch Review覆盖75个源文件及22个学生/教师组，共1232个候选、0个失败组、0个机器答案冲突、0个P0；仍有1232个P1，尚未核验或成书。已修复作答说明误计题、旧字体阅读A组漏题、旧版标题/选项和分值抽取，并恢复Word表格结构；新增共享材料/候选富内容阻断传递，当前4个候选明确留在视觉复核队列。source-pair批准、得分缺口、18项答案复核、185项来源解析缺口与题目级Coverage仍未完成"
+    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35, 41, 42]
+    summary: "英语本轮最新 Batch Review 仍覆盖75个源文件、22组学生/教师源及1232个候选，0个失败组、0个机器答案键冲突、0个P0；当前1232个P1尚未核验或成书。两处表格 DrawingML 标点经源图与教师版交叉核验后已从阻断队列解除；分值缺口从67降为45，结构异常21、答案复核18、来源解析缺口185。另检出3处答案键/源解析不一致，须隔离并逐项复核；Source-pair 批准、Coverage和成书仍未完成"
 
   - id: GATE-ENGLISH-REAL-XELATEX
     status: private_smoke_passed
@@ -159,6 +158,9 @@ real_corpus:
     png: 166
     jpeg: 56
   english_batch_review_2026_09_28:
+    production_run: batch-review-english-score-v02-20260928
+    source_snapshot_id: source-20260928-dbc15ebeb41d9a8d
+    source_snapshot_hash: dbc15ebeb41d9a8d318eedee86e67e8063a74e384457df7467962ce2255cdb82
     source_files_intaken: 75
     exact_student_companion_groups: 22
     companion_sources: 22
@@ -168,9 +170,11 @@ real_corpus:
     P1: 1232
     answer_conflicts: 0
     candidate_structure_units: 21
-    rich_content_blocked_units: 4
-    score_missing_units: 67
+    rich_content_blocked_units: 0
+    visually_resolved_table_drawings: 2
+    score_missing_units: 45
     answer_review_required_units: 18
+    source_analysis_conflict_flags: 3
     teacher_analysis_gaps: 185
     ready_for_canonical: 0
     status: review_only_not_verified_or_publishable
@@ -188,7 +192,7 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 完成本轮22个英语学生/教师源对复核；处理21个结构异常、4个富内容视觉阻断、67个计分缺失、18个答案复核项与185个来源解析空缺
+  - 完成本轮22个英语学生/教师源对复核；处理21个结构异常、45个计分缺失、18个答案复核项、3个答案/源解析冲突与185个来源解析空缺
   - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
   - 完成英语答案核验、Canonical、解析补全、学生/教师同序成书与全页最终QA
   - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册
