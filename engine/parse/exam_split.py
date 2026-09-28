@@ -148,6 +148,16 @@ class GroupBlock:
     shared_material: tuple[str, ...]
     questions: tuple[CandidateBlock, ...]
 
+ENGLISH_SELF_TEST_MARKER = re.compile(
+    r"^\s*【自主检测(?:\d+)?】\s*$",
+    re.IGNORECASE,
+)
+
+
+def is_english_self_test_marker(text: str) -> bool:
+    return bool(ENGLISH_SELF_TEST_MARKER.fullmatch(text.strip()))
+
+
 REFERENCE_WRITING_HEADING = re.compile(
     r"(?:写作|书面表达).*?(?:参考范文|参考答案范文|范文|例文)|"
     r"(?:参考范文|参考答案范文|范文|例文).*?(?:写作|书面表达)",
@@ -162,6 +172,8 @@ def is_reference_writing_heading(text: str) -> bool:
 def detect_section(subject: str, text: str):
     if subject == "english" and is_reference_writing_heading(text):
         return None
+    if subject == "english" and is_english_self_test_marker(text):
+        return "single_choice", "single_choice"
     # PDF text blocks can contain a title line followed by the actual section
     # heading in the same block. Match the whole block first, then individual
     # lines; never search arbitrary mid-line prose for a section label.
