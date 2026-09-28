@@ -365,6 +365,71 @@ class CandidateBankTests(unittest.TestCase):
         ))
         self.assertTrue(bank["sections"][0]["inferred"])
 
+    def test_standalone_reading_analysis_tail_is_not_question_content(self):
+        texts = [
+            "III. 阅读理解",
+            "A",
+            "A fictional passage.",
+            "31. What is the fictional passage about?",
+            "A. one",
+            "B. two",
+            "C. three",
+            "D. four",
+            "解析：选B。A fictional explanation.",
+            "32. What detail appears in the fictional passage?",
+            "A. red",
+            "B. blue",
+            "C. green",
+            "D. gold",
+            "32.B【解析】A second fictional explanation.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="english",
+            source_id="ENG-STANDALONE-READING",
+        )
+        jsonschema.validate(bank, self.schema)
+        self.assertEqual(
+            [q["source_number"] for q in bank["candidates"]],
+            [31, 32],
+        )
+        self.assertTrue(all(q["status"] == "parsed" for q in bank["candidates"]))
+        self.assertTrue(all(len(q["options"]) == 4 for q in bank["candidates"]))
+        self.assertFalse(any(
+            "explanation" in q["stem_text"]
+            for q in bank["candidates"]
+        ))
+
+    def test_inline_numbered_answer_analysis_is_not_a_fake_question(self):
+        texts = [
+            "I. 单项选择",
+            "1. A fictional prompt. A. one B. two C. three D. four",
+            "2. Another fictional prompt. A. one B. two C. three D. four",
+            "1.B【解析】A fictional explanation.",
+            "2.C.考查 fictional grammar.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="english",
+            source_id="ENG-MIXED-ANSWER-APPENDIX",
+        )
+        self.assertEqual(
+            [q["source_number"] for q in bank["candidates"]],
+            [1, 2],
+        )
+
     def test_politics_simple_sections_and_locators(self):
         texts = [
             "一、单项选择题",
