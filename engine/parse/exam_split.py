@@ -7,14 +7,20 @@ from typing import Iterable
 # Some source files contain missing punctuation after question numbers (e.g. "12 Actually...").
 # Allow either punctuation or at least one whitespace after a 1-3 digit question number.
 _STANDARD_QUESTION_RE = re.compile(
-    r"^\s*(\d{1,3})(?:\s*[.．、]\s*|\s+)(.+?)\s*$"
+    r"^\s*(\d{1,3})(?:\s*[.．、,，]\s*|\s+)(.+?)\s*$"
 )
 # A legacy Word conversion can render the leading "1" in a teen question
 # number as the letter "l", for example "l8.". Only accept l/L + one nonzero
 # digit followed by explicit question punctuation; never reinterpret a bare
 # Roman-I section heading. Source text stays unchanged in Document AST/provenance.
 _LEGACY_L_AS_ONE_QUESTION_RE = re.compile(
-    r"^\s*[lL]([1-9])\s*[.．、]\s*(.+?)\s*$"
+    r"^\s*[lL]([1-9])\s*[.．、,，]\s*(.+?)\s*$"
+)
+_LEGACY_BARE_L_QUESTION_RE = re.compile(
+    r"^\s*[lL]\s*[.．、,，]\s*(.+?)\s*$"
+)
+_LEGACY_TRAILING_L_QUESTION_RE = re.compile(
+    r"^\s*([1-9])[lL]\s*[.．、,，]\s*(.+?)\s*$"
 )
 
 
@@ -42,6 +48,16 @@ class _QuestionPattern:
         legacy = _LEGACY_L_AS_ONE_QUESTION_RE.match(text)
         if legacy:
             return _QuestionMatch(text, 10 + int(legacy.group(1)), legacy.group(2))
+        bare_l = _LEGACY_BARE_L_QUESTION_RE.match(text)
+        if bare_l:
+            return _QuestionMatch(text, 1, bare_l.group(1))
+        trailing_l = _LEGACY_TRAILING_L_QUESTION_RE.match(text)
+        if trailing_l:
+            return _QuestionMatch(
+                text,
+                int(trailing_l.group(1)) * 10 + 1,
+                trailing_l.group(2),
+            )
         return None
 
 
@@ -76,7 +92,11 @@ def english_exam_section_for_number(number: int) -> str | None:
 
 
 def has_legacy_l_as_one_question_prefix(text: str) -> bool:
-    return bool(_LEGACY_L_AS_ONE_QUESTION_RE.match(text))
+    return bool(
+        _LEGACY_L_AS_ONE_QUESTION_RE.match(text)
+        or _LEGACY_BARE_L_QUESTION_RE.match(text)
+        or _LEGACY_TRAILING_L_QUESTION_RE.match(text)
+    )
 
 SECTION_LEAD = (
     r"^\s*(?:(?:[0-9]+|[IVXLC]+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[一二三四五六七八九十]+)"
@@ -129,9 +149,16 @@ class GroupBlock:
     questions: tuple[CandidateBlock, ...]
 
 def detect_section(subject: str, text: str):
-    for pattern, key, kind in SECTION_PATTERNS.get(subject, []):
-        if pattern.search(text):
-            return key, kind
+    # PDF text blocks can contain a title line followed by the actual section
+    # heading in the same block. Match the whole block first, then individual
+    # lines; never search arbitrary mid-line prose for a section label.
+    candidates = [text]
+    if "\n" in text:
+        candidates.extend(line.strip() for line in text.splitlines() if line.strip())
+    for candidate in candidates:
+        for pattern, key, kind in SECTION_PATTERNS.get(subject, []):
+            if pattern.search(candidate):
+                return key, kind
     return None
 
 
