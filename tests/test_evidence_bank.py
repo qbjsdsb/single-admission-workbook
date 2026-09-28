@@ -550,6 +550,74 @@ class EvidenceBankTests(unittest.TestCase):
             for e in bank["evidence"]
         ))
 
+    def test_english_writing_requirements_stay_one_prompt_and_keep_root_number(self):
+        texts = [
+            "V. 书面表达（满分10分）",
+            "56. Write a letter to a fictional friend.",
+            "1. Mention the fictional event.",
+            "2. Explain your fictional plan.",
+            "3. Close the letter politely.",
+            "【答案】例文：",
+            "Dear Mark,",
+            "A fictional model response.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-WRITING-BULLETS",
+            source_sha256="b" * 64,
+        )
+        jsonschema.validate(bank, self.schema)
+
+        writing_records = [
+            row for row in bank["question_records"]
+            if row["section_key"] == "writing"
+        ]
+        self.assertEqual(len(writing_records), 1)
+        self.assertEqual(writing_records[0]["number"], 56)
+        self.assertIn("1. Mention the fictional event.", writing_records[0]["stem"])
+        self.assertIn("3. Close the letter politely.", writing_records[0]["stem"])
+
+        samples = [
+            item for item in bank["evidence"]
+            if item["field"] == "source_sample_response"
+        ]
+        self.assertTrue(samples)
+        self.assertTrue(all(item["source_number"] == 56 for item in samples))
+
+    def test_english_unnumbered_writing_prompt_is_preserved_as_single_record(self):
+        texts = [
+            "V. 写作（满分10分）",
+            "Write a short fictional note.",
+            "1. Include a greeting.",
+            "2. Give one fictional reason.",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document,
+            subject="english",
+            source_id="ENG-WRITING-UNNUMBERED",
+        )
+        jsonschema.validate(bank, self.schema)
+        writing_records = [
+            row for row in bank["question_records"]
+            if row["section_key"] == "writing"
+        ]
+        self.assertEqual(len(writing_records), 1)
+        self.assertIsNone(writing_records[0]["number"])
+        self.assertIn("1. Include a greeting.", writing_records[0]["stem"])
+
     def test_english_composition_model_answer_is_source_sample_not_key_or_analysis(self):
         texts = [
             "V. 书面表达（满分10分）",
