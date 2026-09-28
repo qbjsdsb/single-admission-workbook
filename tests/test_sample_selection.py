@@ -73,6 +73,47 @@ class SampleSelectionTests(unittest.TestCase):
             {"question_id": "ENG_B", "reason": "missing_teacher_analysis"},
         )
 
+    def test_reviewed_open_response_writing_does_not_need_fake_answer(self):
+        writing = {
+            "id": "ENG_WRITE",
+            "subject": "english",
+            "kind": "composition",
+            "answer_mode": "open_response",
+            "score": 10,
+            "stem": [{"type": "text", "text": "Write a fictional letter."}],
+            "analysis": [{"type": "text", "text": "A reviewed writing guide."}],
+            "chapter_key": "grammar",
+            "section_key": "verb",
+            "difficulty": "standard",
+        }
+        draft = {"subject": "english", "questions": [writing]}
+        result = select_sample_questions(draft, curriculum())
+        jsonschema.validate(result, self.schema)
+        self.assertEqual(result["selected_question_ids"], ["ENG_WRITE"])
+        self.assertEqual(result["excluded"], [])
+
+    def test_open_response_writing_still_requires_teacher_analysis(self):
+        writing = {
+            "id": "ENG_WRITE",
+            "subject": "english",
+            "kind": "composition",
+            "answer_mode": "open_response",
+            "score": 10,
+            "stem": [{"type": "text", "text": "Write a fictional letter."}],
+            "chapter_key": "grammar",
+            "section_key": "verb",
+            "difficulty": "standard",
+        }
+        result = select_sample_questions(
+            {"subject": "english", "questions": [writing]},
+            curriculum(),
+        )
+        self.assertEqual(result["selected_question_ids"], [])
+        self.assertEqual(
+            result["excluded"][0],
+            {"question_id": "ENG_WRITE", "reason": "missing_teacher_analysis"},
+        )
+
     def test_requested_unknown_id_is_explicitly_excluded(self):
         draft = {"subject": "english", "questions": [question("ENG_A")]}
         result = select_sample_questions(

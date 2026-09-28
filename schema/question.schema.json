@@ -41,6 +41,12 @@
         "cloze_group"
       ]
     },
+    "answer_mode": {
+      "enum": [
+        "fixed",
+        "open_response"
+      ]
+    },
     "chapter_key": {
       "type": "string"
     },
@@ -454,6 +460,30 @@
         "required": [
           "children"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "answer_mode": {
+            "const": "open_response"
+          }
+        },
+        "required": [
+          "answer_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "kind": {
+            "const": "composition"
+          }
+        },
+        "not": {
+          "required": [
+            "answer"
+          ]
+        }
       }
     }
   ]

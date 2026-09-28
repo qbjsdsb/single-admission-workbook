@@ -25,6 +25,13 @@ def has_content(value):
     return False
 
 
+def _is_open_response(question):
+    return (
+        question.get("kind") == "composition"
+        and question.get("answer_mode") == "open_response"
+    )
+
+
 def validate_inputs(questions, ledger, curriculum):
     """Ledger is private: every source occurrence must resolve before a full release."""
     errors = []
@@ -56,11 +63,19 @@ def validate_inputs(questions, ledger, curriculum):
                     errors.append(f"{q['id']}/{child_id}: empty child stem")
                 if not has_content(child.get('answer')) or not has_content(child.get('analysis')):
                     errors.append(f"{q['id']}/{child_id}: missing child answer or analysis")
+        elif _is_open_response(q):
+            if not has_content(q.get('analysis')):
+                errors.append(f"{q['id']}: missing open-response analysis")
         elif not has_content(q.get('answer')) or not has_content(q.get('analysis')):
             errors.append(f"{q['id']}: missing answer or analysis")
     if ledger.get('strict_answer_evidence'):
+        fixed_answer_ids = [
+            q['id']
+            for q in questions
+            if not _is_open_response(q)
+        ]
         errors.extend(validate_release_evidence(
-            ids,
+            fixed_answer_ids,
             ledger.get('answer_evidence', []),
             require_verified=True,
         ))

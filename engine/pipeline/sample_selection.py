@@ -14,6 +14,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _has_verified_answer(question: Mapping[str, Any]) -> bool:
+    if (
+        question.get("kind") == "composition"
+        and question.get("answer_mode") == "open_response"
+    ):
+        return True
     if question.get("kind") in {"cloze_group", "reading_group"}:
         children = question.get("children") or []
         return bool(children) and all(
