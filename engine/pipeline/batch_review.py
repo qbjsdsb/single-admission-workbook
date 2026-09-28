@@ -12,7 +12,10 @@ from engine.parse.candidate_bank import extract_candidate_bank
 from engine.parse.evidence_bank import extract_evidence_bank
 from engine.pipeline.reconcile import reconcile_candidate_and_evidence
 from engine.pipeline.verification import aggregate_pairing_reviews
-from engine.pipeline.scoring import build_score_evidence
+from engine.pipeline.scoring import (
+    auto_apply_first_volume_residual_resolution,
+    build_score_evidence,
+)
 from engine.pipeline.classification import build_safe_classification_proposals
 from engine.pipeline.teacher_enrichment import build_teacher_enrichment
 from engine.pipeline.editorial_queue import build_editorial_queue
@@ -44,6 +47,22 @@ def _load_document_ast(intake_dir: Path, source: Mapping[str, Any]) -> dict[str,
     if not isinstance(document, dict):
         raise ValueError(f"{source.get('path')}: cached Document AST unavailable")
     return document
+
+
+def _source_text_by_locator(document: Mapping[str, Any]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for block in document.get("blocks") or []:
+        if block.get("type") != "paragraph":
+            continue
+        text = "".join(
+            str(inline.get("text") or "")
+            for inline in block.get("inlines") or []
+            if inline.get("type") in {"text", "mathml_inline_text"}
+        ).strip()
+        locator = str(block.get("locator") or "")
+        if locator and text:
+            out[locator] = text
+    return out
 
 
 def _merge_teacher_enrichments(
@@ -160,6 +179,11 @@ def review_cached_source_group(
         source_id=source_id,
     )
     score = build_score_evidence(candidate)
+    score = auto_apply_first_volume_residual_resolution(
+        candidate,
+        score,
+        source_text_by_locator=_source_text_by_locator(student_document),
+    )
 
     companion_outputs: list[dict[str, Any]] = []
     pairing_reviews: list[dict[str, Any]] = []
