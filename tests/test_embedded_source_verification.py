@@ -4,6 +4,7 @@ import unittest
 
 import jsonschema
 
+from engine.pipeline.scoring import apply_score_evidence, build_score_evidence
 from engine.pipeline.verification import (
     build_embedded_source_verified_candidate_bank,
 )
@@ -222,6 +223,33 @@ class EmbeddedSourceVerificationTests(unittest.TestCase):
         )
         self.assertEqual(without_sample["summary"]["verified"], 0)
         self.assertEqual(without_sample["deferred_candidate_ids"], ["Q1"])
+
+
+    def test_embedded_verified_candidate_can_be_scored_from_source_heading(self):
+        candidate_bank = bank(candidate())
+        candidate_bank["sections"] = [{
+            "section_key": "single_choice",
+            "heading": "I.单项选择（共1小题，每小题2分，满分2分）",
+            "heading_locator": "src/h/1",
+            "candidate_count": 1,
+            "inferred": False,
+        }]
+        verified = build_embedded_source_verified_candidate_bank(
+            candidate_bank,
+            evidence([{
+                "source_number": 1,
+                "section_key": "single_choice",
+                "field": "answer",
+                "value": "B",
+            }]),
+        )
+        scored = apply_score_evidence(
+            verified,
+            build_score_evidence(candidate_bank),
+        )
+        self.assertEqual(scored["summary"], {"assigned": 1, "unresolved": 0})
+        self.assertEqual(scored["assigned"][0]["score"], 2.0)
+
 
 
 if __name__ == "__main__":

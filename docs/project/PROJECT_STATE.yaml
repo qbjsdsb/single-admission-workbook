@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 18
+status_version: 19
 updated: 2026-09-28
 
 product:
@@ -9,19 +9,20 @@ product:
   target_books: 8
   publication_rule: "成书页面不得出现来源、内部ID、解析状态、GitHub、构建信息或其他工程元数据"
 
-current_phase: english_real_business_loop
+current_phase: parallel_eight_book_production
+
+latest_code_progress:
+  main_head_before_fast_track: cd83cd65854db3af9f1cf0dd4277e9ff587f79a9
+  integrated_through_pr: 66
+  note: "PR #56-#66 已把英语真实语料的结构恢复、严格来源验证、计分、完整阅读题组、全册渲染加固和未配对同源证据路径继续前推。这里不重写 v16 私有语料统计；必须用同一 source snapshot 与当前 main 重新跑批后，才能发布新的真实候选/阻断数字。"
 
 engineering_baseline:
   branch: main
-  commit: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
-  integrated_pr: 54
-  integration_head: 88fb792f5fd69bfdb327dddbef8afede5a739c3a
-  checks_on_integration_head:
-    quality: passed
-    print_build: passed_or_not_required_by_diff
-    checked_pr_head: dc80d387137b3cdb55df2a6a8856da53db7fb7ea
-  main_merge_commit_status: no_statuses_reported
-  note: "PR #46-#54 are merged on main. Open-response writing now remains explicit through verification, Canonical, sample selection and strict book gates; cached private checkpoints can be rerun without reparsing raw sources; CI publishes a short-lived tested runtime bundle. The old Drive English checkpoint was rerun successfully but is older than v16 production work, so its refreshed counts must not supersede the latest real-corpus checkpoint below."
+  commit: cd83cd65854db3af9f1cf0dd4277e9ff587f79a9
+  integrated_pr: 66
+  integration_head: cd83cd65854db3af9f1cf0dd4277e9ff587f79a9
+  checks_on_fast_track_branch: pending_pr_ci
+  note: "当前代码基线已推进到 PR #66；旧 #54 检查记录不再作为当前 head 的 CI 证明。fast-track 分支必须通过自己的质量检查后才能合并。"
 
 
 gates:
@@ -195,17 +196,14 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 已验证旧 Drive English checkpoint 可由当前代码快速重跑，但该 checkpoint 早于 v16 的后续私有生产成果，重跑得到的1196候选/269个P0/927个P1仅用于证明缓存刷新链路有效，不得覆盖 v16 的1232候选/1163 source-pair approvals/69 deferred
-  - 下一步必须基于同一224文件source snapshot获取或重建最新英语75文件 intake/cache，再用 main 当前代码重跑 Batch Review；新 checkpoint 必须版本化并与 source snapshot/hash、main SHA 绑定
-  - 在新 Batch Review 上处理剩余结构例外、计分缺失、开放写作 source discrepancy 和3个来源解析冲突；保留来源范文独立身份；随后复核真实剩余的来源解析空缺
-  - 对185个来源解析空缺执行双重审查式补解析，并审查已提取来源解析的题号绑定与内容冲突
-  - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
-  - 完成英语答案核验、Canonical、解析补全、学生/教师同序成书与全页最终QA
-  - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册
-  - 英语全册通过Coverage与全页终审后，复用同一流水线继续推进政治、语文、数学
-  - 复用同一生产线推进政治，并核对两份31/32题结构异常来源
-  - 再推进语文加点/阅读题组与数学公式、图形、OLE/WMF复杂资产
-  - 建立真实私有Golden Benchmark（四科代表题）并完成最终224文件题目级覆盖验收
+  - 用当前 main 对同一224文件 source snapshot 重新跑英语75文件与政治51文件；保存与 source hash/main SHA 绑定的新 checkpoint，不再沿用旧统计推测当前数量
+  - 英语与政治并行：paired review、embedded-source verification、strict verification、scoring 同时推进；内容 blocker 保留，不让可靠题重复解析
+  - 建立科目级 verified/scored 合并器与 Occurrence Ledger 汇总器，把来源组级结果直接推向完整 Canonical，而不是继续增加中间管理层
+  - 先把英语完整学生册/教师册跑到全页 QA，以第一套真实整册反向修正模板与最后的内容 Gate
+  - 政治同步完成可审计 taxonomy 与材料题路径，并处理真实结构异常
+  - 语文直接实现 Candidate/Evidence 适配：现代文/古诗文题组、字音字形、作文、加点/下划线优先；扫描难页单独路由
+  - 数学实现 rich-content 适配：OMML/OLE/WMF/图形/表格不允许静默降级；困难页比较 PP-StructureV3/MinerU 等 shadow parser 后再决定接入
+  - 四科分别通过 source occurrence 100% accounted、答案/分值/解析/分类/富内容保真 Gate 后，使用现有八册 build 统一生成8份正式PDF并做目录、书签、页码、彩灰、缺字、溢出和学生版泄漏终审
 
 non_goals_now:
   - 不新增与真实处理速度、正确率或出版质量无直接关系的流程层
