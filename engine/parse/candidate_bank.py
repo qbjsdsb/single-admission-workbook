@@ -185,7 +185,16 @@ def _simple_candidate(
         number = first_number
     normalized = [first_rest] + texts[1:] if texts else []
 
-    options_result = parse_options(normalized) if kind == "single_choice" else None
+    options_result = (
+        parse_options(
+            normalized,
+            allow_abbd_recovery=(
+                subject == "english" and section_key == "reading"
+            ),
+        )
+        if kind == "single_choice"
+        else None
+    )
     status = "parsed"
     review_reasons: list[str] = []
     if texts and has_legacy_l_as_one_question_prefix(texts[0]):
