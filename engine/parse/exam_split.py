@@ -148,7 +148,20 @@ class GroupBlock:
     shared_material: tuple[str, ...]
     questions: tuple[CandidateBlock, ...]
 
+REFERENCE_WRITING_HEADING = re.compile(
+    r"(?:写作|书面表达).*?(?:参考范文|参考答案范文|范文|例文)|"
+    r"(?:参考范文|参考答案范文|范文|例文).*?(?:写作|书面表达)",
+    re.IGNORECASE,
+)
+
+
+def is_reference_writing_heading(text: str) -> bool:
+    return bool(REFERENCE_WRITING_HEADING.search(text))
+
+
 def detect_section(subject: str, text: str):
+    if subject == "english" and is_reference_writing_heading(text):
+        return None
     # PDF text blocks can contain a title line followed by the actual section
     # heading in the same block. Match the whole block first, then individual
     # lines; never search arbitrary mid-line prose for a section label.
