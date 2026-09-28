@@ -206,6 +206,7 @@ class CanonicalPromotionTests(unittest.TestCase):
         )
         question = draft["questions"][0]
         jsonschema.validate(question, self.question_schema)
+        self.assertEqual(question["answer_mode"], "open_response")
         self.assertNotIn("answer", question)
         teacher_tex = render_question(question, 1, "teacher")
         student_tex = render_question(question, 1, "student")
