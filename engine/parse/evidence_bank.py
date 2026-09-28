@@ -106,6 +106,76 @@ SAMPLE_RESPONSE_LABEL = re.compile(
 EMPTY_SAMPLE_RESPONSE = re.compile(r"^\s*(?:略|无|暂无|无固定答案)[。．.!！]?\s*$")
 
 
+def _english_writing_prompt(
+    paragraphs: list[ParagraphEvidence],
+    *,
+    source_id: str,
+) -> tuple[dict[str, Any] | None, int | None]:
+    """Collapse one English writing section into one prompt identity.
+
+    Numbered requirement bullets inside a composition are prompt content, not
+    independent questions. Teacher-only answer/sample/analysis markers terminate
+    the prompt. A high printed question number (for example the common final
+    writing item number) is retained as companion identity when present, while
+    low 1/2/3 requirement bullets never become the composition identity.
+    """
+    in_writing = False
+    body: list[ParagraphEvidence] = []
+
+    for paragraph in paragraphs:
+        detected = detect_section("english", paragraph.text)
+        if detected:
+            if in_writing:
+                break
+            if detected[0] == "writing":
+                in_writing = True
+            continue
+        if not in_writing:
+            continue
+
+        text = paragraph.text.strip()
+        if (
+            EXPLICIT_NUMBERED_ANSWER.match(text)
+            or PLAIN_ANSWER.match(text)
+            or ANALYSIS.match(text)
+            or DETAIL.match(text)
+            or QUESTION_DETAIL.match(text)
+            or CORE.match(text)
+        ):
+            break
+        body.append(paragraph)
+
+    if not body:
+        return None, None
+
+    # Writing requirement lists commonly use 1/2/3. Do not let those sub-bullets
+    # masquerade as the actual exam question number. A distinct high number is
+    # retained only as source identity; content matching never depends on it.
+    numbered = [
+        int(match.group(1))
+        for paragraph in body
+        if (match := QUESTION_RE.match(paragraph.text))
+    ]
+    root_number = next((number for number in numbered if number >= 20), None)
+
+    first_match = QUESTION_RE.match(body[0].text)
+    first_text = first_match.group(2).strip() if first_match else body[0].text.strip()
+    stem_parts = [first_text] + [paragraph.text.strip() for paragraph in body[1:]]
+    stem_text = "\n".join(part for part in stem_parts if part).strip()
+    if not stem_text:
+        return None, root_number
+
+    record = {
+        "id": f"{source_id}:prompt:writing:{_stable_id(*(p.locator for p in body))[:8]}",
+        "number": root_number,
+        "section_key": "writing",
+        "stem": stem_text,
+        "locators": [p.locator for p in body],
+        "match_status": "content_available",
+    }
+    return record, root_number
+
+
 def _answer_range_items(text: str) -> list[tuple[int, str]]:
     out: list[tuple[int, str]] = []
     for match in ANSWER_RANGE.finditer(text):
@@ -263,6 +333,13 @@ def extract_evidence_bank(
     inferred_single_start = _inferred_single_choice_start(
         paragraphs, subject=subject
     )
+    writing_prompt_record = None
+    writing_root_number = None
+    if subject == "english":
+        writing_prompt_record, writing_root_number = _english_writing_prompt(
+            paragraphs,
+            source_id=source_id,
+        )
 
     def emit(
         *,
@@ -556,7 +633,14 @@ def extract_evidence_bank(
         question = QUESTION_RE.match(text)
         if question:
             flush_prompt()
-            current_number = int(question.group(1))
+            if (
+                subject == "english"
+                and current_section == "writing"
+                and writing_root_number is not None
+            ):
+                current_number = writing_root_number
+            else:
+                current_number = int(question.group(1))
             current_question_paragraphs = [paragraph]
             pending_detail_number = None
 
@@ -577,6 +661,16 @@ def extract_evidence_bank(
             current_question_paragraphs.append(paragraph)
 
     flush_prompt()
+
+    if subject == "english" and writing_prompt_record is not None:
+        # The general numbered-question scanner is correct for objective sections
+        # but would split writing requirements 1/2/3 into fake questions. Replace
+        # those rows with the single source composition prompt.
+        question_records = [
+            item for item in question_records
+            if item.get("section_key") != "writing"
+        ]
+        question_records.append(writing_prompt_record)
 
     # Preserve conflicting values. Only byte-identical evidence at the same locator
     # is compacted.
