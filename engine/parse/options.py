@@ -170,7 +170,11 @@ def _complete_option_set(labels: list[str]) -> bool:
     return len(labels) == 4 and set(labels) == set("ABCD")
 
 
-def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
+def parse_options(
+    paragraphs: Iterable[str],
+    *,
+    allow_abbd_recovery: bool = False,
+) -> ParsedOptions:
     """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
     texts = [raw.strip() for raw in paragraphs if raw.strip()]
     stem: list[str] = []
@@ -248,7 +252,8 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
             return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
         return ParsedOptions(tuple(stem), tuple(found), "ok")
     if (
-        labels == ["A", "B", "B", "D"]
+        allow_abbd_recovery
+        and labels == ["A", "B", "B", "D"]
         and all(value for _, value in found)
     ):
         # One paired legacy English source prints the third option label as B in
