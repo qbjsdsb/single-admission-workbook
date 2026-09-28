@@ -50,8 +50,10 @@ class DocumentAstTests(unittest.TestCase):
             self.assertIn("emphasis_dot", paragraph["inlines"][0]["styles"])
             self.assertIn("underline", paragraph["inlines"][0]["styles"])
             self.assertTrue(any(n["type"] == "math_omml" for n in paragraph["inlines"]))
-            self.assertEqual(ast["blocks"][1]["type"], "unsupported")
-            self.assertEqual(ast["blocks"][1]["feature"], "docx_table")
+            table = ast["blocks"][1]
+            self.assertEqual(table["type"], "table")
+            self.assertEqual(table["rows"][0]["cells"][0]["text"], "表格")
+            self.assertEqual(table["rows"][0]["cells"][0]["grid_span"], 1)
 
     def test_intake_docx_emits_document_ast(self):
         with tempfile.TemporaryDirectory() as td:

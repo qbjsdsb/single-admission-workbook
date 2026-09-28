@@ -44,6 +44,47 @@
           "required": [
             "type",
             "locator",
+            "rows",
+            "unsupported_features",
+            "raw_xml"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "table" },
+            "locator": { "type": "string", "minLength": 1 },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["cells"],
+                "additionalProperties": false,
+                "properties": {
+                  "cells": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["paragraphs", "text", "grid_span", "vertical_merge"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "paragraphs": { "type": "array", "items": { "type": "string" } },
+                        "text": { "type": "string" },
+                        "grid_span": { "type": "integer", "minimum": 1 },
+                        "vertical_merge": { "type": ["string", "null"] }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "unsupported_features": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "raw_xml": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "locator",
             "inlines"
           ],
           "additionalProperties": false,

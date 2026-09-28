@@ -95,6 +95,13 @@ class GroupCanonicalTests(unittest.TestCase):
                 "section_key": "cloze",
                 "label": None,
                 "shared_material_text": "A fictional passage with two blanks.",
+                "shared_material_rich": [
+                    {"type": "text", "text": "A fictional passage with two blanks."},
+                    {"type": "table", "rows": [{"cells": [
+                        {"text": "Day", "grid_span": 1},
+                        {"text": "Activity", "grid_span": 1},
+                    ]}]},
+                ],
                 "locators": ["word/document.xml/body/100"],
                 "child_candidate_ids": ["C1", "C2"],
             }],
@@ -125,6 +132,8 @@ class GroupCanonicalTests(unittest.TestCase):
         self.assertEqual(len(group["children"]), 2)
         self.assertEqual(group["chapter_key"], "cloze")
         self.assertEqual(group["section_key"], "cloze_training")
+        jsonschema.validate(group, self.question_schema)
+        self.assertEqual(group["stem"][1]["type"], "table")
         self.assertIn("fictional passage", group["stem"][0]["text"])
 
         selection = select_sample_questions(draft, self.curriculum)
@@ -142,6 +151,7 @@ class GroupCanonicalTests(unittest.TestCase):
         }
         student_tex = render_body(book, {group["id"]: group})
         self.assertEqual(student_tex.count("A fictional passage with two blanks."), 1)
+        self.assertIn(r"\begin{tabularx}", student_tex)
         self.assertIn(r"\q{1}{2}", student_tex)
         self.assertIn(r"\q{2}{2}", student_tex)
         self.assertNotIn(r"\teacheranswer", student_tex)

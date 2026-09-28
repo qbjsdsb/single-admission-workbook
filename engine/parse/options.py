@@ -159,6 +159,16 @@ def _sequence_like(labels: list[str]) -> bool:
     return indices == sorted(indices) and len(indices) == len(set(indices))
 
 
+def _complete_option_set(labels: list[str]) -> bool:
+    """Accept a visually ordered two-column option set when all labels are unique.
+
+    Legacy Word files may serialize two-column choices by reading order, e.g.
+    B/A on the first row and D/C on the second. Sorting is safe only after the
+    full A-D set is present exactly once; partial or duplicate sets stay blocked.
+    """
+    return len(labels) == 4 and set(labels) == set("ABCD")
+
+
 def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
     """Parse common 1/2/4-column Word exports without silently guessing ambiguity."""
     texts = [raw.strip() for raw in paragraphs if raw.strip()]
@@ -180,10 +190,18 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
             next_text=next_text,
         )
         labels_here = [label for label, _ in pieces]
-        valid_marker_shape = (
+        unique_known_labels = (
             bool(pieces)
-            and _sequence_like(labels_here)
-            and labels_here[0] == expected_label
+            and all(label in "ABCD" for label in labels_here)
+            and len(labels_here) == len(set(labels_here))
+        )
+        valid_marker_shape = (
+            unique_known_labels
+            and (
+                _sequence_like(labels_here)
+                and labels_here[0] == expected_label
+                or starts_with_marker and len(pieces) >= 2
+            )
         )
         bare_a_confirmed_by_next_b = (
             expected_label == "A"
@@ -207,6 +225,10 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
                 stem.append(prefix)
             started = True
             found.extend(pieces)
+        elif started and unique_known_labels:
+            if len(found) + len(pieces) > 4 or set(label for label, _ in found) & set(labels_here):
+                return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
+            found.extend(pieces)
         elif started:
             if len(found) == 4 and VOLUME_TAIL.match(text):
                 continue
@@ -219,6 +241,11 @@ def parse_options(paragraphs: Iterable[str]) -> ParsedOptions:
     labels = [label for label, _ in found]
     if not found:
         return ParsedOptions(tuple(stem), (), "none")
+    if _complete_option_set(labels):
+        found = sorted(found, key=lambda item: "ABCD".index(item[0]))
+        if any(not value for _, value in found):
+            return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
+        return ParsedOptions(tuple(stem), tuple(found), "ok")
     if labels != ["A", "B", "C", "D"] or any(not value for _, value in found):
         return ParsedOptions(tuple(stem), tuple(found), "ambiguous_labels")
     return ParsedOptions(tuple(stem), tuple(found), "ok")

@@ -8,6 +8,7 @@ from typing import Any, Mapping
 
 from engine.parse.exam_split import QUESTION_RE, detect_section
 from engine.parse.options import parse_options
+from engine.document.docx_table import normalize_table_block, table_plain_text
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,19 @@ def _safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidenc
     blockers: list[dict[str, Any]] = []
     for block in document.get("blocks") or []:
         locator = str(block.get("locator") or "")
+        table = normalize_table_block(block)
+        if table is not None:
+            if table.get("unsupported_features"):
+                blockers.append({
+                    "locator": locator,
+                    "reasons": ["unsupported_table_feature:" + str(x) for x in table["unsupported_features"]],
+                })
+            text = table_plain_text(table)
+            if text:
+                paragraphs.append(ParagraphEvidence(locator, text))
+            continue
+        if block.get("type") == "unsupported" and block.get("feature") == "docx_bookmarkEnd":
+            continue
         if block.get("type") != "paragraph":
             blockers.append({
                 "locator": locator,
@@ -81,6 +95,10 @@ COMPACT_ITEM = re.compile(
 ANSWER_RANGE = re.compile(
     r"(\d{1,3})\s*[-—–~～]\s*(\d{1,3})\s*([A-DＡ-Ｄ\s]+)"
 )
+NUMBERED_SOURCE_ANALYSIS = re.compile(
+    r"^\s*(\d{1,3})\s*[.．、]\s*([A-DＡ-Ｄ])\s*[;；]\s*(.+?)\s*$"
+)
+LETTER_SEQUENCE = re.compile(r"^[A-DＡ-Ｄ\s]{2,}$")
 
 
 def _answer_range_items(text: str) -> list[tuple[int, str]]:
@@ -332,6 +350,29 @@ def extract_evidence_bank(
         answer = PLAIN_ANSWER.match(text)
         if answer:
             answer_text = answer.group(1).strip()
+            # Some teacher editions print a compact cloze key after the last
+            # child question (e.g. "CADAD CCBDA"). Bind its letters across the
+            # contiguous range ending at the current cloze question, rather than
+            # attaching the whole string to that final question.
+            sequence = unicodedata.normalize("NFKC", answer_text)
+            sequence = re.sub(r"\s+", "", sequence).upper()
+            if (
+                subject == "english"
+                and current_section == "cloze"
+                and current_number is not None
+                and LETTER_SEQUENCE.fullmatch(answer_text)
+                and len(sequence) <= current_number
+            ):
+                start_number = current_number - len(sequence) + 1
+                for offset, value in enumerate(sequence):
+                    emit(
+                        number=start_number + offset,
+                        field="answer",
+                        value=value,
+                        locator=paragraph.locator,
+                        mode="compact_letter_sequence",
+                    )
+                continue
             compact_answer = _compact_items(answer_text)
             if compact_answer:
                 for number, value in compact_answer:
@@ -435,6 +476,21 @@ def extract_evidence_bank(
                 locator=paragraph.locator,
                 mode="explicit_current",
             )
+            continue
+
+        numbered_analysis = NUMBERED_SOURCE_ANALYSIS.match(text)
+        if numbered_analysis:
+            flush_prompt()
+            current_number = int(numbered_analysis.group(1))
+            letter = unicodedata.normalize("NFKC", numbered_analysis.group(2)).upper()
+            emit(
+                number=current_number,
+                field="analysis",
+                value=f"{letter}；{numbered_analysis.group(3)}",
+                locator=paragraph.locator,
+                mode="numbered_source_analysis",
+            )
+            pending_detail_number = None
             continue
 
         question = QUESTION_RE.match(text)

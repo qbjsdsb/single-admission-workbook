@@ -89,6 +89,38 @@ class CandidateBankTests(unittest.TestCase):
         self.assertIsNone(writing["source_number"])
         self.assertIn("fictional email", writing["stem_text"])
 
+    def test_table_in_group_material_is_retained_as_structured_rich_content(self):
+        table = {
+            "type": "table",
+            "locator": "word/document.xml/body/3",
+            "rows": [{"cells": [
+                {"paragraphs": ["Time"], "text": "Time", "grid_span": 1, "vertical_merge": None},
+                {"paragraphs": ["Activity"], "text": "Activity", "grid_span": 1, "vertical_merge": None},
+            ]}, {"cells": [
+                {"paragraphs": ["Saturday"], "text": "Saturday", "grid_span": 1, "vertical_merge": None},
+                {"paragraphs": ["Read"], "text": "Read", "grid_span": 1, "vertical_merge": None},
+            ]}],
+            "unsupported_features": [],
+            "raw_xml": "<w:tbl/>",
+        }
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [
+                paragraph(0, "III.阅读理解"), paragraph(1, "A"),
+                paragraph(2, "A fictional passage."), table,
+                paragraph(4, "31. Which activity is listed? A. Read B. Run C. Swim D. Dance"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(document, subject="english", source_id="ENG-TABLE")
+        jsonschema.validate(bank, self.schema)
+        group = bank["groups"][0]
+        self.assertIn("Saturday | Read", group["shared_material_text"])
+        self.assertEqual(group["shared_material_rich"][0]["type"], "text")
+        table_node = next(x for x in group["shared_material_rich"] if x["type"] == "table")
+        self.assertEqual(table_node["rows"][1]["cells"][0]["text"], "Saturday")
+
     def test_glued_english_options_and_arabic_section_heading(self):
         texts = [
             "1. 单项选择（共1小题）",
