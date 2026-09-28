@@ -86,7 +86,7 @@ def _build_leaf_question(
         "id": _canonical_id(subject, candidate_id),
         "kind": kind,
         "score": float(score),
-        "stem": _text_rich(item.get("stem_text")),
+        "stem": item.get("stem_rich") or _text_rich(item.get("stem_text")),
         "answer": item.get("verified_answer"),
     }
 
@@ -285,7 +285,7 @@ def promote_to_canonical_draft(
             "tags": tags,
             "difficulty": _max_difficulty(child_classifications),
             "score": float(sum(float(child["score"]) for child in children)),
-            "stem": _text_rich(shared_material),
+            "stem": group.get("shared_material_rich") or _text_rich(shared_material),
             "answer": [child.get("answer") for child in children],
             "children": children,
         })

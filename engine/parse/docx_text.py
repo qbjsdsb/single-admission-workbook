@@ -35,6 +35,13 @@ def extract_docx_paragraphs(path: Path) -> list[str]:
 def paragraphs_from_document_ast(document_ast: dict) -> list[str]:
     out: list[str] = []
     for block in document_ast.get('blocks') or []:
+        if block.get('type') == 'table':
+            for row in block.get('rows') or []:
+                cells = [str(cell.get('text') or '').strip() for cell in row.get('cells') or []]
+                line = ' | '.join(cells).strip()
+                if line:
+                    out.append(line)
+            continue
         if block.get('type') != 'paragraph':
             continue
         text = ''.join(

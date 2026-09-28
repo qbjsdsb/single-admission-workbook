@@ -114,6 +114,25 @@ class OptionCalibrationTests(unittest.TestCase):
         ])
         self.assertNotEqual(result.status, "ok")
 
+    def test_two_column_source_order_is_normalized_only_for_complete_unique_ad_set(self):
+        result = parse_options([
+            "B. second choice    A. first choice",
+            "D. fourth choice    C. third choice",
+        ])
+        self.assertEqual(result.status, "ok")
+        self.assertEqual(
+            result.options,
+            (("A", "first choice"), ("B", "second choice"),
+             ("C", "third choice"), ("D", "fourth choice")),
+        )
+
+    def test_duplicate_label_in_two_column_options_stays_blocked(self):
+        result = parse_options([
+            "A. first choice    B. second choice",
+            "B. third choice    D. fourth choice",
+        ])
+        self.assertNotEqual(result.status, "ok")
+
 
 if __name__ == "__main__":
     unittest.main()

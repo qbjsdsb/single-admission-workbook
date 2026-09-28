@@ -67,6 +67,28 @@ class EvidenceBankTests(unittest.TestCase):
         )
         self.assertIn("fictional explanation", analysis["value"])
 
+    def test_table_material_is_not_lost_or_reported_as_unsupported(self):
+        table = {
+            "type": "table",
+            "locator": "word/document.xml/body/2",
+            "rows": [{"cells": [
+                {"paragraphs": ["Time"], "text": "Time", "grid_span": 1, "vertical_merge": None},
+                {"paragraphs": ["Activity"], "text": "Activity", "grid_span": 1, "vertical_merge": None},
+            ]}],
+            "unsupported_features": [],
+            "raw_xml": "<w:tbl/>",
+        }
+        document = {
+            "version": 1, "source_format": "docx",
+            "blocks": [paragraph(0, "I.单项选择"), paragraph(1, "1. Choose from the table."), table,
+                       paragraph(3, "答案：A"), paragraph(4, "解析：A fictional explanation.")],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(document, subject="english", source_id="ENG-TABLE-TEACHER")
+        jsonschema.validate(bank, self.schema)
+        self.assertEqual(bank["blockers"], [])
+        self.assertTrue(any(e["field"] == "answer" and e["value"] == "A" for e in bank["evidence"]))
+
     def test_bracketed_teacher_format_and_grouped_answer_details(self):
         texts = [
             "Ⅰ. 单项选择",
@@ -274,6 +296,54 @@ class EvidenceBankTests(unittest.TestCase):
         answer_pairs = {(e["source_number"], e["value"]) for e in answers}
         self.assertIn((21, "B"), answer_pairs)
         self.assertIn((30, "D"), answer_pairs)
+
+    def test_compact_cloze_key_maps_letters_and_keeps_misnumbered_source_analysis(self):
+        texts = [
+            "II. 完形填空（共10题）",
+            "21. A fictional cloze opening.",
+            "A. one B. two C. three D. four",
+            "30. A fictional final cloze prompt.",
+            "A. one B. two C. three D. four",
+            "答案：CADAD   CCBDA",
+            "解析：",
+            "21. C；第21题虚构解析。",
+            "21. A；第22题虚构解析，但源题号误写为21。",
+            "23. D；第23题虚构解析。",
+        ]
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [paragraph(i, text) for i, text in enumerate(texts)],
+            "warnings": [],
+        }
+        bank = extract_evidence_bank(
+            document, subject="english", source_id="ENG-CLOZE-KEY"
+        )
+        jsonschema.validate(bank, self.schema)
+
+        answers = {
+            (e["source_number"], e["value"])
+            for e in bank["evidence"]
+            if e["field"] == "answer"
+        }
+        self.assertEqual(
+            answers,
+            {(21, "C"), (22, "A"), (23, "D"), (24, "A"), (25, "D"),
+             (26, "C"), (27, "C"), (28, "B"), (29, "D"), (30, "A")},
+        )
+        q21_analysis = [
+            e for e in bank["evidence"]
+            if e["source_number"] == 21 and e["field"] == "analysis"
+        ]
+        self.assertEqual(len(q21_analysis), 2)
+        self.assertTrue(all(
+            e["extraction_mode"] == "numbered_source_analysis"
+            for e in q21_analysis
+        ))
+        self.assertFalse(any(
+            e["source_number"] == 22 and e["field"] == "analysis"
+            for e in bank["evidence"]
+        ))
 
     def test_question_with_price_is_not_treated_as_compact_answer_list(self):
         texts = [

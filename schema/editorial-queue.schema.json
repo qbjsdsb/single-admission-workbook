@@ -87,6 +87,7 @@
                     "answer_conflict",
                     "score_conflict",
                     "candidate_structure",
+                    "rich_content",
                     "answer_verification",
                     "score_missing",
                     "classification",

@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 from typing import Any, Mapping
+from engine.document.docx_table import normalize_table_block, table_plain_text, table_rich_node
 
 from engine.parse.exam_split import (
     QUESTION_RE,
@@ -18,6 +19,7 @@ from engine.parse.options import parse_options
 class ParagraphEvidence:
     locator: str
     text: str
+    table_rich: dict[str, Any] | None = None
 
 
 def _stable_id(*parts: object) -> str:
@@ -48,6 +50,30 @@ def safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence
     blockers: list[dict[str, Any]] = []
     for block in document.get("blocks") or []:
         locator = str(block.get("locator") or "")
+        table = normalize_table_block(block)
+        if table is not None:
+            if table.get("unsupported_features"):
+                blockers.append({
+                    "locator": locator,
+                    "reasons": [
+                        "unsupported_table_feature:" + str(feature)
+                        for feature in table["unsupported_features"]
+                    ],
+                })
+            text = table_plain_text(table)
+            if text:
+                paragraphs.append(ParagraphEvidence(
+                    locator=locator,
+                    text=text,
+                    table_rich=table_rich_node(table),
+                ))
+            continue
+        if (
+            block.get("type") == "unsupported"
+            and block.get("feature") == "docx_bookmarkEnd"
+        ):
+            # Word bookmark terminators are non-rendering anchors with no text.
+            continue
         text, reasons = _paragraph_text(block)
         if reasons:
             blockers.append({"locator": locator, "reasons": reasons})
@@ -55,6 +81,18 @@ def safe_paragraphs(document: Mapping[str, Any]) -> tuple[list[ParagraphEvidence
         if text:
             paragraphs.append(ParagraphEvidence(locator, text))
     return paragraphs, blockers
+
+
+def _rich_content(paragraphs: list[ParagraphEvidence]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for index, paragraph in enumerate(paragraphs):
+        if paragraph.table_rich is not None:
+            out.append(paragraph.table_rich)
+        else:
+            out.append({"type": "text", "text": paragraph.text})
+        if index + 1 < len(paragraphs):
+            out.append({"type": "text", "text": "\n"})
+    return out
 
 
 def _strip_question_prefix(text: str) -> tuple[int | None, str]:
@@ -187,6 +225,8 @@ def _simple_candidate(
     }
     if options:
         record["options"] = options
+    if any(p.table_rich is not None for p in paragraphs):
+        record["stem_rich"] = _rich_content(paragraphs)
     return record
 
 
@@ -217,7 +257,7 @@ def _extract_cloze_group(
         record["group_id"] = group_id
         candidates.append(record)
 
-    groups = [{
+    group = {
         "group_id": group_id,
         "kind": "cloze_group",
         "section_key": section_key,
@@ -225,7 +265,10 @@ def _extract_cloze_group(
         "shared_material_text": "\n".join(p.text for p in shared).strip(),
         "locators": [p.locator for p in shared],
         "child_candidate_ids": [q["candidate_id"] for q in candidates],
-    }]
+    }
+    if any(p.table_rich is not None for p in shared):
+        group["shared_material_rich"] = _rich_content(shared)
+    groups = [group]
     return candidates, groups
 
 
@@ -308,6 +351,8 @@ def _extract_reading_groups(
         }
         if source_label != label:
             group["label_normalization"] = "legacy_english_reading_font_mapping"
+        if any(p.table_rich is not None for p in shared):
+            group["shared_material_rich"] = _rich_content(shared)
         groups.append(group)
 
     return candidates, groups

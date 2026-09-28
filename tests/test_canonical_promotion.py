@@ -139,6 +139,20 @@ class CanonicalPromotionTests(unittest.TestCase):
         self.assertIn("reviewed explanation", question["analysis"][0]["text"])
         self.assertIn("teaching note", question["teacher_notes"][0]["text"])
 
+    def test_structured_table_stem_survives_canonical_promotion(self):
+        bank = scored_bank()
+        bank["assigned"][0]["stem_rich"] = [
+            {"type": "text", "text": "Plan:"},
+            {"type": "table", "rows": [{"cells": [
+                {"text": "Time", "grid_span": 1},
+                {"text": "Activity", "grid_span": 1},
+            ]}]},
+        ]
+        draft = promote_to_canonical_draft(bank, classification())
+        question = draft["questions"][0]
+        jsonschema.validate(question, self.question_schema)
+        self.assertEqual(question["stem"][1]["type"], "table")
+
     def test_classification_manifest_must_match_source(self):
         manifest = classification()
         manifest["candidate_source_id"] = "OTHER"

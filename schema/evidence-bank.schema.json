@@ -53,7 +53,7 @@
           "field": {"enum": ["answer", "analysis", "teacher_notes"]},
           "value": {"type": "string", "minLength": 1},
           "locator": {"type": "string"},
-          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row"]},
+          "extraction_mode": {"enum": ["explicit_numbered", "compact_summary", "explicit_current", "numbered_answer_row", "compact_letter_sequence", "numbered_source_analysis"]},
           "status": {"const": "extracted"}
         }
       }

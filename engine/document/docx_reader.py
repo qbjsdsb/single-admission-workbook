@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Mapping
 
 from engine.document.model import DocumentAst, paragraph_block, text_node, unsupported_block
+from engine.document.docx_table import parse_docx_table_xml
 from engine.parse.docx_structure import extract_structure
 
 
@@ -230,12 +231,10 @@ def structure_to_document_ast(structure: Mapping[str, object]) -> DocumentAst:
             continue
 
         if kind == "tbl":
-            blocks.append(unsupported_block(
-                locator,
-                "docx_table",
-                raw=str(block.get("xml") or ""),
-            ))
-            warnings.append("table_not_normalized")
+            table = parse_docx_table_xml(str(block.get("xml") or ""), locator)
+            blocks.append(table)
+            if table.get("unsupported_features"):
+                warnings.append("table_rich_features_require_review")
             continue
 
         blocks.append(unsupported_block(

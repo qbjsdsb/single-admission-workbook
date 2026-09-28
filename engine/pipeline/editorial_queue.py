@@ -7,6 +7,7 @@ PRIORITY = {
     "answer_conflict": 0,
     "score_conflict": 0,
     "candidate_structure": 1,
+    "rich_content": 1,
     "answer_verification": 1,
     "score_missing": 2,
     "classification": 2,
@@ -73,6 +74,16 @@ def build_editorial_queue(
         if str(item.get("candidate_id") or "")
     }
 
+    groups_by_id = _index(candidate_bank.get("groups"), "group_id")
+    blockers_by_locator: dict[str, list[str]] = {}
+    for blocker in candidate_bank.get("blockers") or []:
+        locator = str(blocker.get("locator") or "")
+        if not locator:
+            continue
+        blockers_by_locator.setdefault(locator, []).extend(
+            str(reason) for reason in blocker.get("reasons") or []
+        )
+
     entries: list[dict[str, Any]] = []
 
     for candidate in candidate_bank.get("candidates") or []:
@@ -98,6 +109,25 @@ def build_editorial_queue(
                 ",".join(candidate.get("review_reasons") or [])
                 or "candidate structure requires review",
                 "review_source_structure",
+            )
+
+        relevant_locators = set(str(x) for x in candidate.get("locators") or [])
+        group = groups_by_id.get(str(candidate.get("group_id") or ""))
+        if group is not None:
+            relevant_locators.update(str(x) for x in group.get("locators") or [])
+        rich_blockers = [
+            (locator, sorted(set(blockers_by_locator[locator])))
+            for locator in sorted(relevant_locators & blockers_by_locator.keys())
+        ]
+        if rich_blockers:
+            detail = "; ".join(
+                locator + ":" + ",".join(reasons)
+                for locator, reasons in rich_blockers
+            )
+            add_issue(
+                "rich_content",
+                detail,
+                "review_source_visual_rich_content",
             )
 
         if aggregate is None:

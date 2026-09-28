@@ -1,5 +1,5 @@
 project: single-admission-workbook
-status_version: 11
+status_version: 13
 updated: 2026-09-28
 
 product:
@@ -122,8 +122,8 @@ gates:
 
   - id: GATE-ENGLISH-REAL-BUSINESS
     status: in_progress
-    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35]
-    summary: "本轮私有source snapshot含75个英语源文件；22个学生/教师组进入最新Batch Review，共1232个候选单元、0个失败组、0个答案冲突、0个P0。当前1232个P1仍为复核态，不代表内容核验或成书完成；已修复英语作答说明误计题、旧字体阅读A组漏题、旧版单选标题/选项标点识别与计分标题误覆盖问题"
+    merged_prs: [28, 29, 30, 31, 32, 33, 34, 35, 41]
+    summary: "最新私有英语Batch Review覆盖75个源文件及22个学生/教师组，共1232个候选、0个失败组、0个机器答案冲突、0个P0；仍有1232个P1，尚未核验或成书。已修复作答说明误计题、旧字体阅读A组漏题、旧版标题/选项和分值抽取，并恢复Word表格结构；新增共享材料/候选富内容阻断传递，当前4个候选明确留在视觉复核队列。source-pair批准、得分缺口、18项答案复核、185项来源解析缺口与题目级Coverage仍未完成"
 
   - id: GATE-ENGLISH-REAL-XELATEX
     status: private_smoke_passed
@@ -167,9 +167,11 @@ real_corpus:
     P0: 0
     P1: 1232
     answer_conflicts: 0
-    candidate_structure_units: 23
+    candidate_structure_units: 21
+    rich_content_blocked_units: 4
     score_missing_units: 67
-    source_analysis_gaps: 293
+    answer_review_required_units: 18
+    teacher_analysis_gaps: 185
     ready_for_canonical: 0
     status: review_only_not_verified_or_publishable
     note: "Latest Batch Review supersedes all older English counts. Source-pair verification, exception review, score completion, teacher supplements, and occurrence accounting remain unfinished. File extraction is not question occurrence coverage."
@@ -186,7 +188,7 @@ safety_and_quality:
   private_raw_sources_in_public_repo: false
 
 next:
-  - 完成本轮22个英语学生/教师源对复核；处理23个结构异常、67个计分缺失、27个答案证据缺口与293个来源解析空缺
+  - 完成本轮22个英语学生/教师源对复核；处理21个结构异常、4个富内容视觉阻断、67个计分缺失、18个答案复核项与185个来源解析空缺
   - 扩展Occurrence Ledger覆盖75个英语文件中的全部真实题目出现位置，并记录合并、非题目内容、来源伪影与未决阻断的去向
   - 完成英语答案核验、Canonical、解析补全、学生/教师同序成书与全页最终QA
   - 只有英语P0/P1清零、source occurrence 100% accounted后，才生成完整Canonical顺序和学生/教师两册

@@ -48,6 +48,36 @@ def escape_text(text: str) -> str:
             out.append(LATEX_ESCAPES.get(ch, ch))
     return "".join(out)
 
+def _render_table(node: dict[str, Any]) -> str:
+    rows = node.get("rows") or []
+    columns = max(
+        (sum(max(1, int(cell.get("grid_span") or 1)) for cell in row.get("cells") or []) for row in rows),
+        default=0,
+    )
+    if not columns:
+        return ""
+    preamble = "|" + "|".join(["X"] * columns) + "|"
+    rendered_rows: list[str] = []
+    for row in rows:
+        cells: list[str] = []
+        occupied = 0
+        for cell in row.get("cells") or []:
+            value = escape_text(str(cell.get("text") or ""))
+            span = max(1, int(cell.get("grid_span") or 1))
+            cells.append(rf"\multicolumn{{{span}}}{{|X|}}{{{value}}}" if span > 1 else value)
+            occupied += span
+        cells.extend([""] * max(0, columns - occupied))
+        if cells:
+            rendered_rows.append(" & ".join(cells) + r" \\")
+    if not rendered_rows:
+        return ""
+    return (
+        r"\par\smallskip\begingroup\small\renewcommand{\arraystretch}{1.2}"
+        + r"\noindent\begin{tabularx}{\linewidth}{" + preamble + r"}\hline" + "\n"
+        + "\n".join(rendered_rows)
+        + r"\hline\end{tabularx}\par\endgroup\smallskip"
+    )
+
 def rich_text(nodes: list[dict[str, Any]]) -> str:
     out: list[str] = []
     for node in nodes:
@@ -70,6 +100,8 @@ def rich_text(nodes: list[dict[str, Any]]) -> str:
         elif kind == "image":
             # Image support is explicit in the data model. Width policy will become richer later.
             out.append(r"\includegraphics[width=.55\linewidth]{" + escape_text(node["asset"]) + "}")
+        elif kind == "table":
+            out.append(_render_table(node))
         else:
             raise ValueError(f"unsupported rich-text node: {kind}")
     return "".join(out)
