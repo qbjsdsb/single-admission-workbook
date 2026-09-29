@@ -79,6 +79,40 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'placeholder/template teacher analysis is not publishable'):
             self.plan()
 
+    def test_open_content_review_flag_blocks_publication(self):
+        qid = self.data['questions'][0]['id']
+        self.data['ledger']['content_review_flags'] = [{
+            'id': 'review-1',
+            'question_id': qid,
+            'status': 'open',
+            'note': 'source answer/content requires editorial verification',
+        }]
+        with self.assertRaisesRegex(ValueError, 'unresolved content review flag'):
+            self.plan()
+
+    def test_resolved_content_review_flag_requires_audit_note(self):
+        qid = self.data['questions'][0]['id']
+        self.data['ledger']['content_review_flags'] = [{
+            'id': 'review-1',
+            'question_id': qid,
+            'status': 'resolved',
+            'note': '',
+        }]
+        with self.assertRaisesRegex(ValueError, 'resolved content review flag needs note'):
+            self.plan()
+
+    def test_resolved_content_review_flag_can_publish(self):
+        qid = self.data['questions'][0]['id']
+        self.data['ledger']['content_review_flags'] = [{
+            'id': 'review-1',
+            'question_id': qid,
+            'status': 'resolved',
+            'note': 'editorial comparison completed against independent evidence',
+        }]
+        books, bank = self.plan()
+        self.assertIn(qid, bank)
+        self.assertEqual(len(books), 8)
+
     def test_source_coverage_blocks(self):
         self.data['ledger']['sources'][0]['expected_questions'] = 2
         with self.assertRaisesRegex(ValueError, 'expected 2, accounted 1'):
