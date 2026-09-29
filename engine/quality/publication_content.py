@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import Counter
+import hashlib
 import re
 from typing import Any, Iterable, Mapping
 
@@ -67,17 +69,48 @@ def validate_question_content(question: Mapping[str, Any], *, location: str | No
     return errors
 
 
+def _analysis_text(question: Mapping[str, Any]) -> str:
+    analysis = question.get("analysis")
+    text = _plain_text(analysis) if isinstance(analysis, list) else str(analysis or "")
+    return re.sub(r"\\s+", " ", text).strip()
+
+
 def validate_publication_content(questions: Iterable[Mapping[str, Any]]) -> list[str]:
     errors: list[str] = []
-    for question in questions:
+    materialized = list(questions)
+    analysis_rows: list[tuple[str, str]] = []
+
+    for question in materialized:
         qid = str(question.get("id") or "<unknown>")
         errors.extend(validate_question_content(question, location=qid))
+        text = _analysis_text(question)
+        if text:
+            analysis_rows.append((qid, text))
+
         for index, child in enumerate(question.get("children") or [], start=1):
             child_id = str(child.get("id") or f"child-{index}")
+            location = f"{qid}/{child_id}"
             errors.extend(
                 validate_question_content(
                     child,
-                    location=f"{qid}/{child_id}",
+                    location=location,
                 )
             )
+            child_text = _analysis_text(child)
+            if child_text:
+                analysis_rows.append((location, child_text))
+
+    # Exact repeated prose across many distinct questions is a reliable signal
+    # that a generic filler/template has leaked into the teacher edition. Use a
+    # deliberately high threshold so ordinary concept overlap is not blocked.
+    counts = Counter(text for _, text in analysis_rows if len(text) >= 24)
+    for text, count in counts.items():
+        if count < 8:
+            continue
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+        errors.append(
+            "teacher analysis boilerplate repeated "
+            f"{count} times (analysis_sha256={digest})"
+        )
+
     return errors
