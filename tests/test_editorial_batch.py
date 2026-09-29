@@ -1,6 +1,7 @@
 import json
-
-import pytest
+from pathlib import Path
+import tempfile
+import unittest
 
 from engine.pipeline.editorial_batch import (
     normalize_editorial_batch,
@@ -60,65 +61,87 @@ def batch_fixture():
     }
 
 
-def test_editorial_batch_renders_same_order_for_student_and_teacher(tmp_path):
-    batch = batch_fixture()
+class EditorialBatchTests(unittest.TestCase):
+    def test_renders_same_order_for_student_and_teacher(self):
+        batch = batch_fixture()
 
-    summary = prepare_editorial_batch(batch, tmp_path)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            summary = prepare_editorial_batch(batch, out)
 
-    assert summary["question_groups"] == 2
-    assert summary["verified_occurrences"] == 2
-    assert summary["status"] == "prepared_editorial_batch_visual_review_required"
+            self.assertEqual(summary["question_groups"], 2)
+            self.assertEqual(summary["verified_occurrences"], 2)
+            self.assertEqual(
+                summary["status"],
+                "prepared_editorial_batch_visual_review_required",
+            )
 
-    student = json.loads(
-        (tmp_path / "english-editorial-v01-student" / "book.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    teacher = json.loads(
-        (tmp_path / "english-editorial-v01-teacher" / "book.json").read_text(
-            encoding="utf-8"
-        )
-    )
+            student = json.loads(
+                (
+                    out
+                    / "english-editorial-v01-student"
+                    / "book.json"
+                ).read_text(encoding="utf-8")
+            )
+            teacher = json.loads(
+                (
+                    out
+                    / "english-editorial-v01-teacher"
+                    / "book.json"
+                ).read_text(encoding="utf-8")
+            )
 
-    student_ids = student["chapters"][0]["sections"][0]["question_ids"]
-    teacher_ids = teacher["chapters"][0]["sections"][0]["question_ids"]
-    assert student_ids == ["EN_EDITORIAL_001", "EN_EDITORIAL_002"]
-    assert teacher_ids == student_ids
+            student_ids = student["chapters"][0]["sections"][0]["question_ids"]
+            teacher_ids = teacher["chapters"][0]["sections"][0]["question_ids"]
+            self.assertEqual(
+                student_ids,
+                ["EN_EDITORIAL_001", "EN_EDITORIAL_002"],
+            )
+            self.assertEqual(teacher_ids, student_ids)
 
-    student_tex = (
-        tmp_path / "english-editorial-v01-student" / "main.tex"
-    ).read_text(encoding="utf-8")
-    teacher_tex = (
-        tmp_path / "english-editorial-v01-teacher" / "main.tex"
-    ).read_text(encoding="utf-8")
+            student_tex = (
+                out
+                / "english-editorial-v01-student"
+                / "main.tex"
+            ).read_text(encoding="utf-8")
+            teacher_tex = (
+                out
+                / "english-editorial-v01-teacher"
+                / "main.tex"
+            ).read_text(encoding="utf-8")
 
-    assert "\\teacheranswer{" not in student_tex
-    assert "\\teacheranalysis{" not in student_tex
-    assert "\\teacheranswer{" in teacher_tex
-    assert "\\teacheranalysis{" in teacher_tex
+            self.assertNotIn("\\teacheranswer{", student_tex)
+            self.assertNotIn("\\teacheranalysis{", student_tex)
+            self.assertIn("\\teacheranswer{", teacher_tex)
+            self.assertIn("\\teacheranalysis{", teacher_tex)
 
-    private_questions = json.loads(
-        (
-            tmp_path
-            / "english-editorial-v01-student"
-            / "questions.private.json"
-        ).read_text(encoding="utf-8")
-    )
-    assert private_questions[0]["chapter_key"] == "grammar"
-    assert private_questions[0]["section_key"] == "verb"
+            private_questions = json.loads(
+                (
+                    out
+                    / "english-editorial-v01-student"
+                    / "questions.private.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(private_questions[0]["chapter_key"], "grammar")
+            self.assertEqual(private_questions[0]["section_key"], "verb")
+
+    def test_requires_verified_occurrence_for_every_question(self):
+        batch = batch_fixture()
+        batch["occurrences"] = batch["occurrences"][:1]
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "missing verified source occurrence",
+        ):
+            normalize_editorial_batch(batch)
+
+    def test_rejects_conflicting_assignment(self):
+        batch = batch_fixture()
+        batch["questions"][0]["chapter_key"] = "wrong"
+
+        with self.assertRaisesRegex(ValueError, "conflicts with batch"):
+            normalize_editorial_batch(batch)
 
 
-def test_editorial_batch_requires_verified_occurrence_for_every_question():
-    batch = batch_fixture()
-    batch["occurrences"] = batch["occurrences"][:1]
-
-    with pytest.raises(ValueError, match="missing verified source occurrence"):
-        normalize_editorial_batch(batch)
-
-
-def test_editorial_batch_rejects_conflicting_assignment():
-    batch = batch_fixture()
-    batch["questions"][0]["chapter_key"] = "wrong"
-
-    with pytest.raises(ValueError, match="conflicts with batch"):
-        normalize_editorial_batch(batch)
+if __name__ == "__main__":
+    unittest.main()
