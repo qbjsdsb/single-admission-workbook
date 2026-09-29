@@ -352,6 +352,11 @@ def build_embedded_source_verified_candidate_bank(
                 if candidate.get("stem_rich")
                 else {}
             ),
+            **(
+                {"asset_refs": candidate["asset_refs"]}
+                if candidate.get("asset_refs")
+                else {}
+            ),
             "options": candidate.get("options") or [],
             "group_id": candidate.get("group_id"),
             "locators": candidate.get("locators") or [],
@@ -522,6 +527,7 @@ def build_verified_candidate_bank(
             "kind": candidate.get("kind"),
             "stem_text": candidate.get("stem_text"),
             **({"stem_rich": candidate["stem_rich"]} if candidate.get("stem_rich") else {}),
+            **({"asset_refs": candidate["asset_refs"]} if candidate.get("asset_refs") else {}),
             "options": candidate.get("options") or [],
             "group_id": candidate.get("group_id"),
             "locators": candidate.get("locators") or [],

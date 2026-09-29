@@ -69,6 +69,8 @@ def _build_leaf_question(
     include_placement: bool,
 ) -> dict[str, Any]:
     candidate_id = str(item.get("candidate_id") or "")
+    if item.get("asset_refs"):
+        raise ValueError("unresolved_source_visual_asset")
     score = item.get("score")
     if not isinstance(score, (int, float)) or score <= 0:
         raise ValueError("missing_or_invalid_score")
@@ -208,6 +210,13 @@ def promote_to_canonical_draft(
             unresolved.append({
                 "candidate_id": group_id,
                 "reason": "invalid_group_structure",
+            })
+            continue
+
+        if group.get("asset_refs"):
+            unresolved.append({
+                "candidate_id": group_id,
+                "reason": "group_unresolved_source_visual_asset",
             })
             continue
 
