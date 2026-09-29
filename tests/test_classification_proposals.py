@@ -191,7 +191,7 @@ class ClassificationProposalTests(unittest.TestCase):
             for qid in ("Q1", "Q2")
         ))
 
-    def test_politics_never_auto_classifies_without_approved_taxonomy(self):
+    def test_politics_without_unique_syllabus_evidence_stays_deferred(self):
         bank = {
             "source_id": "POL",
             "subject": "politics",
@@ -203,7 +203,7 @@ class ClassificationProposalTests(unittest.TestCase):
         manifest = build_safe_classification_proposals(bank)
         self.assertTrue(all(x["decision"] == "defer" for x in manifest["decisions"]))
         self.assertTrue(all(
-            x["note"] == "politics_taxonomy_not_approved"
+            x["note"] == "politics_semantic_ambiguous_or_unsupported"
             for x in manifest["decisions"]
         ))
 

@@ -1,0 +1,40 @@
+version: 1
+subject: politics
+status: official-syllabus-derived
+basis:
+  - "国家体育总局《普通高等学校运动训练、武术与民族传统体育专业招生文化考试大纲（2023版）》政治考试大纲"
+chapters:
+  - key: chinese_socialism
+    title: 中国特色社会主义
+    sections:
+      - {key: socialist_development, title: 社会主义从空想到科学、从理论到实践的发展}
+      - {key: socialism_saves_china, title: 只有社会主义才能救中国}
+      - {key: socialism_develops_china, title: 只有中国特色社会主义才能发展中国}
+      - {key: new_era_rejuvenation, title: 坚持和发展中国特色社会主义与民族复兴}
+
+  - key: economy_society
+    title: 经济与社会
+    sections:
+      - {key: ownership, title: 我国的生产资料所有制}
+      - {key: market_economy, title: 我国的社会主义市场经济体制}
+      - {key: economic_development, title: 我国的经济发展}
+      - {key: distribution_security, title: 个人收入分配与社会保障}
+
+  - key: politics_law
+    title: 政治与法治
+    sections:
+      - {key: party_leadership, title: 中国共产党的领导}
+      - {key: people_as_masters, title: 人民当家作主}
+      - {key: rule_of_law, title: 全面依法治国}
+
+  - key: philosophy_culture
+    title: 哲学与文化
+    sections:
+      - {key: world_and_laws, title: 探究世界与把握规律}
+      - {key: society_and_values, title: 认识社会与价值选择}
+      - {key: culture_innovation, title: 文化传承与文化创新}
+
+  - key: current_affairs
+    title: 时事政治
+    sections:
+      - {key: annual_current_affairs, title: 年度国内外重大时事与现阶段重大方针政策}
