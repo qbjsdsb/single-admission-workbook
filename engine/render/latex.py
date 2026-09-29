@@ -252,7 +252,7 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
         reserve = 7 if edition == "teacher" else 6
         out.append(rf"\Needspace{{{reserve}\baselineskip}}")
     out.extend([
-        rf"\q{{{display_number}}}{{{score_text}}}{{{rich_text(question['stem'])}}}",
+        rf"\q{{{display_number}}}{{{score_text}}}{{{rich_text(stem_nodes)}}}",
         render_choices(question),
     ])
 
