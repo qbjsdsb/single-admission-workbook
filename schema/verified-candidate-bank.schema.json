@@ -89,6 +89,11 @@
             },
             "minItems": 1
           },
+          "asset_refs": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/asset_ref" },
+            "minItems": 1
+          },
           "options": {
             "type": "array"
           },
@@ -189,6 +194,23 @@
     }
   },
   "$defs": {
+    "asset_ref": {
+      "type": "object",
+      "required": ["relationship_id", "locator", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "relationship_id": { "type": "string", "minLength": 1 },
+        "locator": { "type": "string", "minLength": 1 },
+        "source": { "enum": ["drawingml", "vml"] },
+        "asset_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "asset_target": { "type": "string", "minLength": 1 },
+        "asset_extension": { "type": "string", "minLength": 1 },
+        "asset_bytes": { "type": "integer", "minimum": 0 },
+        "cx_emu": { "type": "integer", "minimum": 0 },
+        "cy_emu": { "type": "integer", "minimum": 0 },
+        "name": { "type": "string" }
+      }
+    },
     "rich_node": {
       "oneOf": [
         {
