@@ -57,6 +57,28 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing open-response analysis"):
             self.plan()
 
+    def test_missing_referenced_visual_blocks_publication(self):
+        question = self.data['questions'][0]
+        question['stem'] = [{'type': 'text', 'text': '观察下图，回答问题。'}]
+        with self.assertRaisesRegex(ValueError, 'visual cue present but source visual/table is missing'):
+            self.plan()
+
+    def test_fill_blank_without_explicit_blank_node_blocks_publication(self):
+        question = self.data['questions'][0]
+        question['kind'] = 'fill_blank'
+        question['stem'] = [{'type': 'text', 'text': '请填写正确答案。'}]
+        question.pop('options', None)
+        with self.assertRaisesRegex(ValueError, 'fill_blank must preserve explicit blank rich node'):
+            self.plan()
+
+    def test_placeholder_teacher_analysis_blocks_publication(self):
+        question = self.data['questions'][0]
+        question['analysis'] = [
+            {'type': 'text', 'text': '本题为时事政治/知识识记填空，请结合教材作答。'}
+        ]
+        with self.assertRaisesRegex(ValueError, 'placeholder/template teacher analysis is not publishable'):
+            self.plan()
+
     def test_source_coverage_blocks(self):
         self.data['ledger']['sources'][0]['expected_questions'] = 2
         with self.assertRaisesRegex(ValueError, 'expected 2, accounted 1'):

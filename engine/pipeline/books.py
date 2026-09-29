@@ -10,6 +10,7 @@ from engine.render.latex import SUBJECT_NAMES, render_book
 from engine.pipeline.intake import write_json
 from engine.quality.evidence import validate_release_evidence
 from engine.quality.dedup import exact_duplicate_clusters
+from engine.quality.publication_content import validate_publication_content
 
 ROOT = Path(__file__).resolve().parents[2]
 SUBJECTS = tuple(SUBJECT_NAMES)
@@ -43,6 +44,7 @@ def validate_inputs(questions, ledger, curriculum):
         errors.append(
             "unresolved exact duplicate content: " + ", ".join(cluster.question_ids)
         )
+    errors.extend(validate_publication_content(questions))
     schema = json.loads((ROOT / 'schema/question.schema.json').read_text())
     validator = jsonschema.Draft202012Validator(schema)
     for q in questions:
