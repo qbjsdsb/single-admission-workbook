@@ -45,6 +45,7 @@ def export_docx_assets(path: Path, out_dir: Path) -> dict:
 
     manifest = {
         "source_name": path.name,
+        "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "asset_count": len(exported),
         "assets": exported,
     }
