@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping
 import jsonschema
 
 from engine.quality.dedup import exact_duplicate_clusters
+from engine.quality.publication_content import validate_publication_content
 from engine.render.latex import SUBJECT_NAMES
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -114,6 +115,11 @@ def select_sample_questions(
                     "reason": "unresolved_exact_duplicate_in_sample",
                 })
 
+    publication_errors = validate_publication_content(selected)
+    if publication_errors:
+        raise ValueError(
+            "sample publication content blocked:\n" + "\n".join(publication_errors)
+        )
     return {
         "schema_version": 1,
         "subject": subject,
