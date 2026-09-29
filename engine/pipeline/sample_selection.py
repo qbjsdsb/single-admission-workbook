@@ -132,6 +132,7 @@ def build_sample_book_manifests(
     curriculum: Mapping[str, Any],
     *,
     quote_seed: int = 20260927,
+    title_suffix: str = "样章",
 ) -> list[dict[str, Any]]:
     subject = str(selection.get("subject") or "")
     if subject != canonical_draft.get("subject"):
@@ -182,8 +183,10 @@ def build_sample_book_manifests(
     validator = jsonschema.Draft202012Validator(schema)
     books: list[dict[str, Any]] = []
     for edition in ("student", "teacher"):
+        suffix = str(title_suffix or "").strip()
+        label = f"·{suffix}" if suffix else ""
         title = SUBJECT_NAMES[subject] + (
-            "练习册·样章" if edition == "student" else "教师解析册·样章"
+            f"练习册{label}" if edition == "student" else f"教师解析册{label}"
         )
         book = {
             "schema_version": 1,

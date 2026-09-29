@@ -30,6 +30,7 @@ def prepare_private_sample(
     requested_ids: Iterable[str] | None = None,
     require_teacher_analysis: bool = True,
     quote_seed: int = 20260927,
+    title_suffix: str = "样章",
 ) -> dict[str, Any]:
     """Render a publication-path private sample without claiming whole-corpus release.
 
@@ -52,6 +53,7 @@ def prepare_private_sample(
         canonical_draft,
         curriculum,
         quote_seed=quote_seed,
+        title_suffix=title_suffix,
     )
 
     bank = {

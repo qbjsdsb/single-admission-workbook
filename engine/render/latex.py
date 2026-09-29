@@ -86,6 +86,12 @@ def escape_text(text: str) -> str:
         index += 1
     return "".join(out)
 
+def format_score(score: Any) -> str:
+    """Render a compact textbook score without leaking Python float syntax."""
+    value = float(score)
+    return str(int(value)) if value.is_integer() else (f"{value:.2f}".rstrip("0").rstrip("."))
+
+
 def _render_table(node: dict[str, Any]) -> str:
     rows = node.get("rows") or []
     columns = max(
@@ -200,8 +206,7 @@ def _teacher_value(value: Any) -> str:
     return escape_text(str(value))
 
 def render_question(question: dict[str, Any], display_number: int, edition: str) -> str:
-    score = question["score"]
-    score_text = str(int(score)) if float(score).is_integer() else str(score)
+    score_text = format_score(question["score"])
     out = []
     if question.get("options"):
         # Real English cloze calibration found that the prompt could fit at the
@@ -294,6 +299,11 @@ def render_book(*, template: str, book: dict[str, Any], questions: dict[str, dic
         "%%SUBJECT_MODULE%%": SUBJECT_MODULES[book["subject"]],
         "%%PAGE_LABEL%%": PAGE_LABELS[book["subject"]],
         "%%QUOTE_SEED%%": str(int(book["quote_seed"]) % 997),
+        "%%FOOTER_QUOTE_COMMAND%%": (
+            r"\studentfooterquote"
+            if book["edition"] == "student"
+            else r"\teacherfooterquote"
+        ),
         "%%BODY%%": body,
         "%%FRONT_MATTER%%": r"\workbookcontents" if book.get("table_of_contents", False) else "",
     }

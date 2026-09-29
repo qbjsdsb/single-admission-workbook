@@ -85,6 +85,35 @@ class RendererHardeningTests(unittest.TestCase):
 
 
 class PrivateSampleRenderTests(unittest.TestCase):
+    def test_stage_full_title_suffix_is_visible(self):
+        draft = {
+            "subject": "english",
+            "questions": [cloze_group()],
+        }
+        curriculum = {
+            "english": [{
+                "key": "cloze",
+                "title": "完形填空",
+                "sections": [{"key": "training", "title": "完形填空专项训练"}],
+            }]
+        }
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td)
+            prepare_private_sample(
+                draft,
+                curriculum,
+                out,
+                title_suffix="阶段全册",
+            )
+            student_book = json.loads(
+                (out / "english-sample-student" / "book.json").read_text(encoding="utf-8")
+            )
+            teacher_book = json.loads(
+                (out / "english-sample-teacher" / "book.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(student_book["title"], "英语练习册·阶段全册")
+            self.assertEqual(teacher_book["title"], "英语教师解析册·阶段全册")
+
     def test_prepares_same_student_teacher_selection_and_no_student_answer_leak(self):
         draft = {
             "subject": "english",
