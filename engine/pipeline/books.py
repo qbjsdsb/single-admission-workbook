@@ -149,9 +149,16 @@ def validate_inputs(questions, ledger, curriculum):
             errors.append(f'{subject}: empty or duplicate chapters')
         valid = {(c['key'], s['key']) for c in chapters for s in c['sections']}
         for c in chapters:
+            if not str(c.get('title') or '').strip():
+                errors.append(f"{subject}: chapter {c.get('key')} missing visible title")
             keys = [s['key'] for s in c['sections']]
             if len(keys) != len(set(keys)):
                 errors.append(f'{subject}: duplicate section keys')
+            for s in c['sections']:
+                if not str(s.get('title') or '').strip():
+                    errors.append(
+                        f"{subject}: section {c.get('key')}/{s.get('key')} missing visible title"
+                    )
         subset = by_subject[subject]
         if not subset:
             errors.append(f'{subject}: no questions')
