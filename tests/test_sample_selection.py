@@ -130,11 +130,14 @@ class SampleSelectionTests(unittest.TestCase):
             "section_key": "verb",
             "difficulty": "standard",
         }
-        with self.assertRaisesRegex(ValueError, "sample publication content blocked"):
-            select_sample_questions(
-                {"subject": "english", "questions": [writing]},
-                curriculum(),
-            )
+        result = select_sample_questions(
+            {"subject": "english", "questions": [writing]},
+            curriculum(),
+        )
+        self.assertEqual(result["selected_question_ids"], [])
+        self.assertTrue(
+            result["excluded"][0]["reason"].startswith("publication_content:")
+        )
     def test_requested_unknown_id_is_explicitly_excluded(self):
         draft = {"subject": "english", "questions": [question("ENG_A")]}
         result = select_sample_questions(
