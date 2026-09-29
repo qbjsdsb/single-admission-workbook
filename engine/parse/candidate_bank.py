@@ -23,6 +23,7 @@ class ParagraphEvidence:
     locator: str
     text: str
     table_rich: dict[str, Any] | None = None
+    asset_refs: tuple[dict[str, Any], ...] = ()
 
 
 def _stable_id(*parts: object) -> str:
@@ -40,12 +41,42 @@ def _paragraph_text(block: Mapping[str, Any]) -> tuple[str | None, list[str]]:
         kind = inline.get("type")
         if kind in {"text", "mathml_inline_text"}:
             text_parts.append(str(inline.get("text") or ""))
+        elif kind == "image_ref":
+            # Keep ordinary source visuals as explicit asset references. They are
+            # still review-gated and are not silently promoted to Canonical image
+            # nodes until a private asset resolver confirms the exported file.
+            continue
         else:
             blockers.append(f"unsupported_inline:{kind}")
     # A paragraph can contain several instances of the same unsupported rich
     # feature (for example, two images). Keep the blocker evidence unique so
     # it satisfies the candidate-bank contract without hiding any new type.
     return "".join(text_parts).strip(), list(dict.fromkeys(blockers))
+
+
+def _paragraph_asset_refs(block: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    refs: list[dict[str, Any]] = []
+    for inline in block.get("inlines") or []:
+        if inline.get("type") != "image_ref":
+            continue
+        ref = {
+            key: inline[key]
+            for key in (
+                "relationship_id",
+                "locator",
+                "source",
+                "asset_sha256",
+                "asset_target",
+                "asset_extension",
+                "asset_bytes",
+                "cx_emu",
+                "cy_emu",
+                "name",
+            )
+            if inline.get(key) is not None
+        }
+        refs.append(ref)
+    return tuple(refs)
 
 
 def safe_paragraphs(
@@ -86,7 +117,8 @@ def safe_paragraphs(
         if reasons:
             blockers.append({"locator": locator, "reasons": reasons})
             continue
-        if text:
+        asset_refs = _paragraph_asset_refs(block)
+        if text or asset_refs:
             if subject == "english" and document.get("source_format") == "pdf":
                 raw_lines = [line.strip() for line in text.splitlines() if line.strip()]
                 marker_index = next(
@@ -120,7 +152,7 @@ def safe_paragraphs(
                         ):
                             english_pdf_self_test = False
                     continue
-            paragraphs.append(ParagraphEvidence(locator, text))
+            paragraphs.append(ParagraphEvidence(locator, text, asset_refs=asset_refs))
     return paragraphs, blockers
 
 
@@ -346,6 +378,19 @@ def _simple_candidate(
     }
     if options:
         record["options"] = options
+
+    asset_refs = [
+        ref
+        for paragraph in paragraphs
+        for ref in paragraph.asset_refs
+    ]
+    if asset_refs:
+        record["asset_refs"] = asset_refs
+        if record["status"] == "parsed":
+            record["status"] = "needs_review"
+        if "source_visual_asset_requires_resolution" not in record["review_reasons"]:
+            record["review_reasons"].append("source_visual_asset_requires_resolution")
+
     if any(p.table_rich is not None for p in paragraphs):
         record["stem_rich"] = _rich_content(paragraphs)
     elif kind == "fill_blank":
@@ -393,6 +438,13 @@ def _extract_cloze_group(
     }
     if any(p.table_rich is not None for p in shared):
         group["shared_material_rich"] = _rich_content(shared)
+    shared_asset_refs = [
+        ref
+        for paragraph in shared
+        for ref in paragraph.asset_refs
+    ]
+    if shared_asset_refs:
+        group["asset_refs"] = shared_asset_refs
     groups = [group]
     return candidates, groups
 
@@ -478,6 +530,13 @@ def _extract_reading_groups(
             group["label_normalization"] = "legacy_english_reading_font_mapping"
         if any(p.table_rich is not None for p in shared):
             group["shared_material_rich"] = _rich_content(shared)
+        shared_asset_refs = [
+            ref
+            for paragraph in shared
+            for ref in paragraph.asset_refs
+        ]
+        if shared_asset_refs:
+            group["asset_refs"] = shared_asset_refs
         groups.append(group)
 
     return candidates, groups
