@@ -95,6 +95,14 @@ def select_sample_questions(
             excluded.append({"question_id": qid, "reason": "invalid_curriculum_assignment"})
             continue
 
+        content_errors = validate_publication_content([question])
+        if content_errors:
+            excluded.append({
+                "question_id": qid,
+                "reason": "publication_content:" + content_errors[0],
+            })
+            continue
+
         selected.append(question)
 
     if use_requested:
