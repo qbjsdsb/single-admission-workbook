@@ -70,6 +70,31 @@ def validate_inputs(questions, ledger, curriculum):
                 errors.append(f"{q['id']}: missing open-response analysis")
         elif not has_content(q.get('answer')) or not has_content(q.get('analysis')):
             errors.append(f"{q['id']}: missing answer or analysis")
+    review_flags = ledger.get('content_review_flags', [])
+    seen_review_flags = set()
+    for flag in review_flags:
+        flag_id = str(flag.get('id') or '')
+        question_id = str(flag.get('question_id') or '')
+        occurrence_id = str(flag.get('occurrence_id') or '')
+        status = str(flag.get('status') or '')
+        note = str(flag.get('note') or '').strip()
+        if not flag_id or flag_id in seen_review_flags:
+            errors.append('content review flags need unique non-empty ids')
+            continue
+        seen_review_flags.add(flag_id)
+        if not question_id and not occurrence_id:
+            errors.append(f"{flag_id}: content review flag missing target")
+            continue
+        if question_id and question_id not in bank:
+            errors.append(f"{flag_id}: content review references unknown question")
+        if status not in {'open', 'resolved'}:
+            errors.append(f"{flag_id}: invalid content review status")
+        elif status == 'open':
+            target = question_id or occurrence_id
+            errors.append(f"{target}: unresolved content review flag")
+        elif not note:
+            errors.append(f"{flag_id}: resolved content review flag needs note")
+
     if ledger.get('strict_answer_evidence'):
         fixed_answer_ids = [
             q['id']
