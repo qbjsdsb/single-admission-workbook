@@ -1,6 +1,6 @@
 \documentclass[UTF8,zihao=-4]{ctexart}
 \usepackage{geometry,xcolor,amsmath,amssymb,enumitem,needspace,setspace,xeCJKfntef,fontspec}
-\usepackage{fancyhdr,tabularx,tikz,hyperref,graphicx}
+\usepackage{fancyhdr,tabularx,tikz,hyperref,graphicx,tocloft}
 \geometry{a4paper,left=18mm,right=16mm,top=16mm,bottom=20mm,footskip=10mm}
 
 \IfFontExistsTF{Tinos}{\newfontfamily\wblatin{Tinos}}{\newfontfamily\wblatin{TeX Gyre Termes}}
@@ -129,7 +129,7 @@
  \hangafter=1\relax
  \noindent
  \makebox[\qnumwidth][l]{\sffamily\bfseries #1.}%
- \makebox[\qscorewidth][l]{{\color{muted}（#2分）}}%
+ \makebox[\qscorewidth][l]{{\wbhei\fontsize{9}{12}\selectfont（#2分）}}%
  \hspace{\qstemgap}#3\par
  \endgroup\vspace{1mm}}
 
@@ -195,10 +195,21 @@
 
 % Native LaTeX TOC: one source of chapter order, clickable links and PDF outline.
 \setcounter{tocdepth}{2}
+\setlength{\cftbeforesecskip}{4pt}
+\setlength{\cftbeforesubsecskip}{1.5pt}
+\setlength{\cftsecindent}{0pt}
+\setlength{\cftsubsecindent}{12mm}
+\setlength{\cftsubsecnumwidth}{0pt}
+\renewcommand{\cftsecfont}{\wbhei\fontsize{10.5}{15}\selectfont}
+\renewcommand{\cftsecpagefont}{\wbhei\fontsize{10.5}{15}\selectfont}
+\renewcommand{\cftsubsecfont}{\wbsong\fontsize{9.2}{13}\selectfont}
+\renewcommand{\cftsubsecpagefont}{\wblatin\fontsize{9.2}{13}\selectfont}
+
 \newcommand{\workbookcontents}{%
  \pagenumbering{Roman}%
  \pdfbookmark[1]{目录}{workbook-contents}%
- {\wbhei\fontsize{18}{24}\selectfont %%BOOK_TITLE%%\par}\vspace{6mm}%
+ {\wbhei\fontsize{18}{24}\selectfont %%BOOK_TITLE%%\par}\vspace{3mm}%
+ {\wbhei\fontsize{20}{28}\selectfont 目录\par}\vspace{5mm}%
  \tableofcontents
  \clearpage\pagenumbering{arabic}}
 
