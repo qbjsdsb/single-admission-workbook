@@ -593,6 +593,48 @@ class CandidateBankTests(unittest.TestCase):
         # The rich paragraph is not silently flattened into a publishable stem.
         self.assertEqual(bank["summary"]["candidate_count"], 0)
 
+    def test_politics_fill_blank_preserves_explicit_blank_node(self):
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [
+                paragraph(0, "二、填空题"),
+                paragraph(1, "26. 2024年5月3日，\t探测器发射。"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="politics",
+            source_id="POL-BLANK",
+        )
+        jsonschema.validate(bank, self.schema)
+        question = bank["candidates"][0]
+        self.assertEqual(question["kind"], "fill_blank")
+        self.assertEqual(question["stem_text"], "2024年5月3日，\t探测器发射。")
+        self.assertTrue(any(
+            node["type"] == "blank"
+            for node in question["stem_rich"]
+        ))
+
+    def test_fill_blank_without_source_marker_does_not_invent_blank(self):
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [
+                paragraph(0, "二、填空题"),
+                paragraph(1, "26. 这是一条已经丢失空格标记的虚构题目。"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="politics",
+            source_id="POL-NO-BLANK",
+        )
+        question = bank["candidates"][0]
+        self.assertNotIn("stem_rich", question)
+
     def test_ambiguous_options_are_reviewable_not_guessed(self):
         texts = [
             "一、单项选择题",

@@ -136,6 +136,40 @@ def _rich_content(paragraphs: list[ParagraphEvidence]) -> list[dict[str, Any]]:
     return out
 
 
+_FILL_BLANK_RUN_RE = re.compile(r"(_{2,}|\t+|\u3000+| {3,})")
+
+
+def _fill_blank_rich(text: str) -> list[dict[str, Any]] | None:
+    """Convert explicit source blank runs into canonical rich blank nodes.
+
+    This intentionally recognizes only visible/structural blank markers. It does
+    not guess a blank from sentence semantics. If a source lost its blank
+    completely, the final publication gate still blocks the question.
+    """
+    matches = list(_FILL_BLANK_RUN_RE.finditer(text))
+    if not matches:
+        return None
+
+    out: list[dict[str, Any]] = []
+    cursor = 0
+    for match in matches:
+        if match.start() > cursor:
+            out.append({"type": "text", "text": text[cursor:match.start()]})
+        token = match.group(0)
+        if "\t" in token:
+            width_mm = min(45.0, max(18.0, 18.0 * len(token)))
+        elif token.startswith("_"):
+            width_mm = min(50.0, max(12.0, 1.8 * len(token)))
+        else:
+            width_mm = min(45.0, max(12.0, 3.0 * len(token)))
+        out.append({"type": "blank", "width_mm": width_mm})
+        cursor = match.end()
+
+    if cursor < len(text):
+        out.append({"type": "text", "text": text[cursor:]})
+    return out
+
+
 def _strip_question_prefix(text: str) -> tuple[int | None, str]:
     match = QUESTION_RE.match(text)
     if not match:
@@ -314,6 +348,10 @@ def _simple_candidate(
         record["options"] = options
     if any(p.table_rich is not None for p in paragraphs):
         record["stem_rich"] = _rich_content(paragraphs)
+    elif kind == "fill_blank":
+        blank_rich = _fill_blank_rich(stem_text)
+        if blank_rich is not None:
+            record["stem_rich"] = blank_rich
     return record
 
 

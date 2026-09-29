@@ -135,6 +135,15 @@
         },
         {
           "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "blank" },
+            "width_mm": { "type": "number", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "rows"],
           "additionalProperties": false,
           "properties": {
