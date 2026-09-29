@@ -557,7 +557,7 @@ class CandidateBankTests(unittest.TestCase):
             ["word_spelling", "writing"],
         )
 
-    def test_rich_content_becomes_explicit_blocker_not_plain_text(self):
+    def test_source_visual_refs_are_preserved_but_review_gated(self):
         rich_paragraph = paragraph(
             1,
             "1. 带图的虚构题。",
@@ -567,6 +567,9 @@ class CandidateBankTests(unittest.TestCase):
                 "locator": "word/document.xml/body/1/drawing/0",
                 "status": "captured_not_normalized",
                 "source": "drawingml",
+                "asset_sha256": "a" * 64,
+                "asset_target": "media/figure-a.png",
+                "asset_extension": ".png",
             },
         )
         rich_paragraph["inlines"].append({
@@ -575,6 +578,9 @@ class CandidateBankTests(unittest.TestCase):
             "locator": "word/document.xml/body/1/drawing/1",
             "status": "captured_not_normalized",
             "source": "drawingml",
+            "asset_sha256": "b" * 64,
+            "asset_target": "media/figure-b.png",
+            "asset_extension": ".png",
         })
         document = {
             "version": 1,
@@ -587,11 +593,61 @@ class CandidateBankTests(unittest.TestCase):
             "warnings": ["image_relationship_not_normalized"],
         }
         bank = extract_candidate_bank(document, subject="politics", source_id="POL-RICH")
-        self.assertEqual(bank["summary"]["blocker_count"], 1)
-        self.assertIn("unsupported_inline:image_ref", bank["blockers"][0]["reasons"])
-        self.assertEqual(bank["blockers"][0]["reasons"], ["unsupported_inline:image_ref"])
-        # The rich paragraph is not silently flattened into a publishable stem.
-        self.assertEqual(bank["summary"]["candidate_count"], 0)
+        jsonschema.validate(bank, self.schema)
+        self.assertEqual(bank["summary"]["blocker_count"], 0)
+        self.assertEqual(bank["summary"]["candidate_count"], 1)
+        question = bank["candidates"][0]
+        self.assertEqual(question["status"], "needs_review")
+        self.assertIn(
+            "source_visual_asset_requires_resolution",
+            question["review_reasons"],
+        )
+        self.assertEqual(
+            [ref["relationship_id"] for ref in question["asset_refs"]],
+            ["rId1", "rId2"],
+        )
+
+    def test_politics_fill_blank_preserves_explicit_blank_node(self):
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [
+                paragraph(0, "二、填空题"),
+                paragraph(1, "26. 2024年5月3日，\t探测器发射。"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="politics",
+            source_id="POL-BLANK",
+        )
+        jsonschema.validate(bank, self.schema)
+        question = bank["candidates"][0]
+        self.assertEqual(question["kind"], "fill_blank")
+        self.assertEqual(question["stem_text"], "2024年5月3日，\t探测器发射。")
+        self.assertTrue(any(
+            node["type"] == "blank"
+            for node in question["stem_rich"]
+        ))
+
+    def test_fill_blank_without_source_marker_does_not_invent_blank(self):
+        document = {
+            "version": 1,
+            "source_format": "docx",
+            "blocks": [
+                paragraph(0, "二、填空题"),
+                paragraph(1, "26. 这是一条已经丢失空格标记的虚构题目。"),
+            ],
+            "warnings": [],
+        }
+        bank = extract_candidate_bank(
+            document,
+            subject="politics",
+            source_id="POL-NO-BLANK",
+        )
+        question = bank["candidates"][0]
+        self.assertNotIn("stem_rich", question)
 
     def test_politics_fill_blank_preserves_explicit_blank_node(self):
         document = {
