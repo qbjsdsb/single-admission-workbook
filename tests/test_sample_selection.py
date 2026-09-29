@@ -114,6 +114,27 @@ class SampleSelectionTests(unittest.TestCase):
             {"question_id": "ENG_WRITE", "reason": "missing_teacher_analysis"},
         )
 
+    def test_stage_preview_blocks_generic_writing_analysis(self):
+        writing = {
+            "id": "ENG_WRITE_GENERIC",
+            "subject": "english",
+            "kind": "composition",
+            "answer_mode": "open_response",
+            "score": 10,
+            "stem": [{"type": "text", "text": "Write a fictional letter."}],
+            "analysis": [{
+                "type": "text",
+                "text": "本题为开放写作。先逐项圈出题干中的内容要求，再确定合适的人称、时态和书信格式。",
+            }],
+            "chapter_key": "grammar",
+            "section_key": "verb",
+            "difficulty": "standard",
+        }
+        with self.assertRaisesRegex(ValueError, "sample publication content blocked"):
+            select_sample_questions(
+                {"subject": "english", "questions": [writing]},
+                curriculum(),
+            )
     def test_requested_unknown_id_is_explicitly_excluded(self):
         draft = {"subject": "english", "questions": [question("ENG_A")]}
         result = select_sample_questions(
