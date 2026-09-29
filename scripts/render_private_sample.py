@@ -52,6 +52,11 @@ def main() -> int:
     parser.add_argument("--ids", type=Path, help="Optional newline-separated canonical IDs")
     parser.add_argument("--allow-missing-analysis", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--title-suffix",
+        default="样章",
+        help="Visible book-title suffix, e.g. 样章 or 阶段全册; use empty string for none.",
+    )
     parser.add_argument("--compile", action="store_true")
     args = parser.parse_args()
 
@@ -70,6 +75,7 @@ def main() -> int:
             args.out,
             requested_ids=requested,
             require_teacher_analysis=not args.allow_missing_analysis,
+            title_suffix=args.title_suffix,
         )
 
         if args.compile:
