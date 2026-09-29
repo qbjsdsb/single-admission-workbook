@@ -27,6 +27,33 @@ class PublicationContentQualityTests(unittest.TestCase):
             for error in errors
         ))
 
+    def test_repeated_composition_analysis_is_blocked_after_two_prompts(self):
+        repeated = (
+            "A reviewed-looking but generic writing explanation that says to cover all points, "
+            "use clear paragraphs, and check grammar after finishing."
+        )
+        questions = []
+        for i in range(2):
+            question = self._question(f"W{i}", repeated)
+            question["kind"] = "composition"
+            questions.append(question)
+        errors = validate_publication_content(questions)
+        self.assertTrue(any(
+            "composition teacher analysis repeated 2 times" in error
+            for error in errors
+        ))
+
+    def test_known_generic_open_writing_template_is_blocked(self):
+        question = self._question(
+            "W1",
+            "本题为开放写作。先逐项圈出题干中的内容要求，再确定合适的人称、时态和书信格式。",
+        )
+        question["kind"] = "composition"
+        errors = validate_publication_content([question])
+        self.assertTrue(any(
+            "placeholder/template teacher analysis is not publishable" in error
+            for error in errors
+        ))
     def test_normal_unique_teacher_analyses_are_not_blocked(self):
         questions = [
             self._question(

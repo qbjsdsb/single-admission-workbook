@@ -67,6 +67,20 @@ class RendererHardeningTests(unittest.TestCase):
         self.assertNotIn(r"\_" * 20, rendered)
         self.assertIn(r"\blank{45mm}", rendered)
 
+    def test_student_writing_drops_source_number_and_keeps_prompt_with_space(self):
+        question = {
+            "id": "ENG-WRITE-NUMBERED",
+            "subject": "english",
+            "kind": "composition",
+            "answer_mode": "open_response",
+            "score": 10,
+            "stem": [{"type": "text", "text": "56. Write a fictional email."}],
+            "analysis": [{"type": "text", "text": "A reviewed fictional writing guide."}],
+        }
+        student = render_question(question, 1211, "student")
+        self.assertIn(r"\Needspace{105mm}", student)
+        self.assertIn(r"\q{1211}{10}{Write a fictional email.}", student)
+        self.assertNotIn("56. Write a fictional email.", student)
     def test_student_open_response_gets_stable_writing_space(self):
         question = {
             "id": "ENG-WRITE",

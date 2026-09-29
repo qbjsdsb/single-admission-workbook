@@ -13,6 +13,7 @@ FORBIDDEN_ANALYSIS_FRAGMENTS = (
     "本题为时事政治/知识识记填空",
     "根据题干所考查的概念、原理和材料信息进行判断",
     "先概括材料主体、措施与结果",
+    "本题为开放写作。先逐项圈出题干中的内容要求",
 )
 
 
@@ -72,7 +73,7 @@ def validate_question_content(question: Mapping[str, Any], *, location: str | No
 def _analysis_text(question: Mapping[str, Any]) -> str:
     analysis = question.get("analysis")
     text = _plain_text(analysis) if isinstance(analysis, list) else str(analysis or "")
-    return re.sub(r"\\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def validate_publication_content(questions: Iterable[Mapping[str, Any]]) -> list[str]:
@@ -100,6 +101,24 @@ def validate_publication_content(questions: Iterable[Mapping[str, Any]]) -> list
             if child_text:
                 analysis_rows.append((location, child_text))
 
+    composition_rows = [
+        (qid, _analysis_text(question))
+        for question in materialized
+        if question.get("kind") == "composition"
+        for qid in [str(question.get("id") or "<unknown>")]
+        if _analysis_text(question)
+    ]
+    composition_counts = Counter(
+        text for _, text in composition_rows if len(text) >= 40
+    )
+    for text, count in composition_counts.items():
+        if count < 2:
+            continue
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+        errors.append(
+            "composition teacher analysis repeated "
+            f"{count} times (analysis_sha256={digest})"
+        )
     # Exact repeated prose across many distinct questions is a reliable signal
     # that a generic filler/template has leaked into the teacher edition. Use a
     # deliberately high threshold so ordinary concept overlap is not blocked.

@@ -196,6 +196,31 @@ def render_choices(question: dict[str, Any]) -> str:
         lines.append(r"\longoptline{" + escape_text(str(opt["label"])) + "}{" + content + "}")
     return "\\Needspace{4\\baselineskip}\n" + "\n".join(lines) + "\n\\vspace{3mm}\n"
 
+def _strip_redundant_source_number(
+    nodes: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Remove a source-paper question number already replaced by workbook numbering.
+
+    Some English writing prompts carry their original paper number, such as 56.,
+    inside the Canonical stem. Keeping it produces two visible question numbers
+    in the assembled workbook. Only the first non-empty text node is eligible,
+    and only a clear integer question prefix is removed.
+    """
+    out = [dict(node) for node in nodes]
+    for node in out:
+        if node.get("type") != "text":
+            if node.get("type") not in {"emphasis_dot", "underline", "bold", "italic"}:
+                break
+            continue
+        text = str(node.get("text") or "")
+        if not text.strip():
+            continue
+        cleaned = re.sub(r"^\s*\d{1,3}\s*[.．、]\s*", "", text, count=1)
+        if cleaned != text:
+            node["text"] = cleaned
+        break
+    return out
+
 def _teacher_value(value: Any) -> str:
     if value is None:
         return ""
@@ -208,6 +233,17 @@ def _teacher_value(value: Any) -> str:
 def render_question(question: dict[str, Any], display_number: int, edition: str) -> str:
     score_text = format_score(question["score"])
     out = []
+    stem_nodes = question["stem"]
+    if question.get("kind") == "composition":
+        stem_nodes = _strip_redundant_source_number(stem_nodes)
+    if (
+        edition == "student"
+        and question.get("kind") == "composition"
+        and question.get("answer_mode") == "open_response"
+    ):
+        # Keep the prompt with useful writing space instead of leaving the prompt
+        # at a page bottom while every answer line jumps to the following page.
+        out.append(r"\Needspace{105mm}")
     if question.get("options"):
         # Real English cloze calibration found that the prompt could fit at the
         # bottom of a page while the option grid moved alone to the next page.
@@ -216,7 +252,7 @@ def render_question(question: dict[str, Any], display_number: int, edition: str)
         reserve = 7 if edition == "teacher" else 6
         out.append(rf"\Needspace{{{reserve}\baselineskip}}")
     out.extend([
-        rf"\q{{{display_number}}}{{{score_text}}}{{{rich_text(question['stem'])}}}",
+        rf"\q{{{display_number}}}{{{score_text}}}{{{rich_text(stem_nodes)}}}",
         render_choices(question),
     ])
 
