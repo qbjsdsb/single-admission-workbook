@@ -33,9 +33,12 @@ v0.3 therefore uses:
 
 - number start: 18 mm
 - score / option / sub-question start: 23 mm
-- stem start: about 39.05 mm
+- stem start: about 39.05 mm on the first line
+- wrapped stem continuation: 23 mm, aligned to the score rail
+- choice labels: 23 mm, aligned to the score rail
+- math/material sub-question markers: visually aligned to the 23 mm score rail
 
-This preserves the original stem position while tightening number-to-score spacing by about 1 mm.
+This preserves the original first-line stem position while tightening number-to-score spacing by about 1 mm. Continuation lines intentionally return to the score rail instead of the stem rail.
 
 ## Font profiles
 
@@ -64,3 +67,14 @@ Before restructuring the full repository, approve the following baseline propert
 - page-break guards.
 
 After approval, content will be separated from the renderer and the chapter/question schema will be introduced.
+
+
+## Geometry regression gate
+
+The GitHub workflow extracts PDF bounding boxes after compilation and checks representative coordinates, not only whether XeLaTeX exits successfully. In the baseline sample it asserts that:
+
+- the wrapped second line of the long politics choice stem begins on the score rail;
+- politics choice label A begins on the score rail;
+- the first mathematics sub-question marker begins on the score rail.
+
+This protects the layout contract from later macro/font refactors that would otherwise look valid to ordinary compilation tests.
