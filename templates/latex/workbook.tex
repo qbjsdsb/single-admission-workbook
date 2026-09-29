@@ -39,29 +39,53 @@
 
 \newcount\quoteseed
 \quoteseed=%%QUOTE_SEED%%
-\newcommand{\footerquote}{%
- \pgfmathtruncatemacro{\quoteidx}{mod(\value{page}+\the\quoteseed,9)}%
+\newcommand{\studentfooterquote}{%
+ \pgfmathtruncatemacro{\quoteidx}{mod(\value{page}+\the\quoteseed,8)}%
  \ifcase\quoteidx
- 腹有诗书气自华%
- \or 读书百遍，其义自见%
- \or 文章本天成，妙手偶得之%
- \or 纸上得来终觉浅，绝知此事要躬行%
- \or 苟日新，日日新，又日新%
- \or 博观而约取，厚积而薄发%
- \or 学而不思则罔，思而不学则殆%
- \or 读书破万卷，下笔如有神%
- \or 言之无文，行而不远%
+ 今天会的，比昨天多一点%
+ \or 认真做完每一道题，进步自然发生%
+ \or 把错题变成下一次的得分点%
+ \or 稳住节奏，一题一题拿分%
+ \or 看懂一道题，就多一分底气%
+ \or 不怕慢，只怕没有落实%
+ \or 先做对，再做快%
+ \or 每一次订正都算数%
  \fi}
+\newcommand{\teacherfooterquote}{%
+ \pgfmathtruncatemacro{\quoteidx}{mod(\value{page}+\the\quoteseed,8)}%
+ \ifcase\quoteidx
+ 讲清一道题，比讲完十道题更重要%
+ \or 让学生知道为什么，比只知道答案更重要%
+ \or 错因找准，训练才有效%
+ \or 反馈及时，进步才可见%
+ \or 课堂有重点，训练有闭环%
+ \or 一题多问，胜过机械重复%
+ \or 先看学情，再定讲法%
+ \or 解析要能教，答案要可核%
+ \fi}
+\newcommand{\footerquote}{%%FOOTER_QUOTE_COMMAND%%}
+
+\newcommand{\workbookfooter}{%
+ \fancyfoot[L]{%
+  {\fontsize{10}{12}\selectfont\wbkai\color{muted}青云阁}%
+  \kern2pt{\fontsize{7.8}{10}\selectfont\wbhei\color{muted}教育}%
+  \hspace{3mm}\textcolor{rulegray}{\rule[2.5pt]{8mm}{.35pt}}%
+  \hspace{3mm}{\fontsize{8}{10}\selectfont\wbsong\color{muted}\footerquote}}%
+ \fancyfoot[R]{\fontsize{9}{12}\selectfont\wblatin\color{muted}\thepage}}
 
 \pagestyle{fancy}\fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
-\fancyfoot[L]{%
- {\fontsize{10}{12}\selectfont\wbkai\color{muted}青云阁}%
- \kern2pt{\fontsize{7.8}{10}\selectfont\wbhei\color{muted}教育}%
- \hspace{3mm}\textcolor{rulegray}{\rule[2.5pt]{8mm}{.35pt}}%
- \hspace{3mm}{\fontsize{8}{10}\selectfont\wbsong\color{muted}\footerquote}}
-\fancyfoot[R]{\fontsize{9}{12}\selectfont\wblatin\color{muted}\thepage}
+\fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}
+\fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}\nouppercase{\leftmark}}
+\workbookfooter
+\fancypagestyle{plain}{%
+ \fancyhf{}%
+ \renewcommand{\headrulewidth}{0pt}%
+ \renewcommand{\footrulewidth}{0pt}%
+ \fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}%
+ \fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}\nouppercase{\leftmark}}%
+ \workbookfooter}
 
 \newlength{\qnumwidth}
 \newlength{\qscorewidth}
@@ -84,6 +108,7 @@
  \clearpage
  \refstepcounter{section}%
  \phantomsection%
+ \markboth{#1\quad #2}{#1\quad #2}%
  \addcontentsline{toc}{section}{#1\quad #2}%
  \pagehead{#1\quad #2}
 }
