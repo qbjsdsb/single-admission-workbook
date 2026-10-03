@@ -3,9 +3,8 @@
 \usepackage{fancyhdr,tabularx,tikz,hyperref,graphicx,tocloft}
 \geometry{a4paper,left=18mm,right=16mm,top=16mm,bottom=20mm,footskip=10mm}
 
+% 参考骨架，不是一键批准母版。真实成书必须按版式规范与交付验收逐页检查。
 \IfFontExistsTF{Tinos}{\newfontfamily\wblatin{Tinos}}{\newfontfamily\wblatin{TeX Gyre Termes}}
-% Fandol is shipped with TeX Live and gives a more traditional Chinese
-% teaching-material texture than the Noto screen-oriented fallback.
 \newCJKfontfamily\wbsong{FandolSong-Regular.otf}
 \newCJKfontfamily\wbhei{FandolHei-Regular.otf}
 \newCJKfontfamily\wbkai{FandolKai-Regular.otf}
@@ -26,6 +25,7 @@
 \newcommand{\marked}[1]{\CJKunderdot[depth=0.15em,sep=0.01em]{#1}}
 \newcommand{\blank}[1]{\rule[-.3ex]{#1}{.4pt}}
 
+% 固定线描书本图标。避免使用emoji导致彩色/缺字/平台差异。
 \newcommand{\bookornament}{%
  \begin{tikzpicture}[x=1mm,y=1mm,baseline=-.3mm,line cap=round,line join=round]
  \draw[accent,line width=.4pt]
@@ -37,40 +37,13 @@
  \draw[accent,line width=.35pt] (5,0)--(5,3.7);
  \end{tikzpicture}}
 
-\newcount\quoteseed
-\quoteseed=%%QUOTE_SEED%%
-\newcommand{\studentfooterquote}{%
- \pgfmathtruncatemacro{\quoteidx}{mod(\value{page}+\the\quoteseed,8)}%
- \ifcase\quoteidx
- 今天会的，比昨天多一点%
- \or 认真做完每一道题，进步自然发生%
- \or 把错题变成下一次的得分点%
- \or 稳住节奏，一题一题拿分%
- \or 看懂一道题，就多一分底气%
- \or 不怕慢，只怕没有落实%
- \or 先做对，再做快%
- \or 每一次订正都算数%
- \fi}
-\newcommand{\teacherfooterquote}{%
- \pgfmathtruncatemacro{\quoteidx}{mod(\value{page}+\the\quoteseed,8)}%
- \ifcase\quoteidx
- 讲清一道题，比讲完十道题更重要%
- \or 让学生知道为什么，比只知道答案更重要%
- \or 错因找准，训练才有效%
- \or 反馈及时，进步才可见%
- \or 课堂有重点，训练有闭环%
- \or 一题多问，胜过机械重复%
- \or 先看学情，再定讲法%
- \or 解析要能教，答案要可核%
- \fi}
-\newcommand{\footerquote}{%%FOOTER_QUOTE_COMMAND%%}
-
+% 页脚只保留正式品牌/必要信息/页码，不放随机鸡汤或轮换名言。
 \newcommand{\workbookfooter}{%
  \fancyfoot[L]{%
   {\fontsize{10}{12}\selectfont\wbkai\color{muted}青云阁}%
   \kern2pt{\fontsize{7.8}{10}\selectfont\wbhei\color{muted}教育}%
   \hspace{3mm}\textcolor{rulegray}{\rule[2.5pt]{8mm}{.35pt}}%
-  \hspace{3mm}{\fontsize{8}{10}\selectfont\wbsong\color{muted}\footerquote}}%
+  \hspace{3mm}{\fontsize{8}{10}\selectfont\wbsong\color{muted}%%FOOTER_LABEL%%}}%
  \fancyfoot[R]{\fontsize{9}{12}\selectfont\wblatin\color{muted}\thepage}}
 
 \pagestyle{fancy}\fancyhf{}
@@ -94,6 +67,7 @@
 \setlength{\qscorewidth}{14.85mm}
 \setlength{\qstemgap}{1.2mm}
 
+% 大标题只用于真实章/节入口。续页不得再次复制大标题块。
 \newcommand{\pagehead}[1]{%
  \noindent\begin{tabularx}{\linewidth}{@{}X>{\raggedleft\arraybackslash}p{38mm}@{}}
  {\fontsize{9}{12}\selectfont\wbhei\color{muted}%%SUBJECT_MODULE%%} &
@@ -112,6 +86,7 @@
  \addcontentsline{toc}{section}{#1\quad #2}%
  \pagehead{#1\quad #2}
 }
+
 \newcommand{\sectionhead}[2]{%
  \Needspace{4\baselineskip}\vspace{1mm}
  \refstepcounter{subsection}%
@@ -119,6 +94,11 @@
  \addcontentsline{toc}{subsection}{#1\quad #2}%
  {\textcolor{accent}{\rule[3pt]{3mm}{.6pt}}\hspace{2mm}%
  \fontsize{11}{16}\selectfont\wbhei #1\quad #2}\par\vspace{2.2mm}}
+
+% 轻量续页标题，不重新制造完整标题块。
+\newcommand{\continuationhead}[1]{%
+ \Needspace{2\baselineskip}%
+ {\fontsize{9}{12}\selectfont\wbhei\color{muted}#1\ （续）}\par\vspace{2mm}}
 
 \newcommand{\q}[3]{%
  \Needspace{2.8\baselineskip}%
@@ -175,15 +155,20 @@
 \newcommand{\teacheranalysis}[1]{%
  \Needspace{2\baselineskip}\par
  \noindent\hspace*{\qnumwidth}{\wbhei 解析}\hspace{2mm}#1\par\vspace{2mm}}
-\newcommand{\teachernote}[1]{%
+
+% 提示不是每题标配，只在真实教学价值存在时调用。
+\newcommand{\teachernote}[2][方法点拨]{%
  \Needspace{2\baselineskip}\par
- \noindent\hspace*{\qnumwidth}{\wbhei 提示}\hspace{2mm}#1\par\vspace{2mm}}
+ \noindent\hspace*{\qnumwidth}{\wbhei #1}\hspace{2mm}#2\par\vspace{2mm}}
+
+% 不把来源身份写进教师成书，统一只显示“参考范文”。
 \newcommand{\teachersampleresponse}[1]{%
  \Needspace{4\baselineskip}\par
- \noindent\hspace*{\qnumwidth}{\wbhei 源教师资料参考范文}\par
+ \noindent\hspace*{\qnumwidth}{\wbhei 参考范文}\par
  \begingroup\normalfont\wbsong\fontsize{10.5}{15}\selectfont
  \noindent\hspace*{\qnumwidth}#1\par\endgroup\vspace{2mm}}
 
+% 非数学主观题需要横线时才使用。数学主观题不要调用此宏。
 \newcount\answerlinecount
 \newcommand{\answerlines}[1]{%
  \par\begingroup\offinterlineskip\answerlinecount=0
@@ -192,6 +177,11 @@
  \advance\answerlinecount by1
  \repeat\endgroup\vspace{1mm}}
 
+% 数学学生版纯空白作答区。高度必须按预计步骤传入，不可机械固定成半页/整页。
+\newcommand{\mathspace}[1]{\par\vspace*{#1}\par}
+
+% 关键数学推导优先调用display/align环境，而不是把长算式塞入正文。
+\newcommand{\displayformula}[1]{\par\vspace{1mm}\[ #1 \]\vspace{1mm}\par}
 
 % Native LaTeX TOC: one source of chapter order, clickable links and PDF outline.
 \setcounter{tocdepth}{2}
