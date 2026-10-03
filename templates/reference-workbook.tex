@@ -37,27 +37,28 @@
  \draw[accent,line width=.35pt] (5,0)--(5,3.7);
  \end{tikzpicture}}
 
-% 页脚只保留正式品牌/必要信息/页码，不放随机鸡汤或轮换名言。
+% 所有正文页共用同一页眉；书本线描图标固定在右上角。
 \newcommand{\workbookfooter}{%
- \fancyfoot[L]{%
-  {\fontsize{10}{12}\selectfont\wbkai\color{muted}青云阁}%
-  \kern2pt{\fontsize{7.8}{10}\selectfont\wbhei\color{muted}教育}%
-  \hspace{3mm}\textcolor{rulegray}{\rule[2.5pt]{8mm}{.35pt}}%
-  \hspace{3mm}{\fontsize{8}{10}\selectfont\wbsong\color{muted}%%FOOTER_LABEL%%}}%
+ \fancyfoot[L]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}青云阁教育}%
  \fancyfoot[R]{\fontsize{9}{12}\selectfont\wblatin\color{muted}\thepage}}
 
+\newcommand{\workbookheader}{%
+ \fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}%
+ \fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%
+  \nouppercase{\leftmark}\hspace{2mm}\raisebox{-1mm}{\bookornament}}}
+
+\setlength{\headheight}{18pt}
+\setlength{\headsep}{5mm}
 \pagestyle{fancy}\fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
-\fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}
-\fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}\nouppercase{\leftmark}}
+\workbookheader
 \workbookfooter
 \fancypagestyle{plain}{%
  \fancyhf{}%
  \renewcommand{\headrulewidth}{0pt}%
  \renewcommand{\footrulewidth}{0pt}%
- \fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}%
- \fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}\nouppercase{\leftmark}}%
+ \workbookheader
  \workbookfooter}
 
 \newlength{\qnumwidth}
@@ -67,25 +68,21 @@
 \setlength{\qscorewidth}{14.85mm}
 \setlength{\qstemgap}{1.2mm}
 
-% 大标题只用于真实章/节入口。续页不得再次复制大标题块。
+% 入口只用一个清楚标题，不叠路线、页标或重复层级。
 \newcommand{\pagehead}[1]{%
- \noindent\begin{tabularx}{\linewidth}{@{}X>{\raggedleft\arraybackslash}p{38mm}@{}}
- {\fontsize{9}{12}\selectfont\wbhei\color{muted}%%SUBJECT_MODULE%%} &
- {\fontsize{9}{12}\selectfont\wbsong\color{muted}%%PAGE_LABEL%%}\\[1.8mm]
- {\fontsize{16}{20}\selectfont\wbhei #1} & \bookornament
- \end{tabularx}\par
- \vspace{2mm}
+ \Needspace{6\baselineskip}%
+ {\fontsize{17}{23}\selectfont\wbhei #1\par}\vspace{2mm}%
  \noindent\hbox to\linewidth{\textcolor{accent}{\rule{14mm}{.7pt}}\hspace{3mm}%
  {\color{rulegray}\leaders\hrule height .35pt\hfill}}\par\vspace{3mm}}
 
 \newcommand{\chapterhead}[2]{%
- \clearpage
+ \Needspace{8\baselineskip}%
  \refstepcounter{section}%
  \phantomsection%
  \markboth{#1\quad #2}{#1\quad #2}%
  \addcontentsline{toc}{section}{#1\quad #2}%
  \pagehead{#1\quad #2}
-}
+ }
 
 \newcommand{\sectionhead}[2]{%
  \Needspace{4\baselineskip}\vspace{1mm}
@@ -157,7 +154,7 @@
  \noindent\hspace*{\qnumwidth}{\wbhei 解析}\hspace{2mm}#1\par\vspace{2mm}}
 
 % 提示不是每题标配，只在真实教学价值存在时调用。
-\newcommand{\teachernote}[2][方法点拨]{%
+\newcommand{\teachernote}[2]{%
  \Needspace{2\baselineskip}\par
  \noindent\hspace*{\qnumwidth}{\wbhei #1}\hspace{2mm}#2\par\vspace{2mm}}
 
