@@ -1,6 +1,6 @@
 \documentclass[UTF8,zihao=-4]{ctexart}
 \usepackage{geometry,xcolor,amsmath,amssymb,enumitem,needspace,setspace,xeCJKfntef,fontspec}
-\usepackage{fancyhdr,tabularx,tikz,hyperref,graphicx,tocloft}
+\usepackage{fancyhdr,tabularx,hyperref,graphicx,tocloft}
 \geometry{a4paper,left=18mm,right=16mm,top=16mm,bottom=20mm,footskip=10mm}
 
 % 参考骨架，不是一键批准母版。真实成书必须按版式规范与交付验收逐页检查。
@@ -25,19 +25,7 @@
 \newcommand{\marked}[1]{\CJKunderdot[depth=0.15em,sep=0.01em]{#1}}
 \newcommand{\blank}[1]{\rule[-.3ex]{#1}{.4pt}}
 
-% 固定线描书本图标。避免使用emoji导致彩色/缺字/平台差异。
-\newcommand{\bookornament}{%
- \begin{tikzpicture}[x=1mm,y=1mm,baseline=-.3mm,line cap=round,line join=round]
- \draw[accent,line width=.4pt]
- (0,.4)--(0,4.2)..controls(1.8,5)and(3.5,4.8)..(5,3.7)
- ..controls(6.5,4.8)and(8.2,5)..(10,4.2)--(10,.4);
- \draw[accent,line width=.4pt]
- (0,.4)..controls(1.8,1.2)and(3.5,1)..(5,0)
- ..controls(6.5,1)and(8.2,1.2)..(10,.4);
- \draw[accent,line width=.35pt] (5,0)--(5,3.7);
- \end{tikzpicture}}
-
-% 所有正文页共用同一页眉；书本线描图标固定在右上角。
+% 正式页眉不再使用右上角书本或其他装饰图标；只保留必要文字导航。
 \newcommand{\workbookfooter}{%
  \fancyfoot[L]{\fontsize{8.5}{11}\selectfont\wbsong\color{muted}青云阁教育}%
  \fancyfoot[R]{\fontsize{9}{12}\selectfont\wblatin\color{muted}\thepage}}
@@ -45,7 +33,7 @@
 \newcommand{\workbookheader}{%
  \fancyhead[L]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%%BOOK_TITLE%%}%
  \fancyhead[R]{\fontsize{8.5}{11}\selectfont\wbhei\color{muted}%
-  \nouppercase{\leftmark}\hspace{2mm}\raisebox{-1mm}{\bookornament}}}
+  \nouppercase{\leftmark}}}
 
 \setlength{\headheight}{18pt}
 \setlength{\headsep}{5mm}
